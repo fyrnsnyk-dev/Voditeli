@@ -1,0 +1,116 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="robots" content="noindex">
+<title>Администратор парка</title>
+<style>
+:root{--bg:#edf1ee;--card:#fff;--fg:#10241e;--mut:#5a6b64;--bd:#d9e1dc;--ac:#10241e;--acf:#f2f6f3;--ok:#12805c;--bad:#c8372d;--hero:#ffc629}
+@media (prefers-color-scheme:dark){:root{--bg:#0b1411;--card:#13201b;--fg:#eef4f0;--mut:#9db0a6;--bd:#26372f;--ac:#ffc629;--acf:#10241e;--ok:#4fd1a0;--bad:#ff8d82;color-scheme:dark}}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--fg);font:16px/1.5 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;padding:16px}
+main{max-width:760px;margin:0 auto;display:flex;flex-direction:column;gap:16px}
+h1{font-size:1.4rem;margin:0}h2{font-size:1.05rem;margin:0 0 8px}
+.card{background:var(--card);border-radius:14px;padding:16px}
+label{display:block;font-weight:600;margin:8px 0 4px}
+input{font:inherit;color:var(--fg);background:var(--bg);border:1px solid var(--bd);border-radius:8px;padding:9px;width:100%}
+button{font:inherit;font-weight:600;background:var(--ac);color:var(--acf);border:0;border-radius:8px;padding:9px 14px;cursor:pointer;margin-top:10px}
+button.g{background:none;color:var(--fg);border:1px solid var(--bd);padding:4px 9px;margin:0}
+.row{display:flex;gap:10px;flex-wrap:wrap}.row>div{flex:1 1 200px}
+.mut{color:var(--mut)}.ok{color:var(--ok)}.bad{color:var(--bad)}.small{font-size:.88rem}
+table{width:100%;border-collapse:collapse}td,th{padding:6px 4px;border-bottom:1px solid var(--bd);text-align:left;font-size:.92rem}
+.tw{overflow-x:auto}
+[hidden]{display:none!important}
+</style>
+</head>
+<body>
+<main>
+<h1>Администратор парка</h1>
+<p class="small" id="st"></p>
+
+<section class="card" id="lg">
+  <h2>Вход</h2>
+  <form id="lf"><label for="em">Почта</label><input id="em" type="email" autocomplete="username"><label for="pw">Пароль</label><input id="pw" type="password" autocomplete="current-password"><button type="submit">Войти</button></form>
+</section>
+
+<div id="ad" hidden style="display:flex;flex-direction:column;gap:16px">
+  <section class="card">
+    <h2>Опубликовать неделю водителям</h2>
+    <p class="mut small">В панели владельца нажмите «Экспорт для водителей», сохраните файл и загрузите его сюда. Водители, которых нет в списке, добавятся по номеру телефона.</p>
+    <input id="wf" type="file" accept=".json,application/json">
+    <button id="wu">Опубликовать</button>
+    <div id="wr" class="small"></div>
+  </section>
+  <section class="card">
+    <h2>Водители</h2>
+    <form id="df" class="row"><div><label for="dn">Имя и фамилия</label><input id="dn"></div><div><label for="dp">Телефон</label><input id="dp" inputmode="tel" placeholder="+48123456789"></div></form>
+    <button id="da">Добавить водителя</button> <span id="dm" class="small"></span>
+    <div class="tw" id="dl"></div>
+  </section>
+  <section class="card">
+    <h2>Опубликованные недели</h2>
+    <div id="wl" class="small"></div>
+  </section>
+  <button id="lo" class="g">Выйти</button>
+</div>
+</main>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.js"></script>
+<script>
+const SB=supabase.createClient("https://qehwfuwpcphqixukjbtz.supabase.co","sb_publishable_U8NLOMPpkToIXkQ-ddYg1A_T6iEx9yM");
+const $=id=>document.getElementById(id);
+const esc=s=>String(s).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+const st=(t,c)=>{$("st").textContent=t||"";$("st").className="small "+(c||"")};
+function normPhone(s){let v=String(s||"").replace(/[^\d+]/g,"");if(v.startsWith("00"))v="+"+v.slice(2);else if(/^\d{9}$/.test(v))v="+48"+v;return v}
+const okPhone=p=>/^\+\d{9,15}$/.test(p);
+async function afterLogin(){
+ const a=await SB.from("admins").select("user_id").maybeSingle();
+ if(a.error||!a.data){st("Эта почта не в списке владельцев. Выполните команду добавления владельца в Supabase (см. инструкцию).","bad");$("ad").hidden=true;return}
+ $("lg").hidden=true;$("ad").hidden=false;st("");await loadDrivers();await loadWeeks()}
+async function loadDrivers(){
+ const r=await SB.from("drivers").select("id,name,phone,user_id").order("name");
+ if(r.error){st("Ошибка: "+r.error.message,"bad");return}
+ let h='<table><tr><th>Имя</th><th>Телефон</th><th>Входил</th><th></th></tr>';
+ (r.data||[]).forEach(d=>{h+='<tr><td>'+esc(d.name)+'</td><td>'+esc(d.phone)+'</td><td>'+(d.user_id?"да":"нет")+'</td><td><button class="g" data-del="'+d.id+'">Удалить</button></td></tr>'});
+ h+='</table>';if(!(r.data||[]).length)h='<p class="mut small">Водителей пока нет.</p>';
+ $("dl").innerHTML=h;
+ $("dl").querySelectorAll("[data-del]").forEach(b=>b.onclick=async()=>{if(!b.dataset.arm){b.dataset.arm=1;b.textContent="Точно удалить?";return}
+  const x=await SB.from("drivers").delete().eq("id",b.dataset.del);if(x.error)st("Ошибка: "+x.error.message,"bad");else loadDrivers()})}
+async function loadWeeks(){
+ const r=await SB.from("statements").select("week_start");
+ if(r.error){$("wl").textContent="Ошибка: "+r.error.message;return}
+ const c={};(r.data||[]).forEach(x=>c[x.week_start]=(c[x.week_start]||0)+1);
+ const ks=Object.keys(c).sort().reverse();
+ $("wl").innerHTML=ks.length?ks.map(k=>esc(k)+": водителей "+c[k]).join("<br>"):'<span class="mut">Пока ничего не опубликовано.</span>'}
+$("lf").onsubmit=async e=>{e.preventDefault();st("Входим…");
+ const r=await SB.auth.signInWithPassword({email:$("em").value.trim(),password:$("pw").value});
+ if(r.error){st("Не удалось войти: "+r.error.message,"bad");return}
+ await afterLogin()};
+$("lo").onclick=async()=>{await SB.auth.signOut();location.reload()};
+$("da").onclick=async()=>{const n=$("dn").value.trim(),p=normPhone($("dp").value);
+ if(!n||!okPhone(p)){$("dm").textContent="Введите имя и телефон в формате +48123456789";$("dm").className="small bad";return}
+ const r=await SB.from("drivers").insert({name:n,phone:p});
+ if(r.error){$("dm").textContent=r.error.code==="23505"?"Такой телефон уже есть":"Ошибка: "+r.error.message;$("dm").className="small bad";return}
+ $("dn").value="";$("dp").value="";$("dm").textContent="Добавлен";$("dm").className="small ok";loadDrivers()};
+$("wu").onclick=async()=>{
+ const f=$("wf").files[0];if(!f){$("wr").innerHTML='<span class="bad">Выберите файл недели.</span>';return}
+ $("wr").textContent="Публикуем…";
+ try{
+  const j=JSON.parse(await f.text());
+  if(!/^\d{4}-\d{2}-\d{2}$/.test(j.week||"")||!Array.isArray(j.drivers))throw new Error("Это не файл недели из панели");
+  const skipped=[],bad=[],ok=[];const ps=[];
+  for(const r of j.drivers){const p=normPhone(r.phone);if(!r.phone){skipped.push(r.name);continue}if(!okPhone(p)){bad.push(r.name+" ("+r.phone+")");continue}ps.push({name:r.name,phone:p,data:r.data})}
+  if(ps.length){const u=await SB.from("drivers").upsert(ps.map(x=>({name:x.name,phone:x.phone})),{onConflict:"phone"});if(u.error)throw u.error}
+  const ids=await SB.from("drivers").select("id,phone").in("phone",ps.map(x=>x.phone));if(ids.error)throw ids.error;
+  const map={};ids.data.forEach(d=>map[d.phone]=d.id);
+  const rows=ps.map(x=>({driver_id:map[x.phone],week_start:j.week,data:x.data,published_at:new Date().toISOString()}));
+  if(rows.length){const s=await SB.from("statements").upsert(rows,{onConflict:"driver_id,week_start"});if(s.error)throw s.error}
+  let h='<span class="ok">Опубликовано водителям: '+rows.length+'.</span>';
+  if(skipped.length)h+='<br><span class="bad">Без телефона, не опубликованы: '+skipped.map(esc).join(", ")+'.</span>';
+  if(bad.length)h+='<br><span class="bad">Неверный телефон: '+bad.map(esc).join(", ")+'.</span>';
+  $("wr").innerHTML=h;loadDrivers();loadWeeks()
+ }catch(e){$("wr").innerHTML='<span class="bad">Ошибка: '+esc(e.message||e)+'</span>'}};
+(async()=>{const {data}=await SB.auth.getSession();if(data&&data.session)await afterLogin()})();
+</script>
+</body>
+</html>

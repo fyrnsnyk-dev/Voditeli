@@ -1,0 +1,217 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Расчёты водителя</title>
+<link rel="manifest" href="manifest.webmanifest">
+<meta name="theme-color" content="#ffc629">
+<link rel="icon" href="icon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="icon.svg">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Onest:wght@400;500;600;700&family=Unbounded:wght@500;600&family=Noto+Sans+Georgian:wght@400;600;700&family=Noto+Sans+Devanagari:wght@400;600;700&family=Noto+Sans+Gurmukhi:wght@400;600;700&family=Noto+Naskh+Arabic:wght@400;600;700&display=swap">
+<style>
+
+/* Layout: a single friendly phone column with a language switch on top. Login, then one week at a time: payout hero, where the money went (one bar), where it came from, details on demand. Logical CSS properties so Urdu can run right-to-left. */
+:root{--bg:#edf1ee;--card:#ffffff;--fg:#10241e;--mut:#5a6b64;--bd:#d9e1dc;--hero:#ffc629;--herofg:#10241e;--ink:#10241e;--inkfg:#f2f6f3;--pos:#12805c;--neg:#c8372d;--c1:#12805c;--c2:#10241e;--c3:#e08a00;--c4:#c8372d;--sans:"Onest","Noto Sans Georgian","Noto Sans Devanagari","Noto Sans Gurmukhi","Noto Naskh Arabic",system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;--disp:"Unbounded","Onest",system-ui,sans-serif}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#0b1411;--card:#13201b;--fg:#eef4f0;--mut:#9db0a6;--bd:#26372f;--ink:#eef4f0;--inkfg:#10241e;--pos:#4fd1a0;--neg:#ff8d82;--c1:#4fd1a0;--c2:#9db0a6;--c3:#ffb43a;--c4:#ff8d82;color-scheme:dark}}
+:root[data-theme="dark"]{--bg:#0b1411;--card:#13201b;--fg:#eef4f0;--mut:#9db0a6;--bd:#26372f;--ink:#eef4f0;--inkfg:#10241e;--pos:#4fd1a0;--neg:#ff8d82;--c1:#4fd1a0;--c2:#9db0a6;--c3:#ffb43a;--c4:#ff8d82;color-scheme:dark}
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--fg);font-family:var(--sans);font-size:16px;line-height:1.5;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-block:14px 48px}
+.wrap{max-width:440px;margin:0 auto;display:flex;flex-direction:column;gap:16px}
+.bar0{display:flex;justify-content:space-between;align-items:center;gap:10px}
+.demo{font-size:.76rem;color:var(--mut);flex:1;min-width:0}
+select{font:inherit;font-size:.9rem;color:var(--fg);background:var(--card);border:1px solid var(--bd);border-radius:10px;padding:7px 8px;flex:none;max-width:45%}
+h1{font-size:1.7rem;line-height:1.2;margin:0;text-wrap:balance;font-weight:700}
+h2{font-size:1rem;margin:0 0 10px;font-weight:700}
+p{margin:0}.mut{color:var(--mut)}.small{font-size:.86rem}
+label{display:block;font-weight:600;margin-bottom:6px}
+input{font:inherit;font-size:1.1rem;color:var(--fg);background:var(--bg);border:2px solid var(--bd);border-radius:14px;padding:14px;width:100%}
+input[type=tel],input[inputmode=numeric]{direction:ltr;text-align:start}
+:is(input,button,summary,select):focus-visible{outline:3px solid var(--hero);outline-offset:2px}
+.btn{font:inherit;font-weight:700;font-size:1.05rem;background:var(--hero);color:var(--herofg);border:0;border-radius:14px;padding:15px 16px;width:100%;cursor:pointer}
+.link{background:none;border:0;color:var(--mut);font:inherit;text-decoration:underline;cursor:pointer;padding:8px 0}
+.card{background:var(--card);border-radius:20px;padding:18px}
+.stack{display:flex;flex-direction:column;gap:14px}
+.mark{width:56px;height:56px;border-radius:16px;background:var(--hero);display:grid;place-items:center}
+.top{display:flex;align-items:center;gap:12px}
+.av{width:44px;height:44px;border-radius:50%;background:var(--ink);color:var(--inkfg);display:grid;place-items:center;font-weight:700;flex:none}
+.top .t{flex:1;min-width:0}.top .t b{display:block;font-size:1.1rem}
+.ghost{background:none;border:1px solid var(--bd);border-radius:10px;color:var(--mut);font:inherit;font-size:.85rem;padding:7px 10px;cursor:pointer}
+.wk{display:flex;align-items:center;justify-content:space-between;gap:8px}
+.arrow{width:44px;height:44px;border-radius:50%;border:0;background:var(--card);color:var(--fg);font-size:1.3rem;cursor:pointer;flex:none}
+.arrow:disabled{opacity:.35;cursor:default}
+.wk .mid{text-align:center;min-width:0}.wk .mid b{display:block;font-size:1.05rem;direction:ltr}
+.hero{background:var(--hero);color:var(--herofg);border-radius:24px;padding:22px 20px}
+.hero .lab{font-weight:600;font-size:.95rem;opacity:.8}
+.hero .sum{font-family:var(--disp);font-weight:600;font-size:clamp(2rem,10vw,2.7rem);line-height:1.1;margin-top:6px;font-variant-numeric:tabular-nums;direction:ltr;text-align:start}
+.hero .sum small{font-size:.5em;font-weight:500;margin-inline-start:4px}
+.hero .sub{margin-top:10px;font-size:.92rem;opacity:.85}
+.hero.debt{background:var(--card);color:var(--fg)}
+.hero.debt .sum{color:var(--neg)}
+.bar{display:flex;gap:3px;height:16px;margin:14px 0 12px}
+.bar i{display:block;border-radius:5px;min-width:6px}
+.leg{display:flex;flex-direction:column;gap:2px}
+.li{display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid var(--bd)}
+.li:last-child{border-bottom:0}
+.dot{width:12px;height:12px;border-radius:4px;flex:none}
+.li .nm{flex:1;min-width:0}.li .nm span{display:block}
+.li b{font-variant-numeric:tabular-nums;white-space:nowrap;font-weight:600;direction:ltr}
+.neg{color:var(--neg)}.pos{color:var(--pos)}
+details{border-top:1px solid var(--bd);margin-top:6px}
+summary{cursor:pointer;font-weight:600;padding:12px 0 4px;list-style:none;display:flex;justify-content:space-between;gap:8px}
+summary::-webkit-details-marker{display:none}
+summary::after{content:"+";font-size:1.2rem;color:var(--mut)}
+details[open] summary::after{content:"−"}
+.tw{overflow-x:auto}
+table{width:100%;border-collapse:collapse;font-size:.9rem}
+td,th{padding:6px 0;border-bottom:1px solid var(--bd)}
+th{font-weight:500;color:var(--mut);text-align:end;font-size:.8rem}
+td:first-child,th:first-child{text-align:start}
+td.n{text-align:end;font-variant-numeric:tabular-nums;white-space:nowrap;padding-inline-start:8px;direction:ltr}
+tr:last-child td{border-bottom:0;font-weight:700}
+
+[hidden]{display:none!important}
+body{margin:0}
+</style>
+</head>
+<body>
+
+<div class="wrap">
+  <div class="bar0"><span></span><select id="lang" aria-label="Language"></select></div>
+
+  <section id="login" class="card stack" style="margin-top:6vh">
+    <div class="mark" aria-hidden="true"><svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="#10241e" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 16l1.5-5a2 2 0 0 1 1.9-1.4h7.2a2 2 0 0 1 1.9 1.4L19 16"/><rect x="3" y="16" width="18" height="4" rx="1.5"/><path d="M10 6h4v3h-4z"/></svg></div>
+    <h1 data-i="loginTitle"></h1>
+    <p class="mut" data-i="loginText"></p>
+    <form id="f1" class="stack">
+      <div><label for="ph" data-i="phone"></label><input id="ph" type="tel" inputmode="tel" autocomplete="tel" placeholder="+48 600 000 000"></div>
+      <button class="btn" type="submit" id="b1" data-i="getCode"></button>
+    </form>
+    <form id="f2" class="stack" hidden>
+      <div><label for="cd" data-i="codeLabel"></label><input id="cd" inputmode="numeric" autocomplete="one-time-code" maxlength="8"></div>
+      <button class="btn" type="submit" id="b2" data-i="enter"></button>
+      <button class="link" type="button" id="back" data-i="changeNum"></button>
+    </form>
+    <p class="neg small" id="msg" role="alert"></p>
+    <p class="mut small" data-i="onceNote"></p>
+  </section>
+
+  <main id="app" class="stack" hidden>
+    <div class="top"><div class="av" id="av"></div><div class="t"><span class="mut small" id="hi"></span><b id="who"></b></div><button class="ghost" id="out" data-i="logout"></button></div>
+    <div id="content" class="stack">
+      <div class="wk"><button class="arrow" id="prev"></button><div class="mid"><b id="wl"></b><span class="mut small" id="pub"></span></div><button class="arrow" id="next"></button></div>
+      <div class="hero" id="hero"></div>
+      <div class="card"><h2 data-i="where"></h2><div id="split"></div></div>
+      <div class="card"><h2 data-i="src"></h2><div class="leg" id="src"></div>
+        <details><summary data-i="details"></summary><div class="tw" id="full"></div></details>
+      </div>
+      <div class="card"><h2 data-i="faqTitle"></h2><details><summary data-i="q1"></summary><p class="small" data-i="a1" style="padding-top:8px"></p></details></div>
+      <p class="mut small" data-i="foot" style="text-align:center"></p>
+    </div>
+    <p class="mut" id="empty" hidden></p>
+  </main>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.js"></script>
+<script>
+const L={
+ru:{n:"Русский",demo:"Макет с примерными данными. Имя и суммы выдуманы, ничего не сохраняется.",loginTitle:"Ваши расчёты за неделю",loginText:"Введите номер телефона, который вы дали владельцу парка. Мы пришлём на него код.",phone:"Номер телефона",getCode:"Получить код",codeLabel:"Код из SMS",enter:"Войти",changeNum:"Изменить номер",onceNote:"Код нужен один раз. Потом приложение будет открываться сразу.",g0:"Доброй ночи",g1:"Доброе утро",g2:"Добрый день",g3:"Добрый вечер",logout:"Выйти",prev:"Предыдущая неделя",next:"Следующая неделя",published:"Опубликовано {d}",heroPay:"К выплате за неделю",heroPaySub:"Это сумма после комиссии, аренды и удержаний.",heroDebt:"Долг на следующую неделю",heroDebtSub:"На этой неделе выплаты нет. Долг спишется из заработка следующей недели.",where:"Куда ушли деньги",from:"Из {n} zł, которые пришли на счёт",you:"Вам",fee:"Комиссия парка",feeLow:"90 zł при доходе ниже 1 500 zł",feeStd:"50 zł + 5 % от дохода {x} zł",rent:"Аренда автомобиля",debt:"Долг",zus:"Долг ZUS",carry:"Выплата ZUS",debtNote:"Удержания больше заработка, поэтому на следующую неделю переходит {n} zł.",src:"Откуда они пришли",withCash:"с наличными {n} zł",noIncome:"В эту неделю доходов нет.",details:"Подробный расчёт",gross:"Доход с наличными, всего",invoices:"Фактуры",incBase:"Доход для комиссии",onAcc:"Пришло на счёт",comm:"Комиссия",total:"Итого",foot:"Если сумма не сходится, напишите владельцу парка и назовите неделю.",bar:"Как распределился заработок"},
+uk:{n:"Українська",demo:"Макет із прикладами даних. Ім’я та суми вигадані, нічого не зберігається.",loginTitle:"Ваші розрахунки за тиждень",loginText:"Введіть номер телефону, який ви дали власнику парку. Ми надішлемо на нього код.",phone:"Номер телефону",getCode:"Отримати код",codeLabel:"Код із SMS",enter:"Увійти",changeNum:"Змінити номер",onceNote:"Код потрібен лише раз. Далі застосунок відкриватиметься одразу.",g0:"Доброї ночі",g1:"Доброго ранку",g2:"Добрий день",g3:"Добрий вечір",logout:"Вийти",prev:"Попередній тиждень",next:"Наступний тиждень",published:"Опубліковано {d}",heroPay:"До виплати за тиждень",heroPaySub:"Це сума після комісії, оренди та утримань.",heroDebt:"Борг на наступний тиждень",heroDebtSub:"Цього тижня виплати немає. Борг буде утримано із заробітку наступного тижня.",where:"Куди пішли гроші",from:"Із {n} zł, які надійшли на рахунок",you:"Вам",fee:"Комісія парку",feeLow:"90 zł при доході нижче 1 500 zł",feeStd:"50 zł + 5 % від доходу {x} zł",rent:"Оренда авто",debt:"Борг",zus:"Борг ZUS",carry:"Виплата ZUS",debtNote:"Утримання перевищують заробіток, тому {n} zł переходить на наступний тиждень.",src:"Звідки вони надійшли",withCash:"з готівкою {n} zł",noIncome:"Цього тижня доходів немає.",details:"Повний розрахунок",gross:"Дохід з готівкою, разом",invoices:"Фактури",incBase:"Дохід для комісії",onAcc:"Надійшло на рахунок",comm:"Комісія",total:"Разом",foot:"Якщо сума не сходиться, напишіть власнику парку та вкажіть тиждень.",bar:"Як розподілився заробіток"},
+be:{n:"Беларуская",demo:"Макет з прыкладамі даных. Імя і сумы выдуманыя, нічога не захоўваецца.",loginTitle:"Вашы разлікі за тыдзень",loginText:"Увядзіце нумар тэлефона, які вы далі ўладальніку парка. Мы адправім на яго код.",phone:"Нумар тэлефона",getCode:"Атрымаць код",codeLabel:"Код з SMS",enter:"Увайсці",changeNum:"Змяніць нумар",onceNote:"Код патрэбны толькі адзін раз. Далей праграма будзе адчыняцца адразу.",g0:"Дабранач",g1:"Добрай раніцы",g2:"Добры дзень",g3:"Добры вечар",logout:"Выйсці",prev:"Папярэдні тыдзень",next:"Наступны тыдзень",published:"Апублікавана {d}",heroPay:"Да выплаты за тыдзень",heroPaySub:"Гэта сума пасля камісіі, арэнды і ўтрымання.",heroDebt:"Доўг на наступны тыдзень",heroDebtSub:"У гэты тыдзень выплаты няма. Доўг будзе ўтрыманы з заробку наступнага тыдня.",where:"Куды пайшлі грошы",from:"Са {n} zł, якія паступілі на рахунак",you:"Вам",fee:"Камісія парка",feeLow:"90 zł пры даходзе ніжэй за 1 500 zł",feeStd:"50 zł + 5 % ад даходу {x} zł",rent:"Арэнда аўто",debt:"Доўг",zus:"Доўг ZUS",carry:"Выплата ZUS",debtNote:"Утрыманні большыя за заробак, таму {n} zł пераходзіць на наступны тыдзень.",src:"Адкуль яны паступілі",withCash:"з наяўнымі {n} zł",noIncome:"У гэты тыдзень даходаў няма.",details:"Поўны разлік",gross:"Даход з наяўнымі, разам",invoices:"Фактуры",incBase:"Даход для камісіі",onAcc:"Паступіла на рахунак",comm:"Камісія",total:"Разам",foot:"Калі сума не сыходзіцца, напішыце ўладальніку парка і назавіце тыдзень.",bar:"Як размеркаваўся заробак"},
+pl:{n:"Polski",demo:"Makieta z przykładowymi danymi. Imię i kwoty są zmyślone, nic się nie zapisuje.",loginTitle:"Twoje rozliczenie tygodnia",loginText:"Wpisz numer telefonu, który podałeś właścicielowi floty. Wyślemy na niego kod.",phone:"Numer telefonu",getCode:"Wyślij kod",codeLabel:"Kod z SMS",enter:"Zaloguj",changeNum:"Zmień numer",onceNote:"Kod jest potrzebny tylko raz. Potem aplikacja otworzy się od razu.",g0:"Dobranoc",g1:"Dzień dobry",g2:"Dzień dobry",g3:"Dobry wieczór",logout:"Wyloguj",prev:"Poprzedni tydzień",next:"Następny tydzień",published:"Opublikowano {d}",heroPay:"Do wypłaty za tydzień",heroPaySub:"To kwota po odjęciu prowizji, wynajmu i potrąceń.",heroDebt:"Dług na następny tydzień",heroDebtSub:"W tym tygodniu nie ma wypłaty. Dług zostanie odliczony od zarobku z następnego tygodnia.",where:"Gdzie poszły pieniądze",from:"Z {n} zł, które wpłynęły na konto",you:"Dla Ciebie",fee:"Prowizja floty",feeLow:"90 zł przy dochodzie poniżej 1 500 zł",feeStd:"50 zł + 5% dochodu {x} zł",rent:"Wynajem auta",debt:"Dług",zus:"Dług ZUS",carry:"Wypłata ZUS",debtNote:"Potrącenia są większe niż zarobek, dlatego {n} zł przechodzi na następny tydzień.",src:"Skąd pochodzą",withCash:"z gotówką {n} zł",noIncome:"W tym tygodniu brak dochodów.",details:"Pełne rozliczenie",gross:"Dochód z gotówką, razem",invoices:"Faktury",incBase:"Dochód do prowizji",onAcc:"Wpłynęło na konto",comm:"Prowizja",total:"Razem",foot:"Jeśli kwota się nie zgadza, napisz do właściciela floty i podaj tydzień.",bar:"Podział zarobku"},
+en:{n:"English",demo:"Mock-up with sample data. Name and amounts are made up; nothing is saved.",loginTitle:"Your weekly statement",loginText:"Enter the phone number you gave the fleet owner. We will send you a code.",phone:"Phone number",getCode:"Get code",codeLabel:"SMS code",enter:"Sign in",changeNum:"Change number",onceNote:"You need the code only once. After that the app opens right away.",g0:"Good night",g1:"Good morning",g2:"Good afternoon",g3:"Good evening",logout:"Sign out",prev:"Previous week",next:"Next week",published:"Published {d}",heroPay:"To be paid for the week",heroPaySub:"This is the amount after commission, rent and deductions.",heroDebt:"Debt for next week",heroDebtSub:"No payout this week. The debt will be taken from next week's earnings.",where:"Where the money went",from:"Out of {n} zł received on your account",you:"To you",fee:"Fleet commission",feeLow:"90 zł when income is below 1,500 zł",feeStd:"50 zł + 5% of income {x} zł",rent:"Car rent",debt:"Debt",zus:"ZUS debt",carry:"ZUS payment",debtNote:"Deductions exceed earnings, so {n} zł carries over to next week.",src:"Where it came from",withCash:"incl. cash {n} zł",noIncome:"No income this week.",details:"Full calculation",gross:"Income incl. cash, total",invoices:"Invoices",incBase:"Income for commission",onAcc:"Received on account",comm:"Commission",total:"Total",foot:"If the amount looks wrong, message the fleet owner and name the week.",bar:"How your earnings were split"},
+ka:{n:"ქართული",demo:"მაკეტი სანიმუშო მონაცემებით. სახელი და თანხები გამოგონილია, არაფერი ინახება.",loginTitle:"თქვენი ყოველკვირეული ანგარიში",loginText:"შეიყვანეთ ტელეფონის ნომერი, რომელიც პარკის მფლობელს მიაწოდეთ. ამ ნომერზე კოდს გამოგიგზავნით.",phone:"ტელეფონის ნომერი",getCode:"კოდის მიღება",codeLabel:"SMS კოდი",enter:"შესვლა",changeNum:"ნომრის შეცვლა",onceNote:"კოდი მხოლოდ ერთხელ დაგჭირდებათ. შემდეგ აპლიკაცია პირდაპირ გაიხსნება.",g0:"ღამე მშვიდობისა",g1:"დილა მშვიდობისა",g2:"დღე მშვიდობისა",g3:"საღამო მშვიდობისა",logout:"გასვლა",prev:"წინა კვირა",next:"შემდეგი კვირა",published:"გამოქვეყნდა {d}",heroPay:"კვირის გადასახდელი",heroPaySub:"ეს თანხა კომისიის, ქირისა და დაკავებების შემდეგ არის.",heroDebt:"ვალი შემდეგი კვირისთვის",heroDebtSub:"ამ კვირაში გადახდა არ არის. ვალი შემდეგი კვირის შემოსავლიდან დაკავდება.",where:"სად წავიდა ფული",from:"ანგარიშზე შემოსული {n} zł-დან",you:"თქვენ",fee:"პარკის კომისია",feeLow:"90 zł, როცა შემოსავალი 1 500 zł-ზე ნაკლებია",feeStd:"50 zł + შემოსავლის {x} zł-ის 5 %",rent:"მანქანის ქირა",debt:"ვალი",zus:"ZUS-ის ვალი",carry:"ZUS-ის გადახდა",debtNote:"დაკავებები შემოსავალს აღემატება, ამიტომ {n} zł შემდეგ კვირაში გადადის.",src:"საიდან შემოვიდა",withCash:"ნაღდით {n} zł",noIncome:"ამ კვირაში შემოსავალი არ არის.",details:"სრული გაანგარიშება",gross:"შემოსავალი ნაღდით, სულ",invoices:"ფაქტურები",incBase:"შემოსავალი კომისიისთვის",onAcc:"ანგარიშზე შემოვიდა",comm:"კომისია",total:"ჯამი",foot:"თუ თანხა არ ემთხვევა, მიწერეთ პარკის მფლობელს და მიუთითეთ კვირა.",bar:"როგორ გადანაწილდა შემოსავალი"},
+hi:{n:"हिन्दी",demo:"नमूना डेटा के साथ मॉकअप। नाम और राशियाँ काल्पनिक हैं, कुछ भी सेव नहीं होता।",loginTitle:"आपका साप्ताहिक हिसाब",loginText:"वह फ़ोन नंबर दर्ज करें जो आपने फ़्लीट मालिक को दिया है। हम उस पर कोड भेजेंगे।",phone:"फ़ोन नंबर",getCode:"कोड पाएँ",codeLabel:"SMS कोड",enter:"लॉग इन करें",changeNum:"नंबर बदलें",onceNote:"कोड सिर्फ़ एक बार चाहिए। उसके बाद ऐप सीधे खुलेगा।",g0:"शुभ रात्रि",g1:"सुप्रभात",g2:"नमस्कार",g3:"शुभ संध्या",logout:"लॉग आउट",prev:"पिछला सप्ताह",next:"अगला सप्ताह",published:"प्रकाशित {d}",heroPay:"इस सप्ताह का भुगतान",heroPaySub:"यह कमीशन, किराया और कटौती के बाद की राशि है।",heroDebt:"अगले सप्ताह के लिए बकाया",heroDebtSub:"इस सप्ताह कोई भुगतान नहीं है। बकाया अगले सप्ताह की कमाई से काटा जाएगा।",where:"पैसा कहाँ गया",from:"खाते में आए {n} zł में से",you:"आपको",fee:"फ़्लीट कमीशन",feeLow:"आय 1 500 zł से कम होने पर 90 zł",feeStd:"50 zł + आय {x} zł का 5 %",rent:"गाड़ी का किराया",debt:"बकाया",zus:"ZUS बकाया",carry:"ZUS भुगतान",debtNote:"कटौती कमाई से ज़्यादा है, इसलिए {n} zł अगले सप्ताह में जाएगा।",src:"पैसा कहाँ से आया",withCash:"नक़द सहित {n} zł",noIncome:"इस सप्ताह कोई आय नहीं।",details:"पूरा हिसाब",gross:"नक़द सहित आय, कुल",invoices:"इनवॉइस",incBase:"कमीशन के लिए आय",onAcc:"खाते में आया",comm:"कमीशन",total:"कुल",foot:"अगर राशि सही नहीं लगे, तो फ़्लीट मालिक को लिखें और सप्ताह बताएँ।",bar:"कमाई का बँटवारा"},
+pa:{n:"ਪੰਜਾਬੀ",demo:"ਨਮੂਨਾ ਡਾਟਾ ਨਾਲ ਮੌਕਅੱਪ। ਨਾਮ ਅਤੇ ਰਕਮਾਂ ਕਾਲਪਨਿਕ ਹਨ, ਕੁਝ ਵੀ ਸੇਵ ਨਹੀਂ ਹੁੰਦਾ।",loginTitle:"ਤੁਹਾਡਾ ਹਫ਼ਤਾਵਾਰੀ ਹਿਸਾਬ",loginText:"ਉਹ ਫ਼ੋਨ ਨੰਬਰ ਦਰਜ ਕਰੋ ਜੋ ਤੁਸੀਂ ਫ਼ਲੀਟ ਮਾਲਕ ਨੂੰ ਦਿੱਤਾ ਸੀ। ਅਸੀਂ ਉਸ ਉੱਤੇ ਕੋਡ ਭੇਜਾਂਗੇ।",phone:"ਫ਼ੋਨ ਨੰਬਰ",getCode:"ਕੋਡ ਪ੍ਰਾਪਤ ਕਰੋ",codeLabel:"SMS ਕੋਡ",enter:"ਲੌਗ ਇਨ ਕਰੋ",changeNum:"ਨੰਬਰ ਬਦਲੋ",onceNote:"ਕੋਡ ਸਿਰਫ਼ ਇੱਕ ਵਾਰ ਚਾਹੀਦਾ ਹੈ। ਇਸ ਤੋਂ ਬਾਅਦ ਐਪ ਸਿੱਧਾ ਖੁੱਲ੍ਹੇਗੀ।",g0:"ਸ਼ੁਭ ਰਾਤਰੀ",g1:"ਸ਼ੁਭ ਸਵੇਰ",g2:"ਸਤਿ ਸ੍ਰੀ ਅਕਾਲ",g3:"ਸ਼ੁਭ ਸ਼ਾਮ",logout:"ਲੌਗ ਆਊਟ",prev:"ਪਿਛਲਾ ਹਫ਼ਤਾ",next:"ਅਗਲਾ ਹਫ਼ਤਾ",published:"ਪ੍ਰਕਾਸ਼ਿਤ {d}",heroPay:"ਇਸ ਹਫ਼ਤੇ ਦੀ ਅਦਾਇਗੀ",heroPaySub:"ਇਹ ਕਮਿਸ਼ਨ, ਕਿਰਾਏ ਅਤੇ ਕਟੌਤੀਆਂ ਤੋਂ ਬਾਅਦ ਦੀ ਰਕਮ ਹੈ।",heroDebt:"ਅਗਲੇ ਹਫ਼ਤੇ ਲਈ ਬਕਾਇਆ",heroDebtSub:"ਇਸ ਹਫ਼ਤੇ ਕੋਈ ਅਦਾਇਗੀ ਨਹੀਂ ਹੈ। ਬਕਾਇਆ ਅਗਲੇ ਹਫ਼ਤੇ ਦੀ ਕਮਾਈ ਵਿੱਚੋਂ ਕੱਟਿਆ ਜਾਵੇਗਾ।",where:"ਪੈਸਾ ਕਿੱਥੇ ਗਿਆ",from:"ਖਾਤੇ ਵਿੱਚ ਆਏ {n} zł ਵਿੱਚੋਂ",you:"ਤੁਹਾਨੂੰ",fee:"ਫ਼ਲੀਟ ਕਮਿਸ਼ਨ",feeLow:"ਆਮਦਨ 1 500 zł ਤੋਂ ਘੱਟ ਹੋਣ ਤੇ 90 zł",feeStd:"50 zł + ਆਮਦਨ {x} zł ਦਾ 5 %",rent:"ਗੱਡੀ ਦਾ ਕਿਰਾਇਆ",debt:"ਬਕਾਇਆ",zus:"ZUS ਬਕਾਇਆ",carry:"ZUS ਅਦਾਇਗੀ",debtNote:"ਕਟੌਤੀਆਂ ਕਮਾਈ ਤੋਂ ਵੱਧ ਹਨ, ਇਸ ਲਈ {n} zł ਅਗਲੇ ਹਫ਼ਤੇ ਵਿੱਚ ਜਾਵੇਗਾ।",src:"ਪੈਸਾ ਕਿੱਥੋਂ ਆਇਆ",withCash:"ਨਕਦ ਸਮੇਤ {n} zł",noIncome:"ਇਸ ਹਫ਼ਤੇ ਕੋਈ ਆਮਦਨ ਨਹੀਂ।",details:"ਪੂਰਾ ਹਿਸਾਬ",gross:"ਨਕਦ ਸਮੇਤ ਆਮਦਨ, ਕੁੱਲ",invoices:"ਇਨਵੌਇਸ",incBase:"ਕਮਿਸ਼ਨ ਲਈ ਆਮਦਨ",onAcc:"ਖਾਤੇ ਵਿੱਚ ਆਇਆ",comm:"ਕਮਿਸ਼ਨ",total:"ਕੁੱਲ",foot:"ਜੇ ਰਕਮ ਠੀਕ ਨਾ ਲੱਗੇ, ਤਾਂ ਫ਼ਲੀਟ ਮਾਲਕ ਨੂੰ ਲਿਖੋ ਅਤੇ ਹਫ਼ਤਾ ਦੱਸੋ।",bar:"ਕਮਾਈ ਦੀ ਵੰਡ"},
+ur:{n:"اردو",rtl:1,demo:"نمونہ ڈیٹا کے ساتھ ماڈل۔ نام اور رقوم فرضی ہیں، کچھ بھی محفوظ نہیں ہوتا۔",loginTitle:"آپ کا ہفتہ وار حساب",loginText:"وہ فون نمبر درج کریں جو آپ نے فلیٹ کے مالک کو دیا تھا۔ ہم اس پر کوڈ بھیجیں گے۔",phone:"فون نمبر",getCode:"کوڈ حاصل کریں",codeLabel:"SMS کوڈ",enter:"لاگ اِن کریں",changeNum:"نمبر تبدیل کریں",onceNote:"کوڈ صرف ایک بار درکار ہے۔ اس کے بعد ایپ سیدھی کھل جائے گی۔",g0:"شب بخیر",g1:"صبح بخیر",g2:"السلام علیکم",g3:"شام بخیر",logout:"لاگ آؤٹ",prev:"پچھلا ہفتہ",next:"اگلا ہفتہ",published:"شائع شدہ {d}",heroPay:"اس ہفتے کی ادائیگی",heroPaySub:"یہ کمیشن، کرائے اور کٹوتیوں کے بعد کی رقم ہے۔",heroDebt:"اگلے ہفتے کے لیے بقایا",heroDebtSub:"اس ہفتے کوئی ادائیگی نہیں ہے۔ بقایا اگلے ہفتے کی کمائی سے کاٹا جائے گا۔",where:"پیسہ کہاں گیا",from:"اکاؤنٹ میں آئے {n} zł میں سے",you:"آپ کو",fee:"فلیٹ کمیشن",feeLow:"آمدنی 1 500 zł سے کم ہونے پر 90 zł",feeStd:"50 zł + آمدنی {x} zł کا 5 %",rent:"گاڑی کا کرایہ",debt:"بقایا",zus:"ZUS بقایا",carry:"ZUS ادائیگی",debtNote:"کٹوتیاں کمائی سے زیادہ ہیں، اس لیے {n} zł اگلے ہفتے میں منتقل ہوں گے۔",src:"پیسہ کہاں سے آیا",withCash:"نقد سمیت {n} zł",noIncome:"اس ہفتے کوئی آمدنی نہیں۔",details:"مکمل حساب",gross:"نقد سمیت آمدنی، کل",invoices:"انوائس",incBase:"کمیشن کے لیے آمدنی",onAcc:"اکاؤنٹ میں آیا",comm:"کمیشن",total:"کل",foot:"اگر رقم درست نہ لگے تو فلیٹ کے مالک کو لکھیں اور ہفتہ بتائیں۔",bar:"کمائی کی تقسیم"}
+};
+const F={
+ru:{faqTitle:"Частые вопросы",q1:"Заказ есть в приложении Uber, но в расчёте его нет. Почему?",a1:"Заказы, которые вы выполнили в Uber в ночь с воскресенья на понедельник, примерно с 00:00 до 04:00, могут зачисляться позже. Такие поездки не попадают в расчёт этой недели. Они приходят позже как корректировки: на следующей неделе или даже через неделю. Когда это произойдёт, они появятся в вашем кабинете в расчёте той недели, в которой пришли деньги. Ничего терять и делать не нужно: заказ не пропал, Uber просто платит за него с задержкой."},
+uk:{faqTitle:"Часті запитання",q1:"Замовлення є в застосунку Uber, а в розрахунку його немає. Чому?",a1:"Замовлення, які ви виконали в Uber у ніч із неділі на понеділок, приблизно з 00:00 до 04:00, можуть зараховуватися пізніше. Такі поїздки не потрапляють у розрахунок цього тижня. Вони приходять згодом як коригування: наступного тижня або навіть через тиждень. Коли це станеться, вони з’являться у вашому кабінеті в розрахунку того тижня, коли надійшли гроші. Нічого втрачати чи робити не потрібно: замовлення не зникло, Uber просто платить за нього із затримкою."},
+be:{faqTitle:"Частыя пытанні",q1:"Заказ ёсць у праграме Uber, а ў разліку яго няма. Чаму?",a1:"Заказы, якія вы выканалі ў Uber у ноч з нядзелі на панядзелак, прыкладна з 00:00 да 04:00, могуць залічвацца пазней. Такія паездкі не трапляюць у разлік гэтага тыдня. Яны прыходзяць пазней як карэкціроўкі: на наступным тыдні або нават праз тыдзень. Калі гэта адбудзецца, яны з’явяцца ў вашым кабінеце ў разліку таго тыдня, калі паступілі грошы. Нічога губляць ці рабіць не трэба: заказ не знік, Uber проста плаціць за яго з затрымкай."},
+pl:{faqTitle:"Najczęstsze pytania",q1:"Zamówienie jest w aplikacji Uber, a w rozliczeniu go nie ma. Dlaczego?",a1:"Zamówienia wykonane w Uber w nocy z niedzieli na poniedziałek, mniej więcej od 00:00 do 04:00, mogą zostać zaksięgowane później. Takie przejazdy nie trafiają do rozliczenia tego tygodnia. Przychodzą później jako korekty: w następnym tygodniu, a czasem dopiero za tydzień. Gdy to nastąpi, pojawią się w Twoim koncie w rozliczeniu tygodnia, w którym wpłynęły pieniądze. Nic nie przepada i nic nie musisz robić: zamówienie nie zniknęło, Uber po prostu płaci za nie z opóźnieniem."},
+en:{faqTitle:"Common questions",q1:"An order shows in the Uber app but not in my statement. Why?",a1:"Orders you completed in Uber on the night from Sunday to Monday, roughly 00:00 to 04:00, can be credited later. Those trips are not in this week's statement. They arrive later as adjustments: next week or even the week after. When that happens they will show in your account, in the statement for the week the money arrived. Nothing is lost and you do not need to do anything: the order has not disappeared, Uber just pays for it with a delay."},
+ka:{faqTitle:"ხშირი კითხვები",q1:"შეკვეთა Uber-ის აპლიკაციაში ჩანს, მაგრამ ანგარიშში არ არის. რატომ?",a1:"შეკვეთები, რომლებიც Uber-ში კვირიდან ორშაბათზე გადასულ ღამეს, დაახლოებით 00:00-დან 04:00-მდე შეასრულეთ, შეიძლება მოგვიანებით ჩაირიცხოს. ასეთი მგზავრობები ამ კვირის ანგარიშში არ მოხვდება. ისინი მოგვიანებით მოდის კორექტირების სახით: მომდევნო კვირას ან კიდევ ერთი კვირის შემდეგ. როცა ეს მოხდება, ისინი თქვენს კაბინეტში გამოჩნდება იმ კვირის ანგარიშში, როცა თანხა შემოვიდა. არაფერი იკარგება და არაფრის გაკეთება არ გჭირდებათ: შეკვეთა არ გამქრალა, Uber მას უბრალოდ დაგვიანებით იხდის."},
+hi:{faqTitle:"अक्सर पूछे जाने वाले सवाल",q1:"ऑर्डर Uber ऐप में दिख रहा है, लेकिन हिसाब में नहीं है। ऐसा क्यों?",a1:"रविवार से सोमवार की रात, लगभग 00:00 से 04:00 बजे के बीच, Uber में जो ऑर्डर आपने पूरे किए, उनका पैसा देर से जमा हो सकता है। ऐसी सवारियाँ इस सप्ताह के हिसाब में नहीं आतीं। वे बाद में सुधार (adjustment) के रूप में आती हैं: अगले सप्ताह या उससे अगले सप्ताह भी। जब ऐसा होगा, तो वे आपके कैबिनेट में उस सप्ताह के हिसाब में दिखेंगी जिसमें पैसा आया। कुछ भी खोता नहीं है और आपको कुछ करना नहीं है: ऑर्डर गायब नहीं हुआ, Uber बस उसका भुगतान देर से करता है।"},
+pa:{faqTitle:"ਅਕਸਰ ਪੁੱਛੇ ਜਾਂਦੇ ਸਵਾਲ",q1:"ਆਰਡਰ Uber ਐਪ ਵਿੱਚ ਦਿਸਦਾ ਹੈ, ਪਰ ਹਿਸਾਬ ਵਿੱਚ ਨਹੀਂ ਹੈ। ਕਿਉਂ?",a1:"ਐਤਵਾਰ ਤੋਂ ਸੋਮਵਾਰ ਦੀ ਰਾਤ, ਲਗਭਗ 00:00 ਤੋਂ 04:00 ਵਜੇ ਤੱਕ, Uber ਵਿੱਚ ਜੋ ਆਰਡਰ ਤੁਸੀਂ ਪੂਰੇ ਕੀਤੇ, ਉਨ੍ਹਾਂ ਦਾ ਪੈਸਾ ਦੇਰ ਨਾਲ ਜਮ੍ਹਾਂ ਹੋ ਸਕਦਾ ਹੈ। ਅਜਿਹੀਆਂ ਸਵਾਰੀਆਂ ਇਸ ਹਫ਼ਤੇ ਦੇ ਹਿਸਾਬ ਵਿੱਚ ਨਹੀਂ ਆਉਂਦੀਆਂ। ਉਹ ਬਾਅਦ ਵਿੱਚ ਸੋਧ (adjustment) ਵਜੋਂ ਆਉਂਦੀਆਂ ਹਨ: ਅਗਲੇ ਹਫ਼ਤੇ ਜਾਂ ਉਸ ਤੋਂ ਅਗਲੇ ਹਫ਼ਤੇ ਵੀ। ਜਦੋਂ ਅਜਿਹਾ ਹੋਵੇਗਾ, ਉਹ ਤੁਹਾਡੇ ਕੈਬਿਨੇਟ ਵਿੱਚ ਉਸ ਹਫ਼ਤੇ ਦੇ ਹਿਸਾਬ ਵਿੱਚ ਦਿਖਣਗੀਆਂ ਜਿਸ ਵਿੱਚ ਪੈਸਾ ਆਇਆ। ਕੁਝ ਵੀ ਗੁੰਮ ਨਹੀਂ ਹੁੰਦਾ ਅਤੇ ਤੁਹਾਨੂੰ ਕੁਝ ਕਰਨ ਦੀ ਲੋੜ ਨਹੀਂ: ਆਰਡਰ ਗਾਇਬ ਨਹੀਂ ਹੋਇਆ, Uber ਇਸ ਦਾ ਭੁਗਤਾਨ ਸਿਰਫ਼ ਦੇਰ ਨਾਲ ਕਰਦਾ ਹੈ।"},
+ur:{faqTitle:"عام سوالات",q1:"آرڈر Uber ایپ میں نظر آتا ہے مگر حساب میں نہیں ہے۔ کیوں؟",a1:"اتوار سے پیر کی رات، تقریباً 00:00 سے 04:00 بجے کے درمیان، Uber میں جو آرڈر آپ نے مکمل کیے، ان کی رقم دیر سے جمع ہو سکتی ہے۔ ایسی سواریاں اس ہفتے کے حساب میں شامل نہیں ہوتیں۔ وہ بعد میں ایڈجسٹمنٹ کے طور پر آتی ہیں: اگلے ہفتے یا اس سے اگلے ہفتے بھی۔ جب ایسا ہو گا تو وہ آپ کے کیبنٹ میں اس ہفتے کے حساب میں نظر آئیں گی جس میں رقم آئی۔ کچھ ضائع نہیں ہوتا اور آپ کو کچھ کرنے کی ضرورت نہیں: آرڈر غائب نہیں ہوا، Uber بس اس کی ادائیگی دیر سے کرتا ہے۔"}};
+Object.keys(F).forEach(k=>Object.assign(L[k],F[k]));
+
+const E={
+ru:{errPhone:"Введите номер в формате +48123456789",errNotFound:"Этот номер не зарегистрирован. Обратитесь к владельцу парка.",errCode:"Неверный или просроченный код. Запросите новый.",errNet:"Нет связи или сервис недоступен. Попробуйте ещё раз.",nodata:"Пока нет опубликованных недель. Расчёт появится, когда владелец парка его опубликует.",sending:"Отправляем…"},
+en:{errPhone:"Enter the number like +48123456789",errNotFound:"This number is not registered. Contact the fleet owner.",errCode:"Wrong or expired code. Request a new one.",errNet:"No connection or the service is unavailable. Try again.",nodata:"No weeks published yet. Your statement will appear once the fleet owner publishes it.",sending:"Sending…"},
+pl:{errPhone:"Wpisz numer w formacie +48123456789",errNotFound:"Ten numer nie jest zarejestrowany. Skontaktuj się z właścicielem floty.",errCode:"Zły lub wygasły kod. Poproś o nowy.",errNet:"Brak połączenia lub usługa niedostępna. Spróbuj ponownie.",nodata:"Nie opublikowano jeszcze żadnego tygodnia. Rozliczenie pojawi się, gdy właściciel floty je opublikuje.",sending:"Wysyłamy…"},
+uk:{errPhone:"Введіть номер у форматі +48123456789",errNotFound:"Цей номер не зареєстровано. Зверніться до власника парку.",errCode:"Невірний або прострочений код. Запросіть новий.",errNet:"Немає зв’язку або сервіс недоступний. Спробуйте ще раз.",nodata:"Поки немає опублікованих тижнів. Розрахунок з’явиться, коли власник парку його опублікує.",sending:"Надсилаємо…"}};
+Object.keys(E).forEach(k=>Object.assign(L[k],E[k]));
+
+const SU="https://qehwfuwpcphqixukjbtz.supabase.co",SK="sb_publishable_U8NLOMPpkToIXkQ-ddYg1A_T6iEx9yM";
+const SB=supabase.createClient(SU,SK);
+const $=id=>document.getElementById(id);
+const fm=n=>new Intl.NumberFormat("pl-PL",{minimumFractionDigits:2,maximumFractionDigits:2}).format(Math.round((+n||0)*100)/100);
+let lg="ru",cur=0,weeks=[],me=null,phone="";
+try{const s=localStorage.getItem("lang");if(s&&L[s])lg=s;else{const b=(navigator.language||"ru").slice(0,2).toLowerCase();lg=L[b]?b:"en"}}catch(e){}
+const T=(k,v)=>{let s=(L[lg][k]!==undefined?L[lg][k]:L.en[k])||k;if(v)for(const x in v)s=s.replace("{"+x+"}",v[x]);return s};
+$("lang").innerHTML=Object.keys(L).map(k=>'<option value="'+k+'">'+L[k].n+'</option>').join("");
+const msg=t=>{$("msg").textContent=t||""};
+function normPhone(s){let v=String(s).replace(/[^\d+]/g,"");if(v.startsWith("00"))v="+"+v.slice(2);else if(/^\d{9}$/.test(v))v="+48"+v;return v}
+function stat(){const rtl=!!L[lg].rtl;document.documentElement.lang=lg;document.documentElement.dir=rtl?"rtl":"ltr";$("lang").value=lg;
+document.querySelectorAll("[data-i]").forEach(e=>e.textContent=T(e.dataset.i));
+$("prev").textContent=rtl?"›":"‹";$("next").textContent=rtl?"‹":"›";$("prev").setAttribute("aria-label",T("prev"));$("next").setAttribute("aria-label",T("next"));
+if(!$("app").hidden){greet();draw()}}
+function greet(){const h=new Date().getHours();$("hi").textContent=T(h<5?"g0":h<12?"g1":h<17?"g2":"g3")}
+const p2=n=>String(n).padStart(2,"0");
+function draw(){if(!weeks.length){$("content").hidden=true;$("empty").hidden=false;$("empty").textContent=T("nodata");return}$("content").hidden=false;$("empty").hidden=true;show(cur)}
+function show(i){cur=i;const w=weeks[i],d=w.data||{};
+const x={bolt:d.bolt||[0,0],uber:d.uber||[0,0],fn:d.fn||[0,0],inv:+d.inv||0,rent:+d.rent||0,debt:+d.debt||0,zus:+d.zus||0,carry:+d.carry||0};
+const c={g:+d.g||0,n:+d.n||0,inc:+d.inc||0,fee:+d.fee||0,tot:+d.tot||0};
+const pd=new Date(w.published_at);
+$("wl").textContent=d.w||w.week_start;$("pub").textContent=T("published",{d:p2(pd.getDate())+"."+p2(pd.getMonth()+1)+", "+p2(pd.getHours())+":"+p2(pd.getMinutes())});
+$("prev").disabled=i>=weeks.length-1;$("next").disabled=i<=0;
+const h=c.tot>=0;
+$("hero").className="hero"+(h?"":" debt");
+$("hero").innerHTML=h?'<div class="lab">'+T("heroPay")+'</div><div class="sum">'+fm(c.tot)+'<small>zł</small></div><div class="sub">'+T("heroPaySub")+'</div>':'<div class="lab">'+T("heroDebt")+'</div><div class="sum">'+fm(-c.tot)+'<small>zł</small></div><div class="sub">'+T("heroDebtSub")+'</div>';
+const note=d.std?(c.inc<1500?T("feeLow"):T("feeStd",{x:fm(c.inc)})):"";
+const dd=[[T("fee"),c.fee,"var(--c2)",note],[T("rent"),-x.rent,"var(--c3)",""],[T("debt"),-x.debt,"var(--c4)",""],[T("zus"),-x.zus,"var(--c4)",""],[T("carry"),-x.carry,"var(--c4)",""]].filter(r=>r[1]>0);
+const seg=[[T("you"),Math.max(0,c.tot),"var(--c1)","",1]].concat(dd).filter(r=>r[1]>0);
+let s="";
+if(c.n>0){s+='<p class="mut small">'+T("from",{n:fm(c.n)})+'</p><div class="bar" role="img" aria-label="'+T("bar")+'">'+seg.map(r=>'<i style="flex-grow:'+r[1]+';background:'+r[2]+'"></i>').join("")+'</div>'}
+s+='<div class="leg">'+seg.map(r=>'<div class="li"><span class="dot" style="background:'+r[2]+'"></span><div class="nm"><span>'+r[0]+'</span>'+(r[3]?'<span class="mut small">'+r[3]+'</span>':'')+'</div><b>'+(r[4]?'':'−')+fm(r[1])+'</b></div>').join("")+'</div>';
+if(c.tot<0)s+='<p class="small mut" style="margin-top:8px">'+T("debtNote",{n:fm(-c.tot)})+'</p>';
+$("split").innerHTML=s;
+const pl=[["Bolt","#34d186",x.bolt],["Uber","#10241e",x.uber],["FreeNow","#e0457b",x.fn]].filter(p=>p[2][0]||p[2][1]);
+$("src").innerHTML=pl.map(p=>'<div class="li"><span class="dot" style="background:'+p[1]+'"></span><div class="nm"><span>'+p[0]+'</span><span class="mut small">'+T("withCash",{n:fm(p[2][0])})+'</span></div><b class="'+(p[2][1]<0?'neg':'')+'">'+fm(p[2][1])+'</b></div>').join("")||'<p class="mut small">'+T("noIncome")+'</p>';
+const R=(a,b,cl)=>'<tr><td>'+a+'</td><td class="n '+(cl||'')+'">'+b+'</td></tr>';
+$("full").innerHTML='<table><tr><th></th><th>zł</th></tr>'+R(T("gross"),fm(c.g))+R(T("invoices"),x.inv?"−"+fm(x.inv):"0,00")+R(T("incBase"),fm(c.inc))+R(T("onAcc"),fm(c.n))+R(T("comm"),fm(-c.fee),"neg")+R(T("rent"),fm(x.rent),x.rent<0?"neg":"")+R(T("debt"),fm(x.debt),x.debt<0?"neg":"")+R(T("zus"),fm(x.zus))+R(T("carry"),fm(x.carry))+R(T("total"),fm(c.tot),c.tot<0?"neg":"pos")+'</table>'}
+function showLogin(){$("app").hidden=true;$("login").hidden=false;$("f1").hidden=false;$("f2").hidden=true;$("b1").disabled=false;$("b2").disabled=false}
+async function enter(){
+ try{await SB.rpc("claim_driver");
+ const r1=await SB.from("drivers").select("id,name").maybeSingle();
+ if(r1.error)throw r1.error;
+ if(!r1.data){await SB.auth.signOut();showLogin();msg(T("errNotFound"));return}
+ me=r1.data;
+ const r2=await SB.from("statements").select("week_start,published_at,data").order("week_start",{ascending:false});
+ if(r2.error)throw r2.error;weeks=r2.data||[];
+ $("login").hidden=true;$("app").hidden=false;$("who").textContent=me.name;$("av").textContent=me.name.split(/\s+/).map(w=>w[0]).join("").slice(0,2).toUpperCase();greet();cur=0;draw();msg("")
+ }catch(e){showLogin();msg(T("errNet"))}}
+$("lang").onchange=()=>{lg=$("lang").value;try{localStorage.setItem("lang",lg)}catch(e){}stat()};
+$("f1").onsubmit=async e=>{e.preventDefault();msg("");phone=normPhone($("ph").value);
+ if(!/^\+\d{9,15}$/.test(phone)){msg(T("errPhone"));return}
+ $("b1").disabled=true;msg(T("sending"));
+ const {error}=await SB.auth.signInWithOtp({phone});
+ $("b1").disabled=false;
+ if(error){msg(error.status===403||/зарегистрирован|not allowed|not registered|hook/i.test(error.message||"")?T("errNotFound"):T("errNet"));return}
+ msg("");$("f1").hidden=true;$("f2").hidden=false;$("cd").focus()};
+$("back").onclick=()=>{msg("");$("f2").hidden=true;$("f1").hidden=false};
+$("f2").onsubmit=async e=>{e.preventDefault();msg("");$("b2").disabled=true;
+ const {error}=await SB.auth.verifyOtp({phone,token:$("cd").value.trim(),type:"sms"});
+ $("b2").disabled=false;
+ if(error){msg(T("errCode"));return}
+ await enter()};
+$("out").onclick=async()=>{await SB.auth.signOut();weeks=[];me=null;$("cd").value="";showLogin()};
+$("prev").onclick=()=>show(cur+1);$("next").onclick=()=>show(cur-1);
+stat();
+(async()=>{const {data}=await SB.auth.getSession();if(data&&data.session)await enter();else showLogin()})();
+
+</script>
+</body>
+</html>
