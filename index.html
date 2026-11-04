@@ -173,6 +173,9 @@ Object.keys(E2).forEach(k=>Object.assign(L[k],E2[k]));
 
 
 const SU="https://qehwfuwpcphqixukjbtz.supabase.co",SK="sb_publishable_U8NLOMPpkToIXkQ-ddYg1A_T6iEx9yM";
+const VER="v3";
+window.addEventListener("error",e=>{const m=document.getElementById("msg");if(m)m.textContent="JS error "+VER+": "+(e.message||"")});
+if(typeof supabase==="undefined"){document.addEventListener("DOMContentLoaded",()=>{const m=document.getElementById("msg");if(m)m.textContent="Library not loaded ("+VER+"): cdn.jsdelivr.net blocked or offline"})}
 const SB=supabase.createClient(SU,SK);
 const $=id=>document.getElementById(id);
 const fm=n=>new Intl.NumberFormat("pl-PL",{minimumFractionDigits:2,maximumFractionDigits:2}).format(Math.round((+n||0)*100)/100);
@@ -274,7 +277,7 @@ $("f1").onsubmit=async e=>{e.preventDefault();msg("");phone=normPhone($("ph").va
  $("b1").disabled=true;msg(T("sending"));
  const {error}=await SB.auth.signInWithOtp({phone});
  $("b1").disabled=false;
- if(error){const det=" ["+(error.status||"")+" "+(error.code||"")+" "+(error.message||"")+"]";msg((error.status===403||/зарегистрирован|not allowed|not registered|hook/i.test(error.message||"")?T("errNotFound"):T("errNet"))+det);return}
+ if(error){const det=" ["+VER+" "+(error.status||"")+" "+(error.code||"")+" "+(error.message||"")+"]";msg((error.status===403||/зарегистрирован|not allowed|not registered|hook/i.test(error.message||"")?T("errNotFound"):T("errNet"))+det);return}
  msg("");$("f1").hidden=true;$("f2").hidden=false;$("cd").focus()};
 $("back").onclick=()=>{msg("");$("f2").hidden=true;$("f1").hidden=false};
 $("f2").onsubmit=async e=>{e.preventDefault();msg("");$("b2").disabled=true;
