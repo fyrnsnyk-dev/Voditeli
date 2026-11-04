@@ -122,7 +122,7 @@ body{margin:0}
         <h2 data-i="invTitle"></h2>
         <p class="mut small" data-i="invHelp"></p>
         <div><label for="im" data-i="invMonth"></label><input id="im" type="month"></div>
-        <div><label for="if" data-i="invPick"></label><input id="if" type="file" accept="image/*,application/pdf"></div>
+        <div><label data-i="invPick"></label><input id="if" type="file" accept="image/*,application/pdf" hidden><label class="btn" for="if" id="ifb" style="display:block;text-align:center;background:var(--ink);color:var(--inkfg)" data-i="invChoose"></label><p class="small mut" id="ifn" style="margin-top:6px"></p></div>
         <div><label for="ia" data-i="invAmount"></label><input id="ia" inputmode="decimal"></div>
         <div><label for="in" data-i="invNote"></label><input id="in"></div>
         <button class="btn" id="isend" data-i="invSend"></button>
@@ -166,15 +166,15 @@ pl:{errPhone:"Wpisz numer w formacie +48123456789",errNotFound:"Ten numer nie je
 uk:{errPhone:"Введіть номер у форматі +48123456789",errNotFound:"Цей номер не зареєстровано. Зверніться до власника парку.",errCode:"Невірний або прострочений код. Запросіть новий.",errNet:"Немає зв’язку або сервіс недоступний. Спробуйте ще раз.",nodata:"Поки немає опублікованих тижнів. Розрахунок з’явиться, коли власник парку його опублікує.",sending:"Надсилаємо…"}};
 Object.keys(E).forEach(k=>Object.assign(L[k],E[k]));
 const E2={
-ru:{tabStat:"Расчёты",tabInv:"Фактуры",invTitle:"Загрузить фактуру или чек",invHelp:"Сфотографируйте фактуру целиком, при хорошем свете, чтобы весь текст читался. Можно выбрать фото из галереи или PDF.",invMonth:"Месяц",invPick:"Фото или файл",invAmount:"Сумма, zł (необязательно)",invNote:"Комментарий (необязательно)",invSend:"Отправить",invSending:"Отправляем…",invOk:"Фактура отправлена.",invDup:"Эта фактура уже загружена.",invSmall:"Фото слишком мелкое. Снимите ближе и при хорошем свете.",invBig:"Файл больше 10 МБ.",invNoFile:"Сначала выберите фото или файл.",invErr:"Не удалось отправить. Попробуйте ещё раз.",invList:"Загружено за выбранный месяц",invNone:"Пока ничего нет.",stNew:"Получено",stOk:"Принято",stBad:"Нужна другая"},
-en:{tabStat:"Statement",tabInv:"Invoices",invTitle:"Upload an invoice or receipt",invHelp:"Photograph the whole invoice in good light so all the text is readable. You can pick a photo from the gallery or a PDF.",invMonth:"Month",invPick:"Photo or file",invAmount:"Amount, zł (optional)",invNote:"Comment (optional)",invSend:"Send",invSending:"Sending…",invOk:"Invoice sent.",invDup:"This invoice has already been uploaded.",invSmall:"The photo is too small. Take it closer and in good light.",invBig:"The file is larger than 10 MB.",invNoFile:"Choose a photo or file first.",invErr:"Could not send. Try again.",invList:"Uploaded for the selected month",invNone:"Nothing yet.",stNew:"Received",stOk:"Accepted",stBad:"Send another"},
-pl:{tabStat:"Rozliczenie",tabInv:"Faktury",invTitle:"Prześlij fakturę lub paragon",invHelp:"Sfotografuj całą fakturę przy dobrym świetle, żeby cały tekst był czytelny. Możesz wybrać zdjęcie z galerii lub PDF.",invMonth:"Miesiąc",invPick:"Zdjęcie lub plik",invAmount:"Kwota, zł (opcjonalnie)",invNote:"Komentarz (opcjonalnie)",invSend:"Wyślij",invSending:"Wysyłamy…",invOk:"Faktura wysłana.",invDup:"Ta faktura została już przesłana.",invSmall:"Zdjęcie jest za małe. Zrób bliżej i przy dobrym świetle.",invBig:"Plik jest większy niż 10 MB.",invNoFile:"Najpierw wybierz zdjęcie lub plik.",invErr:"Nie udało się wysłać. Spróbuj ponownie.",invList:"Przesłane w wybranym miesiącu",invNone:"Na razie nic nie ma.",stNew:"Otrzymano",stOk:"Przyjęto",stBad:"Potrzebna inna"},
-uk:{tabStat:"Розрахунки",tabInv:"Фактури",invTitle:"Завантажити фактуру або чек",invHelp:"Сфотографуйте фактуру повністю, за гарного освітлення, щоб увесь текст читався. Можна вибрати фото з галереї або PDF.",invMonth:"Місяць",invPick:"Фото або файл",invAmount:"Сума, zł (необов’язково)",invNote:"Коментар (необов’язково)",invSend:"Надіслати",invSending:"Надсилаємо…",invOk:"Фактуру надіслано.",invDup:"Цю фактуру вже завантажено.",invSmall:"Фото занадто мале. Знімайте ближче й за гарного освітлення.",invBig:"Файл більший за 10 МБ.",invNoFile:"Спершу виберіть фото або файл.",invErr:"Не вдалося надіслати. Спробуйте ще раз.",invList:"Завантажено за вибраний місяць",invNone:"Поки нічого немає.",stNew:"Отримано",stOk:"Прийнято",stBad:"Потрібна інша"}};
+ru:{invChoose:"Выбрать фото или файл",invNoSel:"Файл не выбран",tabStat:"Расчёты",tabInv:"Фактуры",invTitle:"Загрузить фактуру или чек",invHelp:"Сфотографируйте фактуру целиком, при хорошем свете, чтобы весь текст читался. Можно выбрать фото из галереи или PDF.",invMonth:"Месяц",invPick:"Фото или файл",invAmount:"Сумма, zł (необязательно)",invNote:"Комментарий (необязательно)",invSend:"Отправить",invSending:"Отправляем…",invOk:"Фактура отправлена.",invDup:"Эта фактура уже загружена.",invSmall:"Фото слишком мелкое. Снимите ближе и при хорошем свете.",invBig:"Файл больше 10 МБ.",invNoFile:"Сначала выберите фото или файл.",invErr:"Не удалось отправить. Попробуйте ещё раз.",invList:"Загружено за выбранный месяц",invNone:"Пока ничего нет.",stNew:"Получено",stOk:"Принято",stBad:"Нужна другая"},
+en:{invChoose:"Choose photo or file",invNoSel:"No file chosen",tabStat:"Statement",tabInv:"Invoices",invTitle:"Upload an invoice or receipt",invHelp:"Photograph the whole invoice in good light so all the text is readable. You can pick a photo from the gallery or a PDF.",invMonth:"Month",invPick:"Photo or file",invAmount:"Amount, zł (optional)",invNote:"Comment (optional)",invSend:"Send",invSending:"Sending…",invOk:"Invoice sent.",invDup:"This invoice has already been uploaded.",invSmall:"The photo is too small. Take it closer and in good light.",invBig:"The file is larger than 10 MB.",invNoFile:"Choose a photo or file first.",invErr:"Could not send. Try again.",invList:"Uploaded for the selected month",invNone:"Nothing yet.",stNew:"Received",stOk:"Accepted",stBad:"Send another"},
+pl:{invChoose:"Wybierz zdjęcie lub plik",invNoSel:"Nie wybrano pliku",tabStat:"Rozliczenie",tabInv:"Faktury",invTitle:"Prześlij fakturę lub paragon",invHelp:"Sfotografuj całą fakturę przy dobrym świetle, żeby cały tekst był czytelny. Możesz wybrać zdjęcie z galerii lub PDF.",invMonth:"Miesiąc",invPick:"Zdjęcie lub plik",invAmount:"Kwota, zł (opcjonalnie)",invNote:"Komentarz (opcjonalnie)",invSend:"Wyślij",invSending:"Wysyłamy…",invOk:"Faktura wysłana.",invDup:"Ta faktura została już przesłana.",invSmall:"Zdjęcie jest za małe. Zrób bliżej i przy dobrym świetle.",invBig:"Plik jest większy niż 10 MB.",invNoFile:"Najpierw wybierz zdjęcie lub plik.",invErr:"Nie udało się wysłać. Spróbuj ponownie.",invList:"Przesłane w wybranym miesiącu",invNone:"Na razie nic nie ma.",stNew:"Otrzymano",stOk:"Przyjęto",stBad:"Potrzebna inna"},
+uk:{invChoose:"Вибрати фото або файл",invNoSel:"Файл не вибрано",tabStat:"Розрахунки",tabInv:"Фактури",invTitle:"Завантажити фактуру або чек",invHelp:"Сфотографуйте фактуру повністю, за гарного освітлення, щоб увесь текст читався. Можна вибрати фото з галереї або PDF.",invMonth:"Місяць",invPick:"Фото або файл",invAmount:"Сума, zł (необов’язково)",invNote:"Коментар (необов’язково)",invSend:"Надіслати",invSending:"Надсилаємо…",invOk:"Фактуру надіслано.",invDup:"Цю фактуру вже завантажено.",invSmall:"Фото занадто мале. Знімайте ближче й за гарного освітлення.",invBig:"Файл більший за 10 МБ.",invNoFile:"Спершу виберіть фото або файл.",invErr:"Не вдалося надіслати. Спробуйте ще раз.",invList:"Завантажено за вибраний місяць",invNone:"Поки нічого немає.",stNew:"Отримано",stOk:"Прийнято",stBad:"Потрібна інша"}};
 Object.keys(E2).forEach(k=>Object.assign(L[k],E2[k]));
 
 
 const SU="https://qehwfuwpcphqixukjbtz.supabase.co",SK="sb_publishable_U8NLOMPpkToIXkQ-ddYg1A_T6iEx9yM";
-const VER="v4";
+const VER="v7";
 window.addEventListener("error",e=>{const m=document.getElementById("msg");if(m)m.textContent="JS error "+VER+": "+(e.message||"")});
 if(typeof supabase==="undefined"){document.addEventListener("DOMContentLoaded",()=>{const m=document.getElementById("msg");if(m)m.textContent="Library not loaded ("+VER+"): cdn.jsdelivr.net blocked or offline"})}
 const SB=supabase.createClient(SU,SK);
@@ -201,7 +201,8 @@ $("wl").textContent=d.w||w.week_start;$("pub").textContent=T("published",{d:p2(p
 $("prev").disabled=i>=weeks.length-1;$("next").disabled=i<=0;
 const h=c.tot>=0;
 $("hero").className="hero"+(h?"":" debt");
-$("hero").innerHTML=h?'<div class="lab">'+T("heroPay")+'</div><div class="sum">'+fm(c.tot)+'<small>zł</small></div><div class="sub">'+T("heroPaySub")+'</div>':'<div class="lab">'+T("heroDebt")+'</div><div class="sum">'+fm(-c.tot)+'<small>zł</small></div><div class="sub">'+T("heroDebtSub")+'</div>';
+const gz=x.carry>0?'<div style="margin-top:12px;display:flex;justify-content:space-between;align-items:center;gap:12px;background:#fff;color:var(--pos);border-radius:14px;padding:10px 14px;font-weight:700"><span>+ '+T("carry")+'</span><span style="direction:ltr;white-space:nowrap">'+fm(x.carry)+' zł</span></div>':'';
+$("hero").innerHTML=h?'<div class="lab">'+T("heroPay")+'</div><div class="sum">'+fm(c.tot)+'<small>zł</small></div><div class="sub">'+T("heroPaySub")+'</div>'+gz:'<div class="lab">'+T("heroDebt")+'</div><div class="sum">'+fm(-c.tot)+'<small>zł</small></div><div class="sub">'+T("heroDebtSub")+'</div>'+gz;
 const note=d.std?(c.inc<1500?T("feeLow"):T("feeStd",{x:fm(c.inc)})):"";
 const dd=[[T("fee"),c.fee,"var(--c2)",note],[T("rent"),-x.rent,"var(--c3)",""],[T("debt"),-x.debt,"var(--c4)",""],[T("zus"),-x.zus,"var(--c4)",""],[T("carry"),-x.carry,"var(--c4)",""]].filter(r=>r[1]>0);
 const seg=[[T("you"),Math.max(0,c.tot),"var(--c1)","",1]].concat(dd).filter(r=>r[1]>0);
@@ -217,7 +218,7 @@ $("full").innerHTML='<table><tr><th></th><th>zł</th></tr>'+R(T("gross"),fm(c.g)
 
 let tab="s";
 function setTab(t){tab=t;$("tS").setAttribute("aria-pressed",t==="s");$("tI").setAttribute("aria-pressed",t==="i");draw()}
-$("tS").onclick=()=>setTab("s");$("tI").onclick=()=>setTab("i");
+$("tS").onclick=()=>setTab("s");$("tI").onclick=()=>{location.href="faktury.html"};
 const nowM=()=>{const d=new Date();return d.getFullYear()+"-"+p2(d.getMonth()+1)};
 $("im").value=nowM();
 const imsg=(t,bad)=>{$("imsg").textContent=t||"";$("imsg").className="small msgb "+(bad?"neg":"pos")};
@@ -254,7 +255,7 @@ $("isend").onclick=async()=>{
   const a=pn($("ia").value);
   const ins=await SB.from("invoices").insert({driver_id:me.id,month:m,path,file_hash:hash,amount:isNaN(a)?null:a,note:$("in").value.trim()||null});
   if(ins.error){if(ins.error.code==="23505"){imsg(T("invDup"),1);return}throw ins.error}
-  imsg(T("invOk"));$("if").value="";$("ia").value="";$("in").value="";loadInv()
+  imsg(T("invOk"));$("if").value="";$("ifn").textContent=T("invNoSel");$("ia").value="";$("in").value="";loadInv()
  }catch(e){imsg(e&&e.code==="small"?T("invSmall"):T("invErr"),1)}
  finally{$("isend").disabled=false}};
 function pn(s){const v=parseFloat(String(s).replace(",",".").replace(/[^\d.\-]/g,""));return v}
@@ -280,6 +281,7 @@ $("f1").onsubmit=async e=>{e.preventDefault();msg("");phone=normPhone($("ph").va
  $("b1").disabled=false;
  if(error){const det=" ["+VER+" "+(error.status||"")+" "+(error.code||"")+" "+(error.message||"")+"]";msg((error.status===403||/зарегистрирован|not allowed|not registered|hook/i.test(error.message||"")?T("errNotFound"):T("errNet"))+det);return}
  msg("");$("f1").hidden=true;$("f2").hidden=false;$("cd").focus()};
+$("if").onchange=()=>{const f=$("if").files[0];$("ifn").textContent=f?f.name:T("invNoSel")};
 $("have").onclick=()=>{msg("");phone=normPhone($("ph").value);if(!/^\+\d{9,15}$/.test(phone)){msg(T("errPhone"));return}$("f1").hidden=true;$("f2").hidden=false;$("cd").focus()};
 $("back").onclick=()=>{msg("");$("f2").hidden=true;$("f1").hidden=false};
 $("f2").onsubmit=async e=>{e.preventDefault();msg("");$("b2").disabled=true;

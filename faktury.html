@@ -1,0 +1,1776 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Фактуры</title>
+<style>
+  :root { --bg:#f4f5f7; --card:#fff; --text:#1d2129; --muted:#6b7280; --accent:#1f6feb;
+          --ok:#1a7f37; --warn:#b26b00; --bad:#c62828; --line:#e3e6ea; }
+  * { box-sizing:border-box; }
+  body { margin:0; background:var(--bg); color:var(--text);
+         font:16px/1.4 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif; }
+  header { display:flex; justify-content:space-between; align-items:center;
+           padding:12px 16px; background:var(--card); border-bottom:1px solid var(--line);
+           position:sticky; top:0; z-index:2; }
+  header h1 { font-size:18px; margin:0; }
+  main { max-width:520px; margin:0 auto; padding:16px; }
+  .card { background:var(--card); border-radius:14px; padding:16px; margin-bottom:16px;
+          box-shadow:0 1px 3px rgba(0,0,0,.06); }
+  .hidden { display:none !important; }
+  h2 { font-size:17px; margin:0 0 12px; }
+  label { display:block; font-size:14px; color:var(--muted); margin:12px 0 4px; }
+  input, select, button { font:inherit; }
+  input[type=text], input[type=email], input[type=password], input[type=date], select {
+    width:100%; padding:12px; border:1px solid var(--line); border-radius:10px; background:#fff; }
+  .btn { display:block; width:100%; padding:14px; border:0; border-radius:12px;
+         background:var(--accent); color:#fff; font-weight:600; cursor:pointer; margin-top:12px; }
+  .btn.secondary { background:#e8eefc; color:var(--accent); }
+  .btn:disabled { opacity:.5; cursor:default; }
+  .row2 { display:grid; grid-template-columns:1fr 1fr; gap:10px; }
+  .row2 .btn { margin-top:0; }
+  .msg { padding:10px 12px; border-radius:10px; margin-top:12px; font-size:15px; }
+  .msg.ok { background:#e6f4ea; color:var(--ok); }
+  .msg.bad { background:#fdecea; color:var(--bad); }
+  .msg.info { background:#eef2f7; color:var(--text); }
+  #preview { width:100%; max-height:360px; object-fit:contain; border-radius:10px;
+             background:#eee; margin-top:12px; }
+  .small { font-size:13px; color:var(--muted); }
+  .check { display:flex; gap:10px; align-items:flex-start; margin-top:14px; font-size:15px; color:var(--text); }
+  .check input { width:22px; height:22px; margin:0; flex:none; }
+  .inv { display:flex; justify-content:space-between; gap:8px; padding:10px 0; border-bottom:1px solid var(--line); }
+  .inv:last-child { border-bottom:0; }
+  .badge { font-size:12px; padding:3px 8px; border-radius:999px; white-space:nowrap; align-self:flex-start; }
+  .badge.pending { background:#fff4e0; color:var(--warn); }
+  .badge.accepted { background:#e6f4ea; color:var(--ok); }
+  .badge.rejected { background:#fdecea; color:var(--bad); }
+  .linkbtn { background:none; border:0; color:var(--accent); cursor:pointer; padding:0; font-size:14px; }
+</style>
+</head>
+<body>
+<header>
+  <h1 data-t="title">Фактуры</h1><a href="index.html" style="margin-inline-start:auto;margin-inline-end:10px;font-weight:600;color:inherit">← Расчёты / Rozliczenia</a>
+  <select id="lang" aria-label="Language" style="width:auto;padding:6px 8px"><option value="pl">Polski</option><option value="ru">Русский</option><option value="uk">Українська</option><option value="be">Беларуская</option><option value="en">English</option><option value="ka">ქართული</option><option value="pa">ਪੰਜਾਬੀ</option><option value="hi">हिन्दी</option><option value="ur">اردو</option></select>
+</header>
+
+<main>
+  <!-- Настройка подключения (показывается, если ключи не вписаны в файл) -->
+  <section id="setupBox" class="card hidden">
+    <h2>Подключение к Supabase</h2>
+    <div class="small">Supabase → Settings → API. Вставьте два значения один раз — они запомнятся на этом устройстве.</div>
+    <label>Project URL</label><input id="cfgUrl" type="text" placeholder="https://xxxx.supabase.co">
+    <label>anon / publishable key</label><input id="cfgKey" type="text" placeholder="eyJ... или sb_publishable_...">
+    <button class="btn" id="cfgSave">Сохранить</button>
+    <div id="cfgMsg"></div>
+  </section>
+
+  <section id="fatalBox" class="card hidden"><div id="fatalMsg" class="msg bad"></div></section>
+
+  <!-- ВРЕМЕННЫЙ вход для теста (потом заменим на вход по SMS) -->
+  <section id="loginBox" class="card hidden">
+    <h2 data-t="login">Вход</h2>
+    <label>Email</label><input id="email" type="email" autocomplete="username" autocapitalize="none" autocorrect="off" spellcheck="false">
+    <label data-t="password">Пароль</label><input id="password" type="password" autocomplete="current-password" autocapitalize="none" autocorrect="off" spellcheck="false">
+    <button class="btn" id="loginBtn" data-t="signin">Войти</button>
+    <div id="loginMsg"></div>
+    <button class="linkbtn" id="resetCfg" style="margin-top:12px">Изменить URL и ключ</button>
+  </section>
+
+  <section id="noDriver" class="card hidden">
+    <div class="msg bad" data-t="notLinked">Ваш вход не привязан к водителю. Обратитесь к владельцу.</div>
+    <button class="linkbtn" id="logout1" data-t="logout">Выйти</button>
+  </section>
+
+  <section id="uploadBox" class="card hidden">
+    <h2 data-t="newInvoice">Новая фактура</h2>
+    <div class="msg info" style="margin:0 0 12px" data-t="acceptedDocs">Принимаются: фактура, парагон с NIP фирмы, подтверждение с QR-кодом KSeF. Чек с терминала, подтверждение оплаты или перевода, WZ, асигната — не принимаются.</div>
+    <div class="row2">
+      <button class="btn" id="camBtn" data-t="takePhoto">📷 Сфотографировать</button>
+      <button class="btn secondary" id="galBtn" data-t="fromGallery">🖼 Из галереи / PDF</button>
+    </div>
+    <button class="btn secondary" id="qrBtn" data-t="scanQr">🔳 Сканировать только QR-код KSeF</button>
+    <div class="small" data-t="scanQrHint">Для фактур с QR-кодом KSeF: снимите крупно только QR-код.</div>
+    <input id="camInput" type="file" accept="image/*" capture="environment" class="hidden">
+    <input id="qrInput" type="file" accept="image/*" capture="environment" class="hidden">
+    <input id="galInput" type="file" accept="image/*,application/pdf" class="hidden">
+
+    <div id="fileMsg"></div>
+    <img id="preview" class="hidden" alt="">
+    <div id="sizeInfo" class="small"></div>
+
+    <div id="formFields" class="hidden">
+      <div id="qrFound" class="msg ok hidden"></div>
+      <div id="docRow">
+      <label data-t="docType">Документ</label>
+      <select id="docType">
+        <option value="faktura" data-t="docFaktura">Фактура</option>
+        <option value="paragon" data-t="docParagon">Парагон с NIP фирмы</option>
+        <option value="inny" data-t="docOther">Другой документ — фактура в KSeF</option>
+      </select>
+      </div>
+      <div id="otherHint" class="msg info hidden" data-t="otherHint"></div>
+      <div id="paragonHint" class="msg info hidden" data-t="paragonHint">Парагон принимается только если на нём напечатан NIP нашей фирмы.</div>
+      <label data-t="amount">Сумма брутто, zł *</label>
+      <input id="amount" type="text" inputmode="decimal" placeholder="250,00">
+      <label id="nipLabel" data-t="nip">NIP продавца *</label>
+      <input id="sellerNip" type="text" inputmode="numeric">
+      <div id="sellerInfo" class="small"></div>
+      <label data-t="category">За что *</label>
+      <select id="category">
+        <option value="fuel" data-t="catFuel">Топливо</option>
+        <option value="parts" data-t="catParts">Автозапчасти, ремонт</option>
+        <option value="other" data-t="catOther">Химчистка, электроника, другое</option>
+      </select>
+      <div id="numRow">
+        <label id="numLabel" data-t="number">Номер фактуры</label>
+        <input id="invNumber" type="text">
+        <div id="numHint" class="small hidden" data-t="numAuto"></div>
+      </div>
+      <div id="dateRow" class="hidden">
+        <label data-t="date">Дата документа *</label>
+        <input id="invDate" type="date">
+      </div>
+      <div class="check" id="fullRow"><input id="fullVisible" type="checkbox">
+        <span data-t="fullVisible">Вся фактура видна целиком и текст читается</span></div>
+      <button class="btn" id="sendBtn" data-t="send">Отправить</button>
+    </div>
+    <div id="sendMsg"></div>
+  </section>
+
+  <section id="listBox" class="card hidden">
+    <h2 data-t="myInvoices">Мои фактуры</h2>
+    <div id="list"></div>
+    <button class="linkbtn" id="logout2" data-t="logout" style="margin-top:12px">Выйти</button>
+  </section>
+</main>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.js"></script>
+<script>
+// =================== НАСТРОЙКИ ===================
+const SUPABASE_URL = 'https://qehwfuwpcphqixukjbtz.supabase.co';   // Settings → API → Project URL
+const SUPABASE_KEY = 'sb_publishable_U8NLOMPpkToIXkQ-ddYg1A_T6iEx9yM';      // Settings → API → anon / publishable key
+const BUCKET = 'invoices';
+const MAX_TRIES = 4;   // сколько раз водитель должен переснять, прежде чем появится «Отправить всё равно»
+const FIRM_NIP = '5833530463';   // NIP вашей фирмы (получатель), 10 цифр — подставляется автоматически
+
+// Пороги проверки качества (можно подстроить после тестов)
+const MIN_LONG_SIDE = 1000;   // px оригинала — меньше = слишком мелко
+const MIN_SHARPNESS = 95;     // резкость самых чётких краёв текста; у чётких фото 130+, у размытых до ~70
+const MIN_BRIGHT = 55, MAX_BRIGHT = 245; // слишком темно / пересвечено
+const TARGET_LONG_SIDE = 1800;           // размер после сжатия
+const TARGET_BYTES = 300 * 1024;         // цель ~150–300 КБ
+const MAX_BYTES = 1024 * 1024;           // лимит хранилища 1 МБ
+// =================================================
+
+const T = {
+"ru": {
+"title": "Фактуры",
+"login": "Вход",
+"password": "Пароль",
+"signin": "Войти",
+"logout": "Выйти",
+"notLinked": "Ваш вход не привязан к водителю. Обратитесь к владельцу.",
+"newInvoice": "Новый документ",
+"acceptedDocs": "Только расходы на автомобиль. Принимаются: фактура, парагон с NIP фирмы, подтверждение транзакции (фактура в KSeF). Не принимаются: чек с терминала, подтверждение оплаты или перевода, WZ, асигната, KP.",
+"takePhoto": "📷 Сфотографировать",
+"fromGallery": "🖼 Из галереи / PDF",
+"scanQr": "🔳 Сканировать QR-код KSeF",
+"scanQrHint": "Для фактур с QR-кодом KSeF: снимите крупно только QR-код.",
+"docType": "Документ",
+"docFaktura": "Фактура",
+"docParagon": "Парагон с NIP фирмы",
+"docOther": "Подтверждение транзакции (фактура в KSeF)",
+"otherHint": "Документ, по которому сама фактура выставлена в KSeF (например, «Potwierdzenie transakcji», спецификация). Владелец сверит его с KSeF.",
+"paragonHint": "Парагон принимается только если на нём напечатан NIP нашей фирмы.",
+"amount": "Сумма брутто, zł *",
+"number": "Номер фактуры",
+"numOpt": "Номер фактуры",
+"numOther": "Номер фактуры",
+"date": "Дата документа *",
+"enterDate": "Не удалось прочитать дату с фото. Введите дату документа вручную.",
+"category": "За что *",
+"catFuel": "Топливо",
+"catParts": "Автозапчасти, ремонт",
+"catCleaning": "Химчистка",
+"catElectronics": "Электроника",
+"catOther": "Химчистка, электроника, другое",
+"nip": "NIP продавца *",
+"sellerIs": "Продавец: ",
+"fullVisible": "Документ виден целиком, текст читается",
+"send": "Отправить",
+"sendAnyway": "Отправить всё равно",
+"myInvoices": "Мои документы",
+"checking": "Проверяем фото…",
+"tooSmall": "Фото слишком маленькое. Сфотографируйте ближе камерой телефона.",
+"blurry": "Фото размыто. Переснимите: держите телефон неподвижно, дождитесь фокуса.",
+"dark": "Слишком темно. Переснимите при хорошем свете.",
+"bright": "Фото пересвечено (блик). Переснимите без вспышки.",
+"badFile": "Не удалось открыть файл. Попробуйте другое фото.",
+"pdfBig": "PDF больше 1 МБ.",
+"qualityOk": "Фото чёткое ✓ Остальное проверим при отправке.",
+"fillAll": "Заполните все поля со звёздочкой и поставьте галочку.",
+"badNip": "NIP продавца неверный: проверьте 10 цифр.",
+"paragonCamera": "Парагон нужно сфотографировать камерой прямо сейчас (не из галереи).",
+"verifying": "Сверяем данные с фото…",
+"notFound": "На фото не нашлось:",
+"f_seller": "NIP продавца",
+"f_buyer": "NIP нашей фирмы",
+"f_amount": "сумма",
+"f_date": "дата",
+"fixOrSend": "Проверьте и исправьте. Если всё верно — нажмите «Отправить всё равно».",
+"tryOf": "Попытка {n} из {m}. Переснимите фото или исправьте данные.",
+"retake": "📷 Переснять фото",
+"retakeHint": "Введённые данные сохранятся.",
+"vatChecking": "Проверяем NIP в реестре…",
+"vatNotFound": "NIP продавца не найден в реестре плательщиков VAT",
+"vatInactive": "Продавец не активен в реестре VAT",
+"notInvoice": "Это не фактура и не парагон ({x}). Такие документы не принимаются.",
+"notCar": "Покупки в «{x}» не компенсируются — только расходы на автомобиль.",
+"notCarItems": "На документе есть товары не для автомобиля ({x}). Такой документ не принимается — попросите отдельную фактуру.",
+"qrNone": "QR-код не найден. Снимите ближе, чтобы QR-код занимал большую часть кадра.",
+"qrNotKsef": "Это не QR-код KSeF. Сфотографируйте весь документ кнопкой «Сфотографировать».",
+"qrNext": "Фактура KSeF ✓ NIP продавца: {nip}, дата: {date}.<br><b>Теперь сфотографируйте весь документ</b> — сумма на нём должна совпасть с той, что вы введёте.",
+"qrDocBtn": "📷 Сфотографировать документ",
+"qrOk": "Фактура KSeF ✓ NIP продавца: {nip}, дата: {date}.",
+"sending": "Отправляем…",
+"sent": "Документ отправлен ✓ Владелец проверит его.",
+"sentAuto": "Документ принят ✓ Все проверки пройдены.",
+"sentKsef": "Документ отправлен ✓ Владелец сверит его с фактурой в KSeF.",
+"duplicate": "Этот документ уже был отправлен.",
+"sendErr": "Ошибка отправки: ",
+"pending": "на проверке",
+"accepted": "принят",
+"rejected": "отклонён",
+"empty": "Пока нет документов.",
+"loginErr": "Неверный email или пароль.",
+"netErr": "Нет связи с сервером. Проверьте интернет и попробуйте снова.",
+"noConn": "Нет подключения к серверу.",
+"noText": "На фото не видно текста документа. Сфотографируйте фактуру или парагон целиком.",
+"numAuto": "Считан с фото — проверьте и при необходимости исправьте.",
+"rj_notCar": "Не расходы на автомобиль",
+"rj_unreadable": "Фото нечитаемое — отправьте заново",
+"rj_wrongData": "Неверные данные (сумма, NIP или дата)",
+"rj_noFirmNip": "На документе нет NIP нашей фирмы",
+"rj_notInvoice": "Это не фактура",
+"rj_notInKsef": "Фактуры нет в KSeF"
+},
+"pl": {
+"title": "Faktury",
+"login": "Logowanie",
+"password": "Hasło",
+"signin": "Zaloguj",
+"logout": "Wyloguj",
+"notLinked": "Twoje konto nie jest przypisane do kierowcy. Skontaktuj się z właścicielem.",
+"newInvoice": "Nowy dokument",
+"acceptedDocs": "Tylko wydatki na samochód. Przyjmujemy: fakturę, paragon z NIP firmy, potwierdzenie transakcji (faktura w KSeF). Nie przyjmujemy: wydruku z terminala, potwierdzenia płatności lub przelewu, WZ, asygnaty, KP.",
+"takePhoto": "📷 Zrób zdjęcie",
+"fromGallery": "🖼 Z galerii / PDF",
+"scanQr": "🔳 Skanuj kod QR KSeF",
+"scanQrHint": "Dla faktur z kodem QR KSeF: sfotografuj z bliska tylko kod QR.",
+"docType": "Dokument",
+"docFaktura": "Faktura",
+"docParagon": "Paragon z NIP firmy",
+"docOther": "Potwierdzenie transakcji (faktura w KSeF)",
+"otherHint": "Dokument, do którego faktura została wystawiona w KSeF (np. „Potwierdzenie transakcji”, specyfikacja). Właściciel sprawdzi go w KSeF.",
+"paragonHint": "Paragon jest przyjmowany tylko z wydrukowanym NIP-em naszej firmy.",
+"amount": "Kwota brutto, zł *",
+"number": "Numer faktury",
+"numOpt": "Numer faktury",
+"numOther": "Numer faktury",
+"date": "Data dokumentu *",
+"enterDate": "Nie udało się odczytać daty ze zdjęcia. Wpisz datę dokumentu ręcznie.",
+"category": "Za co *",
+"catFuel": "Paliwo",
+"catParts": "Części, naprawa",
+"catCleaning": "Czyszczenie (pranie)",
+"catElectronics": "Elektronika",
+"catOther": "Pranie, elektronika, inne",
+"nip": "NIP sprzedawcy *",
+"sellerIs": "Sprzedawca: ",
+"fullVisible": "Cały dokument jest widoczny i czytelny",
+"send": "Wyślij",
+"sendAnyway": "Wyślij mimo to",
+"myInvoices": "Moje dokumenty",
+"checking": "Sprawdzamy zdjęcie…",
+"tooSmall": "Zdjęcie za małe. Zrób zdjęcie aparatem z bliska.",
+"blurry": "Zdjęcie rozmazane. Zrób je ponownie, trzymaj telefon nieruchomo.",
+"dark": "Za ciemno. Zrób zdjęcie przy dobrym świetle.",
+"bright": "Zdjęcie prześwietlone. Zrób je bez lampy.",
+"badFile": "Nie udało się otworzyć pliku. Spróbuj inne zdjęcie.",
+"pdfBig": "PDF większy niż 1 MB.",
+"qualityOk": "Zdjęcie ostre ✓ Resztę sprawdzimy przy wysyłaniu.",
+"fillAll": "Wypełnij wszystkie pola z gwiazdką i zaznacz pole.",
+"badNip": "Błędny NIP sprzedawcy: sprawdź 10 cyfr.",
+"paragonCamera": "Paragon trzeba sfotografować aparatem teraz (nie z galerii).",
+"verifying": "Porównujemy dane ze zdjęciem…",
+"notFound": "Na zdjęciu nie znaleziono:",
+"f_seller": "NIP sprzedawcy",
+"f_buyer": "NIP naszej firmy",
+"f_amount": "kwota",
+"f_date": "data",
+"fixOrSend": "Sprawdź i popraw. Jeśli wszystko jest dobrze — naciśnij „Wyślij mimo to”.",
+"tryOf": "Próba {n} z {m}. Zrób zdjęcie ponownie lub popraw dane.",
+"retake": "📷 Zrób zdjęcie ponownie",
+"retakeHint": "Wpisane dane zostaną zachowane.",
+"vatChecking": "Sprawdzamy NIP w wykazie…",
+"vatNotFound": "NIP sprzedawcy nie występuje w wykazie podatników VAT",
+"vatInactive": "Sprzedawca nie jest czynnym podatnikiem VAT",
+"notInvoice": "To nie jest faktura ani paragon ({x}). Takie dokumenty nie są przyjmowane.",
+"notCar": "Zakupy w „{x}” nie są zwracane — tylko wydatki na samochód.",
+"notCarItems": "Na dokumencie są towary niezwiązane z samochodem ({x}). Dokument nie jest przyjmowany — poproś o osobną fakturę.",
+"qrNone": "Nie znaleziono kodu QR. Zrób zdjęcie bliżej, aby kod zajmował większość kadru.",
+"qrNotKsef": "To nie jest kod QR KSeF. Sfotografuj cały dokument przyciskiem „Zrób zdjęcie”.",
+"qrNext": "Faktura KSeF ✓ NIP sprzedawcy: {nip}, data: {date}.<br><b>Teraz sfotografuj cały dokument</b> — kwota musi się zgadzać z wpisaną.",
+"qrDocBtn": "📷 Sfotografuj dokument",
+"qrOk": "Faktura KSeF ✓ NIP sprzedawcy: {nip}, data: {date}.",
+"sending": "Wysyłanie…",
+"sent": "Dokument wysłany ✓ Właściciel go sprawdzi.",
+"sentAuto": "Dokument przyjęty ✓ Wszystkie kontrole przeszły.",
+"sentKsef": "Dokument wysłany ✓ Właściciel sprawdzi fakturę w KSeF.",
+"duplicate": "Ten dokument został już wysłany.",
+"sendErr": "Błąd wysyłania: ",
+"pending": "do sprawdzenia",
+"accepted": "przyjęty",
+"rejected": "odrzucony",
+"empty": "Brak dokumentów.",
+"loginErr": "Błędny email lub hasło.",
+"netErr": "Brak połączenia z serwerem. Sprawdź internet i spróbuj ponownie.",
+"noConn": "Brak połączenia z serwerem.",
+"noText": "Na zdjęciu nie widać tekstu dokumentu. Sfotografuj całą fakturę lub paragon.",
+"numAuto": "Odczytany ze zdjęcia — sprawdź i w razie potrzeby popraw.",
+"rj_notCar": "To nie są wydatki na samochód",
+"rj_unreadable": "Nieczytelne zdjęcie — wyślij ponownie",
+"rj_wrongData": "Błędne dane (kwota, NIP lub data)",
+"rj_noFirmNip": "Na dokumencie brak NIP naszej firmy",
+"rj_notInvoice": "To nie jest faktura",
+"rj_notInKsef": "Brak faktury w KSeF"
+},
+"uk": {
+"title": "Фактури",
+"login": "Вхід",
+"password": "Пароль",
+"signin": "Увійти",
+"logout": "Вийти",
+"notLinked": "Ваш вхід не прив’язаний до водія. Зверніться до власника.",
+"newInvoice": "Новий документ",
+"acceptedDocs": "Лише витрати на автомобіль. Приймаються: фактура, парагон з NIP фірми, підтвердження транзакції (фактура в KSeF). Не приймаються: чек з терміналу, підтвердження оплати чи переказу, WZ, асигната, KP.",
+"takePhoto": "📷 Сфотографувати",
+"fromGallery": "🖼 З галереї / PDF",
+"scanQr": "🔳 Сканувати QR-код KSeF",
+"scanQrHint": "Для фактур з QR-кодом KSeF: зніміть крупно лише QR-код.",
+"docType": "Документ",
+"docFaktura": "Фактура",
+"docParagon": "Парагон з NIP фірми",
+"docOther": "Підтвердження транзакції (фактура в KSeF)",
+"otherHint": "Документ, за яким сама фактура виставлена в KSeF (наприклад, «Potwierdzenie transakcji», специфікація). Власник звірить його з KSeF.",
+"paragonHint": "Парагон приймається лише якщо на ньому надруковано NIP нашої фірми.",
+"amount": "Сума брутто, zł *",
+"number": "Номер фактури",
+"numOpt": "Номер фактури",
+"numOther": "Номер фактури",
+"date": "Дата документа *",
+"enterDate": "Не вдалося прочитати дату з фото. Введіть дату документа вручну.",
+"category": "За що *",
+"catFuel": "Пальне",
+"catParts": "Автозапчастини, ремонт",
+"catCleaning": "Хімчистка",
+"catElectronics": "Електроніка",
+"catOther": "Хімчистка, електроніка, інше",
+"nip": "NIP продавця *",
+"sellerIs": "Продавець: ",
+"fullVisible": "Документ видно повністю, текст читається",
+"send": "Надіслати",
+"sendAnyway": "Надіслати все одно",
+"myInvoices": "Мої документи",
+"checking": "Перевіряємо фото…",
+"tooSmall": "Фото замале. Сфотографуйте ближче камерою телефону.",
+"blurry": "Фото розмите. Перезніміть: тримайте телефон нерухомо, дочекайтеся фокусу.",
+"dark": "Занадто темно. Перезніміть при доброму світлі.",
+"bright": "Фото пересвічене (відблиск). Перезніміть без спалаху.",
+"badFile": "Не вдалося відкрити файл. Спробуйте інше фото.",
+"pdfBig": "PDF більше 1 МБ.",
+"qualityOk": "Фото чітке ✓ Решту перевіримо під час надсилання.",
+"fillAll": "Заповніть усі поля із зірочкою та поставте галочку.",
+"badNip": "Невірний NIP продавця: перевірте 10 цифр.",
+"paragonCamera": "Парагон потрібно сфотографувати камерою зараз (не з галереї).",
+"verifying": "Звіряємо дані з фото…",
+"notFound": "На фото не знайдено:",
+"f_seller": "NIP продавця",
+"f_buyer": "NIP нашої фірми",
+"f_amount": "сума",
+"f_date": "дата",
+"fixOrSend": "Перевірте й виправте. Якщо все правильно — натисніть «Надіслати все одно».",
+"tryOf": "Спроба {n} з {m}. Перезніміть фото або виправте дані.",
+"retake": "📷 Перезняти фото",
+"retakeHint": "Введені дані збережуться.",
+"vatChecking": "Перевіряємо NIP у реєстрі…",
+"vatNotFound": "NIP продавця не знайдено в реєстрі платників VAT",
+"vatInactive": "Продавець не активний у реєстрі VAT",
+"notInvoice": "Це не фактура і не парагон ({x}). Такі документи не приймаються.",
+"notCar": "Покупки в «{x}» не компенсуються — лише витрати на автомобіль.",
+"notCarItems": "На документі є товари не для автомобіля ({x}). Такий документ не приймається — попросіть окрему фактуру.",
+"qrNone": "QR-код не знайдено. Зніміть ближче, щоб QR-код займав більшу частину кадру.",
+"qrNotKsef": "Це не QR-код KSeF. Сфотографуйте весь документ кнопкою «Сфотографувати».",
+"qrNext": "Фактура KSeF ✓ NIP продавця: {nip}, дата: {date}.<br><b>Тепер сфотографуйте весь документ</b> — сума на ньому має збігтися з введеною.",
+"qrDocBtn": "📷 Сфотографувати документ",
+"qrOk": "Фактура KSeF ✓ NIP продавця: {nip}, дата: {date}.",
+"sending": "Надсилаємо…",
+"sent": "Документ надіслано ✓ Власник його перевірить.",
+"sentAuto": "Документ прийнято ✓ Усі перевірки пройдено.",
+"sentKsef": "Документ надіслано ✓ Власник звірить його з фактурою в KSeF.",
+"duplicate": "Цей документ уже надіслано.",
+"sendErr": "Помилка надсилання: ",
+"pending": "на перевірці",
+"accepted": "прийнято",
+"rejected": "відхилено",
+"empty": "Поки немає документів.",
+"loginErr": "Невірний email або пароль.",
+"netErr": "Немає зв’язку з сервером. Перевірте інтернет і спробуйте ще раз.",
+"noConn": "Немає підключення до сервера.",
+"noText": "На фото не видно тексту документа. Сфотографуйте фактуру або парагон повністю.",
+"numAuto": "Зчитано з фото — перевірте й за потреби виправте.",
+"rj_notCar": "Це не витрати на автомобіль",
+"rj_unreadable": "Фото нечитабельне — надішліть знову",
+"rj_wrongData": "Невірні дані (сума, NIP або дата)",
+"rj_noFirmNip": "На документі немає NIP нашої фірми",
+"rj_notInvoice": "Це не фактура",
+"rj_notInKsef": "Фактури немає в KSeF"
+},
+"be": {
+"title": "Фактуры",
+"login": "Уваход",
+"password": "Пароль",
+"signin": "Увайсці",
+"logout": "Выйсці",
+"notLinked": "Ваш уваход не прывязаны да кіроўцы. Звярніцеся да ўладальніка.",
+"newInvoice": "Новы дакумент",
+"acceptedDocs": "Толькі выдаткі на аўтамабіль. Прымаюцца: фактура, парагон з NIP фірмы, пацвярджэнне транзакцыі (фактура ў KSeF). Не прымаюцца: чэк з тэрмінала, пацвярджэнне аплаты ці пераводу, WZ, асігната, KP.",
+"takePhoto": "📷 Сфатаграфаваць",
+"fromGallery": "🖼 З галерэі / PDF",
+"scanQr": "🔳 Сканаваць QR-код KSeF",
+"scanQrHint": "Для фактур з QR-кодам KSeF: зніміце буйна толькі QR-код.",
+"docType": "Дакумент",
+"docFaktura": "Фактура",
+"docParagon": "Парагон з NIP фірмы",
+"docOther": "Пацвярджэнне транзакцыі (фактура ў KSeF)",
+"otherHint": "Дакумент, па якім сама фактура выстаўлена ў KSeF (напрыклад, «Potwierdzenie transakcji», спецыфікацыя). Уладальнік зверыць яго з KSeF.",
+"paragonHint": "Парагон прымаецца толькі калі на ім надрукаваны NIP нашай фірмы.",
+"amount": "Сума брута, zł *",
+"number": "Нумар фактуры",
+"numOpt": "Нумар фактуры",
+"numOther": "Нумар фактуры",
+"date": "Дата дакумента *",
+"enterDate": "Не ўдалося прачытаць дату з фота. Увядзіце дату дакумента ўручную.",
+"category": "За што *",
+"catFuel": "Паліва",
+"catParts": "Аўтазапчасткі, рамонт",
+"catCleaning": "Хімчыстка",
+"catElectronics": "Электроніка",
+"catOther": "Хімчыстка, электроніка, іншае",
+"nip": "NIP прадаўца *",
+"sellerIs": "Прадавец: ",
+"fullVisible": "Дакумент бачны цалкам, тэкст чытаецца",
+"send": "Адправіць",
+"sendAnyway": "Адправіць усё роўна",
+"myInvoices": "Мае дакументы",
+"checking": "Правяраем фота…",
+"tooSmall": "Фота занадта маленькае. Сфатаграфуйце бліжэй камерай тэлефона.",
+"blurry": "Фота размытае. Перазніміце: трымайце тэлефон нерухома, дачакайцеся фокусу.",
+"dark": "Занадта цёмна. Перазніміце пры добрым святле.",
+"bright": "Фота перасвечанае (блік). Перазніміце без успышкі.",
+"badFile": "Не ўдалося адкрыць файл. Паспрабуйце іншае фота.",
+"pdfBig": "PDF большы за 1 МБ.",
+"qualityOk": "Фота выразнае ✓ Астатняе праверым пры адпраўцы.",
+"fillAll": "Запоўніце ўсе палі з зорачкай і пастаўце адзнаку.",
+"badNip": "NIP прадаўца няправільны: праверце 10 лічбаў.",
+"paragonCamera": "Парагон трэба сфатаграфаваць камерай зараз (не з галерэі).",
+"verifying": "Зверваем даныя з фота…",
+"notFound": "На фота не знойдзена:",
+"f_seller": "NIP прадаўца",
+"f_buyer": "NIP нашай фірмы",
+"f_amount": "сума",
+"f_date": "дата",
+"fixOrSend": "Праверце і выпраўце. Калі ўсё правільна — націсніце «Адправіць усё роўна».",
+"tryOf": "Спроба {n} з {m}. Перазніміце фота або выпраўце даныя.",
+"retake": "📷 Перазняць фота",
+"retakeHint": "Уведзеныя даныя захаваюцца.",
+"vatChecking": "Правяраем NIP у рэестры…",
+"vatNotFound": "NIP прадаўца не знойдзены ў рэестры плацельшчыкаў VAT",
+"vatInactive": "Прадавец не актыўны ў рэестры VAT",
+"notInvoice": "Гэта не фактура і не парагон ({x}). Такія дакументы не прымаюцца.",
+"notCar": "Пакупкі ў «{x}» не кампенсуюцца — толькі выдаткі на аўтамабіль.",
+"notCarItems": "На дакуменце ёсць тавары не для аўтамабіля ({x}). Такі дакумент не прымаецца — папрасіце асобную фактуру.",
+"qrNone": "QR-код не знойдзены. Зніміце бліжэй, каб QR-код займаў большую частку кадра.",
+"qrNotKsef": "Гэта не QR-код KSeF. Сфатаграфуйце ўвесь дакумент кнопкай «Сфатаграфаваць».",
+"qrNext": "Фактура KSeF ✓ NIP прадаўца: {nip}, дата: {date}.<br><b>Цяпер сфатаграфуйце ўвесь дакумент</b> — сума на ім павінна супасці з уведзенай.",
+"qrDocBtn": "📷 Сфатаграфаваць дакумент",
+"qrOk": "Фактура KSeF ✓ NIP прадаўца: {nip}, дата: {date}.",
+"sending": "Адпраўляем…",
+"sent": "Дакумент адпраўлены ✓ Уладальнік яго праверыць.",
+"sentAuto": "Дакумент прыняты ✓ Усе праверкі пройдзены.",
+"sentKsef": "Дакумент адпраўлены ✓ Уладальнік зверыць яго з фактурай у KSeF.",
+"duplicate": "Гэты дакумент ужо быў адпраўлены.",
+"sendErr": "Памылка адпраўкі: ",
+"pending": "на праверцы",
+"accepted": "прыняты",
+"rejected": "адхілены",
+"empty": "Пакуль няма дакументаў.",
+"loginErr": "Няправільны email або пароль.",
+"netErr": "Няма сувязі з серверам. Праверце інтэрнэт і паспрабуйце зноў.",
+"noConn": "Няма падключэння да сервера.",
+"noText": "На фота не відаць тэксту дакумента. Сфатаграфуйце фактуру або парагон цалкам.",
+"numAuto": "Прачытаны з фота — праверце і пры патрэбе выпраўце.",
+"rj_notCar": "Гэта не выдаткі на аўтамабіль",
+"rj_unreadable": "Фота нечытэльнае — адпраўце зноў",
+"rj_wrongData": "Няправільныя даныя (сума, NIP або дата)",
+"rj_noFirmNip": "На дакуменце няма NIP нашай фірмы",
+"rj_notInvoice": "Гэта не фактура",
+"rj_notInKsef": "Фактуры няма ў KSeF"
+},
+"en": {
+"title": "Invoices",
+"login": "Sign in",
+"password": "Password",
+"signin": "Sign in",
+"logout": "Sign out",
+"notLinked": "Your account is not linked to a driver. Contact the owner.",
+"newInvoice": "New document",
+"acceptedDocs": "Car expenses only. Accepted: invoice, receipt with company NIP, transaction confirmation (invoice in KSeF). Not accepted: card terminal slip, payment or transfer confirmation, WZ, asygnata, KP.",
+"takePhoto": "📷 Take photo",
+"fromGallery": "🖼 Gallery / PDF",
+"scanQr": "🔳 Scan KSeF QR code",
+"scanQrHint": "For invoices with a KSeF QR code: photograph just the QR code, close up.",
+"docType": "Document",
+"docFaktura": "Invoice",
+"docParagon": "Receipt with company NIP",
+"docOther": "Transaction confirmation (invoice in KSeF)",
+"otherHint": "A document whose invoice was issued in KSeF (e.g. “Potwierdzenie transakcji”, specification). The owner will check it in KSeF.",
+"paragonHint": "A receipt is accepted only if our company NIP is printed on it.",
+"amount": "Gross amount, zł *",
+"number": "Invoice number",
+"numOpt": "Invoice number",
+"numOther": "Invoice number",
+"date": "Document date *",
+"enterDate": "Could not read the date from the photo. Enter the document date manually.",
+"category": "What for *",
+"catFuel": "Fuel",
+"catParts": "Car parts, repair",
+"catCleaning": "Car cleaning",
+"catElectronics": "Electronics",
+"catOther": "Cleaning, electronics, other",
+"nip": "Seller NIP *",
+"sellerIs": "Seller: ",
+"fullVisible": "The whole document is visible and readable",
+"send": "Send",
+"sendAnyway": "Send anyway",
+"myInvoices": "My documents",
+"checking": "Checking photo…",
+"tooSmall": "Photo too small. Take it with the phone camera, closer.",
+"blurry": "Photo is blurry. Retake it holding the phone still.",
+"dark": "Too dark. Retake in good light.",
+"bright": "Overexposed. Retake without flash.",
+"badFile": "Could not open the file. Try another photo.",
+"pdfBig": "PDF is larger than 1 MB.",
+"qualityOk": "Photo is sharp ✓ The rest is checked when you send.",
+"fillAll": "Fill in all fields marked * and tick the box.",
+"badNip": "Seller NIP is invalid: check the 10 digits.",
+"paragonCamera": "A receipt must be photographed with the camera right now (not from the gallery).",
+"verifying": "Checking your data against the photo…",
+"notFound": "Not found on the photo:",
+"f_seller": "seller NIP",
+"f_buyer": "our company NIP",
+"f_amount": "amount",
+"f_date": "date",
+"fixOrSend": "Check and correct. If everything is right, press “Send anyway”.",
+"tryOf": "Attempt {n} of {m}. Retake the photo or correct the data.",
+"retake": "📷 Retake photo",
+"retakeHint": "Your entered data will be kept.",
+"vatChecking": "Checking NIP in the register…",
+"vatNotFound": "Seller NIP is not in the VAT payer register",
+"vatInactive": "Seller is not an active VAT payer",
+"notInvoice": "This is not an invoice or receipt ({x}). Such documents are not accepted.",
+"notCar": "Purchases at “{x}” are not reimbursed — car expenses only.",
+"notCarItems": "The document contains non-car items ({x}). It is not accepted — ask for a separate invoice.",
+"qrNone": "No QR code found. Take the photo closer so the code fills most of the frame.",
+"qrNotKsef": "This is not a KSeF QR code. Photograph the whole document with “Take photo”.",
+"qrNext": "KSeF invoice ✓ Seller NIP: {nip}, date: {date}.<br><b>Now photograph the whole document</b> — its amount must match what you enter.",
+"qrDocBtn": "📷 Photograph the document",
+"qrOk": "KSeF invoice ✓ Seller NIP: {nip}, date: {date}.",
+"sending": "Sending…",
+"sent": "Document sent ✓ The owner will check it.",
+"sentAuto": "Document accepted ✓ All checks passed.",
+"sentKsef": "Document sent ✓ The owner will check the invoice in KSeF.",
+"duplicate": "This document was already sent.",
+"sendErr": "Upload error: ",
+"pending": "pending",
+"accepted": "accepted",
+"rejected": "rejected",
+"empty": "No documents yet.",
+"loginErr": "Wrong email or password.",
+"netErr": "No connection to the server. Check your internet and try again.",
+"noConn": "Not connected to the server.",
+"noText": "No document text is visible in the photo. Photograph the whole invoice or receipt.",
+"numAuto": "Read from the photo — check and correct if needed.",
+"rj_notCar": "Not a car expense",
+"rj_unreadable": "Unreadable photo — please send again",
+"rj_wrongData": "Wrong data (amount, NIP or date)",
+"rj_noFirmNip": "Our company NIP is missing on the document",
+"rj_notInvoice": "This is not an invoice",
+"rj_notInKsef": "The invoice is not in KSeF"
+},
+"ka": {
+"title": "ინვოისები",
+"login": "შესვლა",
+"password": "პაროლი",
+"signin": "შესვლა",
+"logout": "გასვლა",
+"notLinked": "თქვენი ანგარიში მძღოლთან არ არის დაკავშირებული. მიმართეთ მფლობელს.",
+"newInvoice": "ახალი დოკუმენტი",
+"acceptedDocs": "მხოლოდ მანქანის ხარჯები. მიიღება: ფაქტურა, პარაგონი ფირმის NIP-ით, ტრანზაქციის დადასტურება (ფაქტურა KSeF-ში). არ მიიღება: ტერმინალის ჩეკი, გადახდის ან გადარიცხვის დადასტურება, WZ, ასიგნატა, KP.",
+"takePhoto": "📷 გადაღება",
+"fromGallery": "🖼 გალერეიდან / PDF",
+"scanQr": "🔳 KSeF QR-კოდის სკანირება",
+"scanQrHint": "KSeF QR-კოდიანი ფაქტურებისთვის: ახლოდან გადაიღეთ მხოლოდ QR-კოდი.",
+"docType": "დოკუმენტი",
+"docFaktura": "ფაქტურა",
+"docParagon": "პარაგონი ფირმის NIP-ით",
+"docOther": "ტრანზაქციის დადასტურება (ფაქტურა KSeF-ში)",
+"otherHint": "დოკუმენტი, რომლის ფაქტურაც გამოწერილია KSeF-ში (მაგ. „Potwierdzenie transakcji“, სპეციფიკაცია). მფლობელი შეამოწმებს KSeF-ში.",
+"paragonHint": "პარაგონი მიიღება მხოლოდ მაშინ, თუ მასზე დაბეჭდილია ჩვენი ფირმის NIP.",
+"amount": "თანხა ბრუტო, zł *",
+"number": "ფაქტურის ნომერი",
+"numOpt": "ფაქტურის ნომერი",
+"numOther": "ფაქტურის ნომერი",
+"date": "დოკუმენტის თარიღი *",
+"enterDate": "ფოტოდან თარიღი ვერ წავიკითხეთ. შეიყვანეთ თარიღი ხელით.",
+"category": "რისთვის *",
+"catFuel": "საწვავი",
+"catParts": "ავტონაწილები, შეკეთება",
+"catCleaning": "ქიმწმენდა",
+"catElectronics": "ელექტრონიკა",
+"catOther": "ქიმწმენდა, ელექტრონიკა, სხვა",
+"nip": "გამყიდველის NIP *",
+"sellerIs": "გამყიდველი: ",
+"fullVisible": "დოკუმენტი მთლიანად ჩანს და იკითხება",
+"send": "გაგზავნა",
+"sendAnyway": "მაინც გაგზავნა",
+"myInvoices": "ჩემი დოკუმენტები",
+"checking": "ფოტოს ვამოწმებთ…",
+"tooSmall": "ფოტო ძალიან პატარაა. გადაიღეთ ახლოდან ტელეფონის კამერით.",
+"blurry": "ფოტო ბუნდოვანია. გადაიღეთ თავიდან, ტელეფონი გაჩერებული დაიჭირეთ.",
+"dark": "ძალიან ბნელია. გადაიღეთ კარგ სინათლეზე.",
+"bright": "ფოტო გადანათებულია. გადაიღეთ ციმციმის გარეშე.",
+"badFile": "ფაილი ვერ გაიხსნა. სცადეთ სხვა ფოტო.",
+"pdfBig": "PDF 1 მბ-ზე დიდია.",
+"qualityOk": "ფოტო მკაფიოა ✓ დანარჩენს გაგზავნისას შევამოწმებთ.",
+"fillAll": "შეავსეთ ვარსკვლავიანი ველები და მონიშნეთ ნიშანი.",
+"badNip": "გამყიდველის NIP არასწორია: შეამოწმეთ 10 ციფრი.",
+"paragonCamera": "პარაგონი ახლავე უნდა გადაიღოთ კამერით (არა გალერეიდან).",
+"verifying": "მონაცემებს ფოტოს ვადარებთ…",
+"notFound": "ფოტოზე ვერ მოიძებნა:",
+"f_seller": "გამყიდველის NIP",
+"f_buyer": "ჩვენი ფირმის NIP",
+"f_amount": "თანხა",
+"f_date": "თარიღი",
+"fixOrSend": "შეამოწმეთ და გაასწორეთ. თუ ყველაფერი სწორია — დააჭირეთ „მაინც გაგზავნა“.",
+"tryOf": "მცდელობა {n} / {m}. გადაიღეთ ფოტო თავიდან ან გაასწორეთ მონაცემები.",
+"retake": "📷 თავიდან გადაღება",
+"retakeHint": "შეყვანილი მონაცემები შეინახება.",
+"vatChecking": "NIP-ს რეესტრში ვამოწმებთ…",
+"vatNotFound": "გამყიდველის NIP არ არის VAT-ის რეესტრში",
+"vatInactive": "გამყიდველი არ არის აქტიური VAT-ის რეესტრში",
+"notInvoice": "ეს არ არის ფაქტურა ან პარაგონი ({x}). ასეთი დოკუმენტები არ მიიღება.",
+"notCar": "„{x}“-ში შენაძენი არ ანაზღაურდება — მხოლოდ მანქანის ხარჯები.",
+"notCarItems": "დოკუმენტზე არის არა-მანქანის საქონელი ({x}). ასეთი დოკუმენტი არ მიიღება — მოითხოვეთ ცალკე ფაქტურა.",
+"qrNone": "QR-კოდი ვერ მოიძებნა. გადაიღეთ ახლოდან, რომ კოდმა კადრის უმეტესი ნაწილი დაიკავოს.",
+"qrNotKsef": "ეს არ არის KSeF-ის QR-კოდი. გადაიღეთ მთელი დოკუმენტი ღილაკით „გადაღება“.",
+"qrNext": "KSeF ფაქტურა ✓ გამყიდველის NIP: {nip}, თარიღი: {date}.<br><b>ახლა გადაიღეთ მთელი დოკუმენტი</b> — მასზე თანხა უნდა ემთხვეოდეს შეყვანილს.",
+"qrDocBtn": "📷 დოკუმენტის გადაღება",
+"qrOk": "KSeF ფაქტურა ✓ გამყიდველის NIP: {nip}, თარიღი: {date}.",
+"sending": "იგზავნება…",
+"sent": "დოკუმენტი გაიგზავნა ✓ მფლობელი შეამოწმებს.",
+"sentAuto": "დოკუმენტი მიღებულია ✓ ყველა შემოწმება გავლილია.",
+"sentKsef": "დოკუმენტი გაიგზავნა ✓ მფლობელი შეამოწმებს ფაქტურას KSeF-ში.",
+"duplicate": "ეს დოკუმენტი უკვე გაგზავნილია.",
+"sendErr": "გაგზავნის შეცდომა: ",
+"pending": "შემოწმებაზე",
+"accepted": "მიღებულია",
+"rejected": "უარყოფილია",
+"empty": "დოკუმენტები ჯერ არ არის.",
+"loginErr": "არასწორი email ან პაროლი.",
+"netErr": "სერვერთან კავშირი არ არის. შეამოწმეთ ინტერნეტი და სცადეთ თავიდან.",
+"noConn": "სერვერთან კავშირი არ არის.",
+"noText": "ფოტოზე დოკუმენტის ტექსტი არ ჩანს. გადაიღეთ მთელი ფაქტურა ან პარაგონი.",
+"numAuto": "წაკითხულია ფოტოდან — შეამოწმეთ და საჭიროებისას გაასწორეთ.",
+"rj_notCar": "ეს არ არის მანქანის ხარჯი",
+"rj_unreadable": "ფოტო არ იკითხება — გამოგზავნეთ თავიდან",
+"rj_wrongData": "არასწორი მონაცემები (თანხა, NIP ან თარიღი)",
+"rj_noFirmNip": "დოკუმენტზე არ არის ჩვენი ფირმის NIP",
+"rj_notInvoice": "ეს არ არის ფაქტურა",
+"rj_notInKsef": "ფაქტურა KSeF-ში არ არის"
+},
+"hi": {
+"title": "इनवॉइस",
+"login": "लॉग इन",
+"password": "पासवर्ड",
+"signin": "लॉग इन करें",
+"logout": "लॉग आउट",
+"notLinked": "आपका खाता किसी ड्राइवर से नहीं जुड़ा है। मालिक से संपर्क करें।",
+"newInvoice": "नया दस्तावेज़",
+"acceptedDocs": "केवल कार के खर्च। स्वीकार: इनवॉइस (फ़ाक्तूरा), कंपनी के NIP वाली रसीद (पारागोन), लेन-देन की पुष्टि (KSeF में इनवॉइस)। स्वीकार नहीं: कार्ड टर्मिनल की पर्ची, भुगतान या ट्रांसफ़र की पुष्टि, WZ, असिग्नाटा, KP।",
+"takePhoto": "📷 फ़ोटो लें",
+"fromGallery": "🖼 गैलरी से / PDF",
+"scanQr": "🔳 KSeF QR कोड स्कैन करें",
+"scanQrHint": "KSeF QR कोड वाले इनवॉइस के लिए: केवल QR कोड पास से फ़ोटो लें।",
+"docType": "दस्तावेज़",
+"docFaktura": "इनवॉइस (Faktura)",
+"docParagon": "कंपनी NIP वाली रसीद (Paragon)",
+"docOther": "लेन-देन की पुष्टि (KSeF में इनवॉइस)",
+"otherHint": "ऐसा दस्तावेज़ जिसका इनवॉइस KSeF में जारी हुआ है (जैसे “Potwierdzenie transakcji”, स्पेसिफ़िकेशन)। मालिक इसे KSeF में जाँचेंगे।",
+"paragonHint": "रसीद तभी स्वीकार होगी जब उस पर हमारी कंपनी का NIP छपा हो।",
+"amount": "कुल राशि (ब्रुटो), zł *",
+"number": "इनवॉइस नंबर",
+"numOpt": "इनवॉइस नंबर",
+"numOther": "इनवॉइस नंबर",
+"date": "दस्तावेज़ की तारीख़ *",
+"enterDate": "फ़ोटो से तारीख़ नहीं पढ़ी जा सकी। तारीख़ हाथ से भरें।",
+"category": "किस लिए *",
+"catFuel": "ईंधन",
+"catParts": "कार पुर्ज़े, मरम्मत",
+"catCleaning": "ड्राई क्लीनिंग",
+"catElectronics": "इलेक्ट्रॉनिक्स",
+"catOther": "ड्राई क्लीनिंग, इलेक्ट्रॉनिक्स, अन्य",
+"nip": "विक्रेता का NIP *",
+"sellerIs": "विक्रेता: ",
+"fullVisible": "पूरा दस्तावेज़ दिख रहा है और पढ़ा जा सकता है",
+"send": "भेजें",
+"sendAnyway": "फिर भी भेजें",
+"myInvoices": "मेरे दस्तावेज़",
+"checking": "फ़ोटो जाँच रहे हैं…",
+"tooSmall": "फ़ोटो बहुत छोटी है। फ़ोन कैमरे से पास से फ़ोटो लें।",
+"blurry": "फ़ोटो धुंधली है। फ़ोन स्थिर रखकर दोबारा फ़ोटो लें।",
+"dark": "बहुत अंधेरा है। अच्छी रोशनी में दोबारा फ़ोटो लें।",
+"bright": "फ़ोटो में बहुत चमक है। फ़्लैश के बिना दोबारा लें।",
+"badFile": "फ़ाइल नहीं खुली। दूसरी फ़ोटो आज़माएँ।",
+"pdfBig": "PDF 1 MB से बड़ी है।",
+"qualityOk": "फ़ोटो साफ़ है ✓ बाकी जाँच भेजते समय होगी।",
+"fillAll": "* वाले सभी खाने भरें और बॉक्स पर निशान लगाएँ।",
+"badNip": "विक्रेता का NIP गलत है: 10 अंक जाँचें।",
+"paragonCamera": "रसीद की फ़ोटो अभी कैमरे से लेनी होगी (गैलरी से नहीं)।",
+"verifying": "डेटा को फ़ोटो से मिला रहे हैं…",
+"notFound": "फ़ोटो पर नहीं मिला:",
+"f_seller": "विक्रेता का NIP",
+"f_buyer": "हमारी कंपनी का NIP",
+"f_amount": "राशि",
+"f_date": "तारीख़",
+"fixOrSend": "जाँचें और ठीक करें। अगर सब सही है तो “फिर भी भेजें” दबाएँ।",
+"tryOf": "प्रयास {n} / {m}। दोबारा फ़ोटो लें या डेटा ठीक करें।",
+"retake": "📷 दोबारा फ़ोटो लें",
+"retakeHint": "भरा हुआ डेटा बना रहेगा।",
+"vatChecking": "रजिस्टर में NIP जाँच रहे हैं…",
+"vatNotFound": "विक्रेता का NIP VAT रजिस्टर में नहीं है",
+"vatInactive": "विक्रेता VAT रजिस्टर में सक्रिय नहीं है",
+"notInvoice": "यह इनवॉइस या रसीद नहीं है ({x})। ऐसे दस्तावेज़ स्वीकार नहीं होते।",
+"notCar": "“{x}” की ख़रीद का भुगतान नहीं होता — केवल कार के खर्च।",
+"notCarItems": "दस्तावेज़ पर कार से असंबंधित सामान है ({x})। यह स्वीकार नहीं होगा — अलग इनवॉइस माँगें।",
+"qrNone": "QR कोड नहीं मिला। पास से फ़ोटो लें ताकि कोड फ़्रेम का बड़ा हिस्सा भरे।",
+"qrNotKsef": "यह KSeF QR कोड नहीं है। “फ़ोटो लें” से पूरे दस्तावेज़ की फ़ोटो लें।",
+"qrNext": "KSeF इनवॉइस ✓ विक्रेता NIP: {nip}, तारीख़: {date}।<br><b>अब पूरे दस्तावेज़ की फ़ोटो लें</b> — उस पर राशि आपकी भरी राशि से मिलनी चाहिए।",
+"qrDocBtn": "📷 दस्तावेज़ की फ़ोटो लें",
+"qrOk": "KSeF इनवॉइस ✓ विक्रेता NIP: {nip}, तारीख़: {date}।",
+"sending": "भेज रहे हैं…",
+"sent": "दस्तावेज़ भेजा गया ✓ मालिक इसे जाँचेंगे।",
+"sentAuto": "दस्तावेज़ स्वीकार ✓ सभी जाँच सफल।",
+"sentKsef": "दस्तावेज़ भेजा गया ✓ मालिक KSeF में इनवॉइस जाँचेंगे।",
+"duplicate": "यह दस्तावेज़ पहले ही भेजा जा चुका है।",
+"sendErr": "भेजने में त्रुटि: ",
+"pending": "जाँच में",
+"accepted": "स्वीकार",
+"rejected": "अस्वीकार",
+"empty": "अभी कोई दस्तावेज़ नहीं।",
+"loginErr": "गलत email या पासवर्ड।",
+"netErr": "सर्वर से कनेक्शन नहीं है। इंटरनेट जाँचें और फिर कोशिश करें।",
+"noConn": "सर्वर से कनेक्शन नहीं है।",
+"noText": "फ़ोटो में दस्तावेज़ का टेक्स्ट नहीं दिख रहा। पूरे इनवॉइस या रसीद की फ़ोटो लें।",
+"numAuto": "फ़ोटो से पढ़ा गया — जाँचें और ज़रूरत हो तो ठीक करें।",
+"rj_notCar": "यह कार का खर्च नहीं है",
+"rj_unreadable": "फ़ोटो पढ़ी नहीं जा रही — दोबारा भेजें",
+"rj_wrongData": "गलत डेटा (राशि, NIP या तारीख़)",
+"rj_noFirmNip": "दस्तावेज़ पर हमारी कंपनी का NIP नहीं है",
+"rj_notInvoice": "यह इनवॉइस नहीं है",
+"rj_notInKsef": "इनवॉइस KSeF में नहीं है"
+},
+"ur": {
+"title": "انوائسز",
+"login": "لاگ ان",
+"password": "پاس ورڈ",
+"signin": "لاگ ان کریں",
+"logout": "لاگ آؤٹ",
+"notLinked": "آپ کا اکاؤنٹ کسی ڈرائیور سے منسلک نہیں ہے۔ مالک سے رابطہ کریں۔",
+"newInvoice": "نئی دستاویز",
+"acceptedDocs": "صرف گاڑی کے اخراجات۔ قبول: انوائس (فاکتورا)، کمپنی کے NIP والی رسید (پاراگون)، لین دین کی تصدیق (KSeF میں انوائس)۔ قبول نہیں: کارڈ ٹرمینل کی پرچی، ادائیگی یا ٹرانسفر کی تصدیق، WZ، اسیگناٹا، KP۔",
+"takePhoto": "📷 تصویر لیں",
+"fromGallery": "🖼 گیلری سے / PDF",
+"scanQr": "🔳 KSeF QR کوڈ اسکین کریں",
+"scanQrHint": "KSeF QR کوڈ والی انوائس کے لیے: صرف QR کوڈ کی قریب سے تصویر لیں۔",
+"docType": "دستاویز",
+"docFaktura": "انوائس (Faktura)",
+"docParagon": "کمپنی NIP والی رسید (Paragon)",
+"docOther": "لین دین کی تصدیق (KSeF میں انوائس)",
+"otherHint": "ایسی دستاویز جس کی انوائس KSeF میں جاری ہوئی ہے (مثلاً “Potwierdzenie transakcji”، تفصیل نامہ)۔ مالک اسے KSeF میں چیک کریں گے۔",
+"paragonHint": "رسید صرف تب قبول ہوگی جب اس پر ہماری کمپنی کا NIP چھپا ہو۔",
+"amount": "کل رقم (برٹو)، zł *",
+"number": "انوائس نمبر",
+"numOpt": "انوائس نمبر",
+"numOther": "انوائس نمبر",
+"date": "دستاویز کی تاریخ *",
+"enterDate": "تصویر سے تاریخ نہیں پڑھی جا سکی۔ تاریخ خود درج کریں۔",
+"category": "کس لیے *",
+"catFuel": "ایندھن",
+"catParts": "گاڑی کے پرزے، مرمت",
+"catCleaning": "ڈرائی کلیننگ",
+"catElectronics": "الیکٹرانکس",
+"catOther": "ڈرائی کلیننگ، الیکٹرانکس، دیگر",
+"nip": "بیچنے والے کا NIP *",
+"sellerIs": "بیچنے والا: ",
+"fullVisible": "پوری دستاویز نظر آ رہی ہے اور پڑھی جا سکتی ہے",
+"send": "بھیجیں",
+"sendAnyway": "پھر بھی بھیجیں",
+"myInvoices": "میری دستاویزات",
+"checking": "تصویر چیک ہو رہی ہے…",
+"tooSmall": "تصویر بہت چھوٹی ہے۔ فون کیمرے سے قریب سے تصویر لیں۔",
+"blurry": "تصویر دھندلی ہے۔ فون کو ساکن رکھ کر دوبارہ تصویر لیں۔",
+"dark": "بہت اندھیرا ہے۔ اچھی روشنی میں دوبارہ تصویر لیں۔",
+"bright": "تصویر میں بہت چمک ہے۔ فلیش کے بغیر دوبارہ لیں۔",
+"badFile": "فائل نہیں کھلی۔ کوئی اور تصویر آزمائیں۔",
+"pdfBig": "PDF ایک MB سے بڑی ہے۔",
+"qualityOk": "تصویر واضح ہے ✓ باقی جانچ بھیجتے وقت ہوگی۔",
+"fillAll": "* والے تمام خانے پُر کریں اور باکس پر نشان لگائیں۔",
+"badNip": "بیچنے والے کا NIP غلط ہے: 10 ہندسے چیک کریں۔",
+"paragonCamera": "رسید کی تصویر ابھی کیمرے سے لینی ہوگی (گیلری سے نہیں)۔",
+"verifying": "ڈیٹا کو تصویر سے ملا رہے ہیں…",
+"notFound": "تصویر پر نہیں ملا:",
+"f_seller": "بیچنے والے کا NIP",
+"f_buyer": "ہماری کمپنی کا NIP",
+"f_amount": "رقم",
+"f_date": "تاریخ",
+"fixOrSend": "چیک کریں اور درست کریں۔ اگر سب ٹھیک ہے تو “پھر بھی بھیجیں” دبائیں۔",
+"tryOf": "کوشش {n} / {m}۔ دوبارہ تصویر لیں یا ڈیٹا درست کریں۔",
+"retake": "📷 دوبارہ تصویر لیں",
+"retakeHint": "درج کیا گیا ڈیٹا محفوظ رہے گا۔",
+"vatChecking": "رجسٹر میں NIP چیک ہو رہا ہے…",
+"vatNotFound": "بیچنے والے کا NIP VAT رجسٹر میں نہیں ہے",
+"vatInactive": "بیچنے والا VAT رجسٹر میں فعال نہیں ہے",
+"notInvoice": "یہ انوائس یا رسید نہیں ہے ({x})۔ ایسی دستاویزات قبول نہیں ہوتیں۔",
+"notCar": "“{x}” کی خریداری کی ادائیگی نہیں ہوتی — صرف گاڑی کے اخراجات۔",
+"notCarItems": "دستاویز پر گاڑی سے غیر متعلق اشیاء ہیں ({x})۔ یہ قبول نہیں ہوگی — الگ انوائس مانگیں۔",
+"qrNone": "QR کوڈ نہیں ملا۔ قریب سے تصویر لیں تاکہ کوڈ فریم کا بڑا حصہ بھرے۔",
+"qrNotKsef": "یہ KSeF QR کوڈ نہیں ہے۔ “تصویر لیں” سے پوری دستاویز کی تصویر لیں۔",
+"qrNext": "KSeF انوائس ✓ بیچنے والے کا NIP: {nip}، تاریخ: {date}۔<br><b>اب پوری دستاویز کی تصویر لیں</b> — اس پر رقم آپ کی درج کردہ رقم سے ملنی چاہیے۔",
+"qrDocBtn": "📷 دستاویز کی تصویر لیں",
+"qrOk": "KSeF انوائس ✓ بیچنے والے کا NIP: {nip}، تاریخ: {date}۔",
+"sending": "بھیج رہے ہیں…",
+"sent": "دستاویز بھیج دی گئی ✓ مالک اسے چیک کریں گے۔",
+"sentAuto": "دستاویز قبول ✓ تمام جانچ کامیاب۔",
+"sentKsef": "دستاویز بھیج دی گئی ✓ مالک KSeF میں انوائس چیک کریں گے۔",
+"duplicate": "یہ دستاویز پہلے ہی بھیجی جا چکی ہے۔",
+"sendErr": "بھیجنے میں خرابی: ",
+"pending": "جانچ میں",
+"accepted": "قبول",
+"rejected": "مسترد",
+"empty": "ابھی کوئی دستاویز نہیں۔",
+"loginErr": "غلط email یا پاس ورڈ۔",
+"netErr": "سرور سے رابطہ نہیں ہے۔ انٹرنیٹ چیک کریں اور دوبارہ کوشش کریں۔",
+"noConn": "سرور سے رابطہ نہیں ہے۔",
+"noText": "تصویر میں دستاویز کا متن نظر نہیں آ رہا۔ پوری انوائس یا رسید کی تصویر لیں۔",
+"numAuto": "تصویر سے پڑھا گیا — چیک کریں اور ضرورت ہو تو درست کریں۔",
+"rj_notCar": "یہ گاڑی کا خرچ نہیں ہے",
+"rj_unreadable": "تصویر پڑھی نہیں جا رہی — دوبارہ بھیجیں",
+"rj_wrongData": "غلط ڈیٹا (رقم، NIP یا تاریخ)",
+"rj_noFirmNip": "دستاویز پر ہماری کمپنی کا NIP نہیں ہے",
+"rj_notInvoice": "یہ انوائس نہیں ہے",
+"rj_notInKsef": "انوائس KSeF میں نہیں ہے"
+},
+"pa": {
+"title": "ਇਨਵੌਇਸ",
+"login": "ਲੌਗ ਇਨ",
+"password": "ਪਾਸਵਰਡ",
+"signin": "ਲੌਗ ਇਨ ਕਰੋ",
+"logout": "ਲੌਗ ਆਉਟ",
+"notLinked": "ਤੁਹਾਡਾ ਖਾਤਾ ਕਿਸੇ ਡਰਾਈਵਰ ਨਾਲ ਜੁੜਿਆ ਨਹੀਂ ਹੈ। ਮਾਲਕ ਨਾਲ ਸੰਪਰਕ ਕਰੋ।",
+"newInvoice": "ਨਵਾਂ ਦਸਤਾਵੇਜ਼",
+"acceptedDocs": "ਸਿਰਫ਼ ਕਾਰ ਦੇ ਖ਼ਰਚੇ। ਮੰਨੇ ਜਾਂਦੇ ਹਨ: ਇਨਵੌਇਸ (ਫ਼ਾਕਤੂਰਾ), ਕੰਪਨੀ ਦੇ NIP ਵਾਲੀ ਰਸੀਦ (ਪਾਰਾਗੋਨ), ਲੈਣ-ਦੇਣ ਦੀ ਪੁਸ਼ਟੀ (KSeF ਵਿੱਚ ਇਨਵੌਇਸ)। ਨਹੀਂ ਮੰਨੇ ਜਾਂਦੇ: ਕਾਰਡ ਟਰਮੀਨਲ ਦੀ ਪਰਚੀ, ਭੁਗਤਾਨ ਜਾਂ ਟ੍ਰਾਂਸਫ਼ਰ ਦੀ ਪੁਸ਼ਟੀ, WZ, ਅਸਿਗਨਾਟਾ, KP।",
+"takePhoto": "📷 ਫ਼ੋਟੋ ਖਿੱਚੋ",
+"fromGallery": "🖼 ਗੈਲਰੀ ਤੋਂ / PDF",
+"scanQr": "🔳 KSeF QR ਕੋਡ ਸਕੈਨ ਕਰੋ",
+"scanQrHint": "KSeF QR ਕੋਡ ਵਾਲੇ ਇਨਵੌਇਸ ਲਈ: ਸਿਰਫ਼ QR ਕੋਡ ਦੀ ਨੇੜੇ ਤੋਂ ਫ਼ੋਟੋ ਖਿੱਚੋ।",
+"docType": "ਦਸਤਾਵੇਜ਼",
+"docFaktura": "ਇਨਵੌਇਸ (Faktura)",
+"docParagon": "ਕੰਪਨੀ NIP ਵਾਲੀ ਰਸੀਦ (Paragon)",
+"docOther": "ਲੈਣ-ਦੇਣ ਦੀ ਪੁਸ਼ਟੀ (KSeF ਵਿੱਚ ਇਨਵੌਇਸ)",
+"otherHint": "ਅਜਿਹਾ ਦਸਤਾਵੇਜ਼ ਜਿਸਦਾ ਇਨਵੌਇਸ KSeF ਵਿੱਚ ਜਾਰੀ ਹੋਇਆ ਹੈ (ਜਿਵੇਂ “Potwierdzenie transakcji”, ਸਪੈਸੀਫ਼ਿਕੇਸ਼ਨ)। ਮਾਲਕ ਇਸਨੂੰ KSeF ਵਿੱਚ ਜਾਂਚੇਗਾ।",
+"paragonHint": "ਰਸੀਦ ਤਾਂ ਹੀ ਮੰਨੀ ਜਾਵੇਗੀ ਜੇ ਉਸ ਉੱਤੇ ਸਾਡੀ ਕੰਪਨੀ ਦਾ NIP ਛਪਿਆ ਹੋਵੇ।",
+"amount": "ਕੁੱਲ ਰਕਮ (ਬਰੂਟੋ), zł *",
+"number": "ਇਨਵੌਇਸ ਨੰਬਰ",
+"numOpt": "ਇਨਵੌਇਸ ਨੰਬਰ",
+"numOther": "ਇਨਵੌਇਸ ਨੰਬਰ",
+"date": "ਦਸਤਾਵੇਜ਼ ਦੀ ਤਾਰੀਖ਼ *",
+"enterDate": "ਫ਼ੋਟੋ ਤੋਂ ਤਾਰੀਖ਼ ਨਹੀਂ ਪੜ੍ਹੀ ਜਾ ਸਕੀ। ਤਾਰੀਖ਼ ਆਪ ਭਰੋ।",
+"category": "ਕਿਸ ਲਈ *",
+"catFuel": "ਤੇਲ (ਬਾਲਣ)",
+"catParts": "ਕਾਰ ਦੇ ਪੁਰਜ਼ੇ, ਮੁਰੰਮਤ",
+"catCleaning": "ਡਰਾਈ ਕਲੀਨਿੰਗ",
+"catElectronics": "ਇਲੈਕਟ੍ਰਾਨਿਕਸ",
+"catOther": "ਡਰਾਈ ਕਲੀਨਿੰਗ, ਇਲੈਕਟ੍ਰਾਨਿਕਸ, ਹੋਰ",
+"nip": "ਵੇਚਣ ਵਾਲੇ ਦਾ NIP *",
+"sellerIs": "ਵੇਚਣ ਵਾਲਾ: ",
+"fullVisible": "ਪੂਰਾ ਦਸਤਾਵੇਜ਼ ਦਿਸਦਾ ਹੈ ਅਤੇ ਪੜ੍ਹਿਆ ਜਾ ਸਕਦਾ ਹੈ",
+"send": "ਭੇਜੋ",
+"sendAnyway": "ਫਿਰ ਵੀ ਭੇਜੋ",
+"myInvoices": "ਮੇਰੇ ਦਸਤਾਵੇਜ਼",
+"checking": "ਫ਼ੋਟੋ ਜਾਂਚ ਰਹੇ ਹਾਂ…",
+"tooSmall": "ਫ਼ੋਟੋ ਬਹੁਤ ਛੋਟੀ ਹੈ। ਫ਼ੋਨ ਦੇ ਕੈਮਰੇ ਨਾਲ ਨੇੜੇ ਤੋਂ ਖਿੱਚੋ।",
+"blurry": "ਫ਼ੋਟੋ ਧੁੰਦਲੀ ਹੈ। ਫ਼ੋਨ ਨੂੰ ਸਥਿਰ ਰੱਖ ਕੇ ਦੁਬਾਰਾ ਖਿੱਚੋ।",
+"dark": "ਬਹੁਤ ਹਨੇਰਾ ਹੈ। ਚੰਗੀ ਰੋਸ਼ਨੀ ਵਿੱਚ ਦੁਬਾਰਾ ਖਿੱਚੋ।",
+"bright": "ਫ਼ੋਟੋ ਵਿੱਚ ਬਹੁਤ ਚਮਕ ਹੈ। ਫ਼ਲੈਸ਼ ਤੋਂ ਬਿਨਾਂ ਦੁਬਾਰਾ ਖਿੱਚੋ।",
+"badFile": "ਫ਼ਾਈਲ ਨਹੀਂ ਖੁੱਲ੍ਹੀ। ਕੋਈ ਹੋਰ ਫ਼ੋਟੋ ਅਜ਼ਮਾਓ।",
+"pdfBig": "PDF 1 MB ਤੋਂ ਵੱਡੀ ਹੈ।",
+"qualityOk": "ਫ਼ੋਟੋ ਸਾਫ਼ ਹੈ ✓ ਬਾਕੀ ਜਾਂਚ ਭੇਜਣ ਵੇਲੇ ਹੋਵੇਗੀ।",
+"fillAll": "* ਵਾਲੇ ਸਾਰੇ ਖਾਨੇ ਭਰੋ ਅਤੇ ਡੱਬੀ ਉੱਤੇ ਨਿਸ਼ਾਨ ਲਗਾਓ।",
+"badNip": "ਵੇਚਣ ਵਾਲੇ ਦਾ NIP ਗ਼ਲਤ ਹੈ: 10 ਅੰਕ ਜਾਂਚੋ।",
+"paragonCamera": "ਰਸੀਦ ਦੀ ਫ਼ੋਟੋ ਹੁਣੇ ਕੈਮਰੇ ਨਾਲ ਖਿੱਚਣੀ ਪਵੇਗੀ (ਗੈਲਰੀ ਤੋਂ ਨਹੀਂ)।",
+"verifying": "ਡਾਟਾ ਨੂੰ ਫ਼ੋਟੋ ਨਾਲ ਮਿਲਾ ਰਹੇ ਹਾਂ…",
+"notFound": "ਫ਼ੋਟੋ ਉੱਤੇ ਨਹੀਂ ਮਿਲਿਆ:",
+"f_seller": "ਵੇਚਣ ਵਾਲੇ ਦਾ NIP",
+"f_buyer": "ਸਾਡੀ ਕੰਪਨੀ ਦਾ NIP",
+"f_amount": "ਰਕਮ",
+"f_date": "ਤਾਰੀਖ਼",
+"fixOrSend": "ਜਾਂਚੋ ਅਤੇ ਠੀਕ ਕਰੋ। ਜੇ ਸਭ ਠੀਕ ਹੈ ਤਾਂ “ਫਿਰ ਵੀ ਭੇਜੋ” ਦਬਾਓ।",
+"tryOf": "ਕੋਸ਼ਿਸ਼ {n} / {m}। ਫ਼ੋਟੋ ਦੁਬਾਰਾ ਖਿੱਚੋ ਜਾਂ ਡਾਟਾ ਠੀਕ ਕਰੋ।",
+"retake": "📷 ਦੁਬਾਰਾ ਫ਼ੋਟੋ ਖਿੱਚੋ",
+"retakeHint": "ਭਰਿਆ ਹੋਇਆ ਡਾਟਾ ਰਹੇਗਾ।",
+"vatChecking": "ਰਜਿਸਟਰ ਵਿੱਚ NIP ਜਾਂਚ ਰਹੇ ਹਾਂ…",
+"vatNotFound": "ਵੇਚਣ ਵਾਲੇ ਦਾ NIP VAT ਰਜਿਸਟਰ ਵਿੱਚ ਨਹੀਂ ਹੈ",
+"vatInactive": "ਵੇਚਣ ਵਾਲਾ VAT ਰਜਿਸਟਰ ਵਿੱਚ ਸਰਗਰਮ ਨਹੀਂ ਹੈ",
+"notInvoice": "ਇਹ ਇਨਵੌਇਸ ਜਾਂ ਰਸੀਦ ਨਹੀਂ ਹੈ ({x})। ਅਜਿਹੇ ਦਸਤਾਵੇਜ਼ ਨਹੀਂ ਮੰਨੇ ਜਾਂਦੇ।",
+"notCar": "“{x}” ਦੀ ਖ਼ਰੀਦ ਦਾ ਪੈਸਾ ਨਹੀਂ ਮਿਲਦਾ — ਸਿਰਫ਼ ਕਾਰ ਦੇ ਖ਼ਰਚੇ।",
+"notCarItems": "ਦਸਤਾਵੇਜ਼ ਉੱਤੇ ਕਾਰ ਨਾਲ ਨਾ ਜੁੜਿਆ ਸਮਾਨ ਹੈ ({x})। ਇਹ ਨਹੀਂ ਮੰਨਿਆ ਜਾਵੇਗਾ — ਵੱਖਰਾ ਇਨਵੌਇਸ ਮੰਗੋ।",
+"qrNone": "QR ਕੋਡ ਨਹੀਂ ਮਿਲਿਆ। ਨੇੜੇ ਤੋਂ ਫ਼ੋਟੋ ਖਿੱਚੋ ਤਾਂ ਜੋ ਕੋਡ ਫ਼੍ਰੇਮ ਦਾ ਵੱਡਾ ਹਿੱਸਾ ਭਰੇ।",
+"qrNotKsef": "ਇਹ KSeF QR ਕੋਡ ਨਹੀਂ ਹੈ। “ਫ਼ੋਟੋ ਖਿੱਚੋ” ਨਾਲ ਪੂਰੇ ਦਸਤਾਵੇਜ਼ ਦੀ ਫ਼ੋਟੋ ਖਿੱਚੋ।",
+"qrNext": "KSeF ਇਨਵੌਇਸ ✓ ਵੇਚਣ ਵਾਲੇ ਦਾ NIP: {nip}, ਤਾਰੀਖ਼: {date}।<br><b>ਹੁਣ ਪੂਰੇ ਦਸਤਾਵੇਜ਼ ਦੀ ਫ਼ੋਟੋ ਖਿੱਚੋ</b> — ਉਸ ਉੱਤੇ ਰਕਮ ਤੁਹਾਡੀ ਭਰੀ ਰਕਮ ਨਾਲ ਮਿਲਣੀ ਚਾਹੀਦੀ ਹੈ।",
+"qrDocBtn": "📷 ਦਸਤਾਵੇਜ਼ ਦੀ ਫ਼ੋਟੋ ਖਿੱਚੋ",
+"qrOk": "KSeF ਇਨਵੌਇਸ ✓ ਵੇਚਣ ਵਾਲੇ ਦਾ NIP: {nip}, ਤਾਰੀਖ਼: {date}।",
+"sending": "ਭੇਜ ਰਹੇ ਹਾਂ…",
+"sent": "ਦਸਤਾਵੇਜ਼ ਭੇਜ ਦਿੱਤਾ ✓ ਮਾਲਕ ਇਸਨੂੰ ਜਾਂਚੇਗਾ।",
+"sentAuto": "ਦਸਤਾਵੇਜ਼ ਮੰਨ ਲਿਆ ✓ ਸਾਰੀਆਂ ਜਾਂਚਾਂ ਪਾਸ।",
+"sentKsef": "ਦਸਤਾਵੇਜ਼ ਭੇਜ ਦਿੱਤਾ ✓ ਮਾਲਕ KSeF ਵਿੱਚ ਇਨਵੌਇਸ ਜਾਂਚੇਗਾ।",
+"duplicate": "ਇਹ ਦਸਤਾਵੇਜ਼ ਪਹਿਲਾਂ ਹੀ ਭੇਜਿਆ ਜਾ ਚੁੱਕਾ ਹੈ।",
+"sendErr": "ਭੇਜਣ ਵਿੱਚ ਗ਼ਲਤੀ: ",
+"pending": "ਜਾਂਚ ਵਿੱਚ",
+"accepted": "ਮੰਨਿਆ",
+"rejected": "ਰੱਦ",
+"empty": "ਅਜੇ ਕੋਈ ਦਸਤਾਵੇਜ਼ ਨਹੀਂ।",
+"loginErr": "ਗ਼ਲਤ email ਜਾਂ ਪਾਸਵਰਡ।",
+"netErr": "ਸਰਵਰ ਨਾਲ ਕੁਨੈਕਸ਼ਨ ਨਹੀਂ ਹੈ। ਇੰਟਰਨੈੱਟ ਜਾਂਚੋ ਅਤੇ ਦੁਬਾਰਾ ਕੋਸ਼ਿਸ਼ ਕਰੋ।",
+"noConn": "ਸਰਵਰ ਨਾਲ ਕੁਨੈਕਸ਼ਨ ਨਹੀਂ ਹੈ।",
+"noText": "ਫ਼ੋਟੋ ਵਿੱਚ ਦਸਤਾਵੇਜ਼ ਦਾ ਲਿਖਤ ਨਹੀਂ ਦਿਸਦਾ। ਪੂਰੇ ਇਨਵੌਇਸ ਜਾਂ ਰਸੀਦ ਦੀ ਫ਼ੋਟੋ ਖਿੱਚੋ।",
+"numAuto": "ਫ਼ੋਟੋ ਤੋਂ ਪੜ੍ਹਿਆ ਗਿਆ — ਜਾਂਚੋ ਅਤੇ ਲੋੜ ਹੋਵੇ ਤਾਂ ਠੀਕ ਕਰੋ।",
+"rj_notCar": "ਇਹ ਕਾਰ ਦਾ ਖ਼ਰਚਾ ਨਹੀਂ ਹੈ",
+"rj_unreadable": "ਫ਼ੋਟੋ ਪੜ੍ਹੀ ਨਹੀਂ ਜਾਂਦੀ — ਦੁਬਾਰਾ ਭੇਜੋ",
+"rj_wrongData": "ਗ਼ਲਤ ਡਾਟਾ (ਰਕਮ, NIP ਜਾਂ ਤਾਰੀਖ਼)",
+"rj_noFirmNip": "ਦਸਤਾਵੇਜ਼ ਉੱਤੇ ਸਾਡੀ ਕੰਪਨੀ ਦਾ NIP ਨਹੀਂ ਹੈ",
+"rj_notInvoice": "ਇਹ ਇਨਵੌਇਸ ਨਹੀਂ ਹੈ",
+"rj_notInKsef": "ਇਨਵੌਇਸ KSeF ਵਿੱਚ ਨਹੀਂ ਹੈ"
+}
+};
+
+let lang = 'pl';
+try { lang = localStorage.getItem('lang') || (navigator.language || 'pl').slice(0,2); } catch(e) {}
+if (!T[lang]) lang = 'pl';
+const t = k => (T[lang] && T[lang][k]) || T.pl[k] || k;   // нет перевода — польский
+function applyLang() {
+  document.documentElement.lang = lang;
+  document.documentElement.dir = lang === 'ur' ? 'rtl' : 'ltr';
+  document.getElementById('lang').value = lang;
+  document.querySelectorAll('[data-t]').forEach(el => el.textContent = t(el.dataset.t));
+  if (document.getElementById('docType')) applyDocType();
+  if (document.getElementById('sendBtn')) $('sendBtn').textContent = warned ? t('sendAnyway') : t('send');
+  Object.keys(lastMsg).forEach(renderMsg);   // сообщения тоже переводятся
+}
+
+const $ = id => document.getElementById(id);
+const show = (id, on = true) => $(id).classList.toggle('hidden', !on);
+// сообщение = текст или функция, которая строит текст (тогда при смене языка оно переводится заново)
+const lastMsg = {};
+function renderMsg(id) {
+  const m = lastMsg[id], el = document.getElementById(id);
+  if (!el) return;
+  const text = m ? (typeof m.text === 'function' ? m.text() : m.text) : '';
+  el.innerHTML = text ? `<div class="msg ${m.kind}">${text}</div>` : '';
+}
+const msg = (id, text, kind = 'info') => { lastMsg[id] = text ? { text, kind } : null; renderMsg(id); };
+document.addEventListener('click', e => {
+  const id = e.target && e.target.id;
+  if (id === 'retakeBtn' || id === 'qrDocBtn') $('camInput').click();
+});
+const kb = n => n < 1024*1024 ? Math.round(n/1024) + ' KB' : (n/1024/1024).toFixed(1) + ' MB';
+
+let sb = null;
+let driverId = null;
+let prepared = null;   // { blob, contentType, ext, hash }
+let numAuto = false;   // номер вставлен автоматически (водитель его не трогал)
+let ocrWorker = null, ocrJob = null, qrPromise = null, pendingQr = null, warned = false, failCount = 0;
+
+function fatal(text) { $('fatalMsg').textContent = text; show('fatalBox'); }
+
+// ключи: из файла, иначе из памяти устройства, иначе форма настройки
+let memUrl = '', memKey = '';
+function getCfg() {
+  if (/^https?:\/\//.test(SUPABASE_URL) && !SUPABASE_KEY.startsWith('ВСТАВЬТЕ')) return { url: SUPABASE_URL, key: SUPABASE_KEY };
+  let url = memUrl, key = memKey;
+  try { url = localStorage.getItem('sbUrl') || url; key = localStorage.getItem('sbKey') || key; } catch (e) {}
+  return (url && key) ? { url, key } : null;
+}
+
+$('cfgSave').onclick = () => {
+  const url = $('cfgUrl').value.trim().replace(/\/+$/, '');
+  const key = $('cfgKey').value.trim();
+  if (!/^https:\/\/.+/.test(url) || key.length < 20) return msg('cfgMsg', 'Проверьте URL (начинается с https://) и ключ.', 'bad');
+  memUrl = url; memKey = key;
+  try { localStorage.setItem('sbUrl', url); localStorage.setItem('sbKey', key); } catch (e) {}
+  show('setupBox', false); msg('cfgMsg', '');
+  init();
+};
+
+// ---------- запуск ----------
+async function init() {
+  applyLang();
+  if (!window.supabase || !window.supabase.createClient)
+    return fatal(t('netErr'));
+  const cfg = getCfg();
+  if (!cfg) { show('setupBox'); return; }
+  try { sb = window.supabase.createClient(cfg.url, cfg.key); }
+  catch (e) { show('setupBox'); return msg('cfgMsg', 'Ошибка ключей: ' + e.message, 'bad'); }
+  let session = null;
+  try { ({ data: { session } } = await sb.auth.getSession()); }
+  catch (e) { return fatal(t('netErr')); }
+  if (!session) { location.replace('index.html'); return; }
+  show('loginBox', false);
+  const { data, error } = await sb.rpc('current_driver_id');
+  if (error || !data) { show('noDriver'); return; }
+  driverId = data;
+  show('loginBox', false); show('uploadBox'); show('listBox');
+  loadList();
+}
+
+$('loginBtn').onclick = async () => {
+  if (!sb) return msg('loginMsg', () => t('noConn'), 'bad');
+  $('loginBtn').disabled = true; msg('loginMsg', '…');
+  let res;
+  try {
+    res = await sb.auth.signInWithPassword({ email: $('email').value.trim().toLowerCase(), password: $('password').value });
+  } catch (e) { res = { error: e }; }
+  $('loginBtn').disabled = false;
+  if (res.error) {
+    const m = String(res.error.message || res.error);
+    const human = /invalid login credentials/i.test(m) ? t('loginErr')
+      : /email not confirmed/i.test(m) ? 'Email не подтверждён: в Supabase поставьте Auto Confirm или подтвердите пользователя.'
+      : /fetch|network|load failed/i.test(m) ? t('netErr')
+      : t('loginErr');
+    return msg('loginMsg', human + '<br><span class="small">(' + esc(m) + ')</span>', 'bad');
+  }
+  msg('loginMsg', '');
+  init();
+};
+$('resetCfg').onclick = () => { try { localStorage.removeItem('sbUrl'); localStorage.removeItem('sbKey'); } catch(e) {} memUrl = memKey = ''; sb = null; show('loginBox', false); $('cfgUrl').value=''; $('cfgKey').value=''; show('setupBox'); };
+$('logout1').onclick = $('logout2').onclick = async () => { await sb.auth.signOut(); location.reload(); };
+$('lang').onchange = e => { lang = e.target.value; try { localStorage.setItem('lang', lang); } catch(_) {} applyLang(); loadList(); };
+
+// ---------- фактура / парагон ----------
+function applyDocType() {
+  const v = $('docType').value, par = v === 'paragon', other = v === 'inny';
+  show('paragonHint', par); show('otherHint', other); 
+  show('numRow', !par);
+  if (!(prepared && prepared.qr)) $('numLabel').textContent = other ? t('numOther') : t('number');
+}
+$('docType').onchange = applyDocType;
+
+// ---------- выбор файла ----------
+$('camBtn').onclick = () => { pendingQr = null; $('camInput').click(); };
+$('galBtn').onclick = () => $('galInput').click();
+$('camInput').onchange = e => handleFile(e.target.files[0], 'camera');
+$('galInput').onchange = e => { pendingQr = null; handleFile(e.target.files[0], 'gallery'); };
+$('qrBtn').onclick = () => $('qrInput').click();
+$('qrInput').onchange = e => handleQrFile(e.target.files[0]);
+
+// ---------- режим «только QR-код KSeF» ----------
+function parseKsefQr(texts) {
+  for (const q of texts) {
+    const m = q.match(/ksef[^\s]*\/invoice\/(\d{10})\/(\d{2})-(\d{2})-(\d{4})\/([A-Za-z0-9_\-]{20,})/i);
+    if (m) return { nip: m[1], date: `${m[4]}-${m[3]}-${m[2]}`, hash: m[5], url: q };
+  }
+  return null;
+}
+function setQrMode(qr) {
+  const on = !!qr;
+  show('qrFound', on); show('docRow', !on); show('fullRow', !on);
+  if (on) {
+    $('docType').value = 'faktura'; applyDocType();
+    $('qrFound').textContent = t('qrOk').replace('{nip}', qr.nip).replace('{date}', qr.date);
+    $('sellerNip').value = qr.nip; $('invDate').value = qr.date;
+  }
+  $('sellerNip').readOnly = on; $('invDate').readOnly = on;
+  $('numLabel').textContent = on ? t('numOpt') : t('number');
+}
+async function handleQrFile(file) {
+  resetForm();
+  if (!file) return;
+  $('qrInput').value = '';
+  msg('fileMsg', () => (t('checking')));
+  let img;
+  try { img = await loadImage(file); } catch (e) { return msg('fileMsg', () => (t('badFile')), 'bad'); }
+  const w = img.width, h = img.height, k = Math.min(1, 2000 / Math.max(w, h));
+  const c = document.createElement('canvas'); c.width = Math.round(w * k); c.height = Math.round(h * k);
+  c.getContext('2d').drawImage(img, 0, 0, c.width, c.height);
+  let texts = [];
+  try { texts = await findQrTexts(c); } catch (e) {}
+  if (!texts.length) return msg('fileMsg', () => (t('qrNone')), 'bad');
+  const qr = parseKsefQr(texts);
+  if (!qr) return msg('fileMsg', () => (t('qrNotKsef')), 'bad');
+  pendingQr = qr;
+  msg('fileMsg', () => (t('qrNext').replace('{nip}', qr.nip).replace('{date}', qr.date)
+    + '<button class="btn" id="qrDocBtn">' + t('qrDocBtn') + '</button>'), 'ok');
+  document.getElementById('qrDocBtn').onclick = () => $('camInput').click();
+}
+
+function resetForm() {
+  prepared = null; ocrJob = null; qrPromise = null; clearWarn();
+  show('dateRow', false); $('invDate').value = '';
+  if (numAuto) { $('invNumber').value = ''; numAuto = false; } show('numHint', false);
+  if (document.getElementById('qrFound')) setQrMode(null);
+  show('preview', false); show('formFields', false);
+  $('sizeInfo').textContent = ''; msg('fileMsg', ''); msg('sendMsg', '');
+}
+
+async function handleFile(file, source) {
+  resetForm();
+  if (!file) return;
+  $('camInput').value = ''; $('galInput').value = '';
+
+  // PDF — без сжатия
+  if (file.type === 'application/pdf') {
+    if (file.size > MAX_BYTES) return msg('fileMsg', () => (t('pdfBig')), 'bad');
+    prepared = { blob: file, contentType: 'application/pdf', ext: 'pdf', hash: await sha256(file), source, fresh: false };
+    $('sizeInfo').textContent = 'PDF: ' + file.name + ' (' + kb(file.size) + ')';
+    msg('fileMsg', () => (t('qualityOk')), 'ok');
+    show('formFields');
+    return;
+  }
+
+  msg('fileMsg', () => (t('checking')));
+  let img;
+  try { img = await loadImage(file); } catch (e) { return msg('fileMsg', () => (t('badFile')), 'bad'); }
+
+  // 1) проверка качества на ОРИГИНАЛЕ
+  const w = img.width, h = img.height;
+  if (Math.max(w, h) < MIN_LONG_SIDE) return msg('fileMsg', () => (t('tooSmall')), 'bad');
+  const q = analyze(img, w, h);
+  if (q.sharpness < MIN_SHARPNESS) return msg('fileMsg', () => (t('blurry')), 'bad');
+  if (q.brightness < MIN_BRIGHT) return msg('fileMsg', () => (t('dark')), 'bad');
+  if (q.brightness > MAX_BRIGHT) return msg('fileMsg', () => (t('bright')), 'bad');
+
+  // 2) сжатие на телефоне
+  const blob = await compress(img, w, h);
+  if (!blob || blob.size > MAX_BYTES) return msg('fileMsg', () => (t('badFile')), 'bad');
+
+  const fresh = source === 'camera' && (!file.lastModified || Math.abs(Date.now() - file.lastModified) < 15 * 60 * 1000);
+  prepared = { blob, contentType: 'image/jpeg', ext: 'jpg', hash: await sha256(file), source, fresh, qr: source === 'camera' ? pendingQr : null };
+  ocrJob = startOcr(img, w, h);
+  qrPromise = findQrTexts(ocrJob.plan[0][0]).catch(() => []);
+  $('preview').src = URL.createObjectURL(blob); show('preview');
+  $('sizeInfo').textContent = kb(file.size) + ' → ' + kb(blob.size) + ' · ' + w + '×' + h;
+  msg('fileMsg', () => (t('qualityOk')), 'ok');
+  const myJob = ocrJob;
+  myJob.first.then(txt => {
+    if (ocrJob !== myJob) return;            // уже выбрано другое фото
+    fillNumberFrom(txt);
+    const letters = (txt.match(/[A-Za-zĄĆĘŁŃÓŚŹŻąćęłńóśźż]/g) || []).length;
+    const money = (txt.match(/\d+[.,]\s?\d{2}(?!\d)/g) || []).length;
+    if (letters < 40 || money < 1) msg('fileMsg', () => t('noText'), 'bad');
+  }).catch(() => {});
+  if (prepared.qr) setQrMode(prepared.qr);
+  show('formFields');
+}
+
+async function loadImage(file) {
+  if (window.createImageBitmap) {
+    try { return await createImageBitmap(file, { imageOrientation: 'from-image' }); } catch (e) {}
+  }
+  return new Promise((res, rej) => {
+    const im = new Image();
+    im.onload = () => res(im);
+    im.onerror = rej;
+    im.src = URL.createObjectURL(file);
+  });
+}
+
+// резкость (дисперсия лапласиана) и средняя яркость на уменьшенной копии
+function analyze(img, w, h) {
+  const s = Math.min(1, 800 / Math.max(w, h));
+  const cw = Math.round(w * s), ch = Math.round(h * s);
+  const c = document.createElement('canvas'); c.width = cw; c.height = ch;
+  const ctx = c.getContext('2d', { willReadFrequently: true });
+  ctx.drawImage(img, 0, 0, cw, ch);
+  const d = ctx.getImageData(0, 0, cw, ch).data;
+  const g = new Float32Array(cw * ch);
+  let sum = 0;
+  for (let i = 0, p = 0; i < g.length; i++, p += 4) {
+    g[i] = 0.299*d[p] + 0.587*d[p+1] + 0.114*d[p+2]; sum += g[i];
+  }
+  const hist = new Uint32Array(1024); let n = 0;
+  for (let y = 1; y < ch - 1; y++) for (let x = 1; x < cw - 1; x++) {
+    const i = y * cw + x;
+    const v = Math.abs(4*g[i] - g[i-1] - g[i+1] - g[i-cw] - g[i+cw]);
+    hist[Math.min(1023, Math.round(v))]++; n++;
+  }
+  // 99.5-й процентиль: насколько резкие самые чёткие края (буквы). Фон стола/сиденья на это почти не влияет.
+  let acc = 0, p995 = 0;
+  for (let k = 1023; k >= 0; k--) { acc += hist[k]; if (acc >= n * 0.005) { p995 = k; break; } }
+  return { sharpness: p995, brightness: sum / g.length };
+}
+
+function toBlob(canvas, q) { return new Promise(r => canvas.toBlob(r, 'image/jpeg', q)); }
+
+async function compress(img, w, h) {
+  let side = TARGET_LONG_SIDE, blob = null;
+  for (let attempt = 0; attempt < 4; attempt++) {
+    const s = Math.min(1, side / Math.max(w, h));
+    const c = document.createElement('canvas');
+    c.width = Math.round(w * s); c.height = Math.round(h * s);
+    const ctx = c.getContext('2d');
+    ctx.fillStyle = '#fff'; ctx.fillRect(0, 0, c.width, c.height);
+    ctx.drawImage(img, 0, 0, c.width, c.height);
+    for (const q of [0.72, 0.62, 0.52]) {
+      blob = await toBlob(c, q);
+      if (blob && blob.size <= TARGET_BYTES) return blob;
+    }
+    if (blob && blob.size <= MAX_BYTES) return blob;
+    side = Math.round(side * 0.8);
+  }
+  return blob;
+}
+
+async function sha256(file) {
+  const buf = await file.arrayBuffer();
+  if (window.crypto && crypto.subtle) {
+    const h = await crypto.subtle.digest('SHA-256', buf);
+    return Array.from(new Uint8Array(h)).map(b => b.toString(16).padStart(2, '0')).join('');
+  }
+  return 'nohash-' + file.size + '-' + file.lastModified + '-' + Date.now();
+}
+
+function uuid() {
+  if (window.crypto && crypto.randomUUID) return crypto.randomUUID();
+  return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, c => {
+    const r = Math.random() * 16 | 0; return (c === 'x' ? r : (r & 3 | 8)).toString(16);
+  });
+}
+
+// ---------- сверка с фото (распознавание на телефоне, бесплатно) ----------
+// подготовка для чтения: из ОРИГИНАЛА, обрезка фона, серый цвет, контраст, увеличение до 2400 px
+// mode 1 — бумага занимает большую часть кадра; mode 2 — чек маленький или фон светлый
+function prepForOcr(img, w, h, mode) {
+  const s = Math.min(1, 2400 / Math.max(w, h));
+  const W = Math.round(w * s), H = Math.round(h * s);
+  const c0 = document.createElement('canvas'); c0.width = W; c0.height = H;
+  const x0c = c0.getContext('2d', { willReadFrequently: true });
+  x0c.drawImage(img, 0, 0, W, H);
+  const d0 = x0c.getImageData(0, 0, W, H).data;
+  const g = new Uint8ClampedArray(W * H);
+  for (let i = 0, p = 0; i < g.length; i++, p += 4) g[i] = 0.299 * d0[p] + 0.587 * d0[p + 1] + 0.114 * d0[p + 2];
+  const st = 8, sw = Math.floor(W / st), sh = Math.floor(H / st), smp = new Uint8Array(sw * sh);
+  for (let y = 0; y < sh; y++) for (let x = 0; x < sw; x++) smp[y * sw + x] = g[y * st * W + x * st];
+  const sorted = Array.from(smp).sort((a, b) => a - b), pc = q => sorted[Math.min(sorted.length - 1, Math.floor(sorted.length * q))];
+  let thr = (pc(0.1) + pc(0.9)) / 2;
+  if (mode === 2) thr = Math.max(thr, pc(0.98) - 40);
+  const colC = new Float32Array(sw), rowC = new Float32Array(sh);
+  for (let y = 0; y < sh; y++) for (let x = 0; x < sw; x++) if (smp[y * sw + x] > thr) { colC[x]++; rowC[y]++; }
+  const cMax = Math.max(...colC), rMax = Math.max(...rowC);
+  const cOk = x => mode === 2 ? colC[x] > 0.25 * cMax : colC[x] / sh > 0.35;
+  const rOk = y => mode === 2 ? rowC[y] > 0.25 * rMax : rowC[y] / sw > 0.35;
+  const mn = mode === 2 ? 0.1 : 0.15;
+  let cx0 = -1, cx1 = -1, cy0 = -1, cy1 = -1;
+  for (let x = 0; x < sw; x++) if (cOk(x)) { if (cx0 < 0) cx0 = x; cx1 = x; }
+  for (let y = 0; y < sh; y++) if (rOk(y)) { if (cy0 < 0) cy0 = y; cy1 = y; }
+  let X0 = 0, Y0 = 0, X1 = W, Y1 = H;
+  if (cx0 >= 0 && cy0 >= 0 && (cx1 - cx0) > sw * mn && (cy1 - cy0) > sh * mn) {
+    X0 = Math.max(0, cx0 * st - 20); X1 = Math.min(W, cx1 * st + 28);
+    Y0 = Math.max(0, cy0 * st - 20); Y1 = Math.min(H, cy1 * st + 28);
+  }
+  const cw = X1 - X0, ch = Y1 - Y0;
+  const hist = new Uint32Array(256);
+  for (let y = Y0; y < Y1; y++) for (let x = X0; x < X1; x++) hist[g[y * W + x]]++;
+  const n = cw * ch; let lo = 0, hi = 255, acc = 0;
+  while (lo < 255 && (acc += hist[lo]) < n * 0.02) lo++;
+  acc = 0; while (hi > 0 && (acc += hist[hi]) < n * 0.02) hi--;
+  const k = hi > lo ? 255 / (hi - lo) : 1;
+  const c1 = document.createElement('canvas'); c1.width = cw; c1.height = ch;
+  const ctx1 = c1.getContext('2d');
+  const out = ctx1.createImageData(cw, ch), d = out.data;
+  for (let y = 0; y < ch; y++) for (let x = 0; x < cw; x++) {
+    const v = Math.max(0, Math.min(255, (g[(y + Y0) * W + x + X0] - lo) * k)), q = (y * cw + x) * 4;
+    d[q] = d[q + 1] = d[q + 2] = v; d[q + 3] = 255;
+  }
+  ctx1.putImageData(out, 0, 0);
+  // мелкий чек увеличиваем — так цифры читаются заметно лучше
+  const up = 2400 / Math.max(cw, ch);
+  if (up <= 1.05) return c1;
+  const c = document.createElement('canvas'); c.width = Math.round(cw * up); c.height = Math.round(ch * up);
+  const ctx = c.getContext('2d'); ctx.imageSmoothingEnabled = true; ctx.imageSmoothingQuality = 'high';
+  ctx.drawImage(c1, 0, 0, c.width, c.height);
+  return c;
+}
+function rotateCanvas(c, deg) {
+  const r = document.createElement('canvas');
+  const side = deg % 180 !== 0;
+  r.width = side ? c.height : c.width; r.height = side ? c.width : c.height;
+  const ctx = r.getContext('2d');
+  ctx.translate(r.width / 2, r.height / 2); ctx.rotate(deg * Math.PI / 180);
+  ctx.drawImage(c, -c.width / 2, -c.height / 2);
+  return r;
+}
+// план чтения: обычный режим → второй режим → другая обрезка → повороты (чек снят боком/вверх ногами)
+function startOcr(img, w, h) {
+  const c1 = prepForOcr(img, w, h, 1), c2 = prepForOcr(img, w, h, 2);
+  const same = Math.abs(c1.width / c1.height - c2.width / c2.height) < 0.05;
+  const land = c2.width > c2.height * 1.1;
+  const plan = [[c1, 0, '3'], [c1, 0, '6']];
+  if (!same) plan.push([c2, 0, '3']);
+  if (land) plan.push([c2, 90, '3'], [c2, 270, '3']); else plan.push([c2, 180, '3']);
+  const job = { plan, text: '', idx: 0 };
+  job.first = ocrStep(job); job.first.catch(() => {});
+  return job;
+}
+async function ocrStep(job) {
+  if (job.idx >= job.plan.length) return job.text;
+  const [c, rot, psm] = job.plan[job.idx++];
+  const t = await runOcr(rot ? rotateCanvas(c, rot) : c, psm);
+  job.text += '\n' + t;
+  return job.text;
+}
+let ocrQueue = Promise.resolve();
+function runOcr(src, psm) {
+  const job = ocrQueue.then(async () => {
+    if (!window.Tesseract) throw new Error('OCR not loaded');
+    if (!ocrWorker) ocrWorker = await Tesseract.createWorker('pol');
+    await ocrWorker.setParameters({ tessedit_pageseg_mode: psm });
+    const r = await ocrWorker.recognize(src);
+    return (r && r.data && r.data.text) || '';
+  });
+  ocrQueue = job.catch(() => {});
+  return job;
+}
+// ---------- KSeF: QR-код на документе ----------
+async function findQrTexts(c) {
+  const out = new Set();
+  if ('BarcodeDetector' in window) {
+    try {
+      const bd = new BarcodeDetector({ formats: ['qr_code'] });
+      (await bd.detect(c)).forEach(b => b.rawValue && out.add(b.rawValue));
+    } catch (e) {}
+  }
+  if (window.jsQR) {
+    const ctx = c.getContext('2d', { willReadFrequently: true });
+    // весь снимок, нижняя половина, нижняя треть, верхняя половина
+    for (const [y0, y1] of [[0, 1], [0.5, 1], [0.66, 1], [0, 0.5]]) {
+      const y = Math.round(c.height * y0), hh = Math.round(c.height * (y1 - y0));
+      if (hh < 50) continue;
+      const d = ctx.getImageData(0, y, c.width, hh);
+      const r = jsQR(d.data, c.width, hh, { inversionAttempts: 'dontInvert' });
+      if (r && r.data) out.add(r.data);
+      await new Promise(res => setTimeout(res, 0));
+    }
+  }
+  return [...out];
+}
+function ksefInfo(qrTexts, ocrText) {
+  const links = qrTexts.filter(q => /ksef/i.test(q));
+  let qrNip = null, qrDate = null;
+  for (const q of links) {
+    const m = q.match(/invoice\/(\d{10})\/(\d{2})-(\d{2})-(\d{4})/i);
+    if (m) { qrNip = m[1]; qrDate = `${m[4]}-${m[3]}-${m[2]}`; break; }
+  }
+  // само слово «KSeF» бывает пустой графой — считаем только номер KSeF вида 5833530463-20261020-ABC123-…
+  const word = /\d{10}\s?-\s?\d{8}\s?-\s?[0-9A-F]{6}/i.test(ocrText || '');
+  // «Potwierdzenie transakcji» (ORLEN и др.) — сама фактура уходит в KSeF
+  const letters = (ocrText || '').toUpperCase().replace(/[^A-ZĄĆĘŁŃÓŚŹŻ]/g, '');
+  const confirm = /POTWIERDZEN.{0,4}TRANSAK/.test(letters);
+  return { inKsef: links.length > 0 || word || confirm, links, qrNip, qrDate, word, confirm };
+}
+
+// что за документ: WZ / проформа не принимаются; FAKTURA / PARAGON / подтверждение — для владельца
+function docKind(text, buyerFound) {
+  const raw = text || '';
+  const L = raw.toUpperCase()
+    .replace(/[ĄÀ]/g, 'A').replace(/Ć/g, 'C').replace(/Ę/g, 'E').replace(/Ł/g, 'L').replace(/Ń/g, 'N')
+    .replace(/Ó/g, 'O').replace(/Ś/g, 'S').replace(/[ŹŻ]/g, 'Z').replace(/[^A-Z]/g, '');
+  const notInvoice =
+      (/WYDANIEZEWN/.test(L) || /\bWZ\s?\d+\s?\/\s?20\d\d/i.test(raw)) ? 'Wydanie zewnętrzne / WZ' :
+      /PROFORM/.test(L) ? 'Faktura proforma' :
+      /ASYGNAT/.test(L) ? 'Asygnata' :
+      /DOWODWYDANIA/.test(L) ? 'Dowód wydania' :
+      (/RAPORTUKASOWEGO|DOKKASOWEGO|KASAPRZYJMIE|DOWODWPLATY/.test(L) || /\bKP\s+NR\b/i.test(raw)) ? 'KP — dowód wpłaty, nie faktura' :
+      /POTWIERDZENIE(WYKONANIA)?PRZELEWU|POTWIERDZENIEOPERACJI/.test(L) ? 'Potwierdzenie przelewu' : null;
+  const faktura = /FAKTUR/.test(L), paragon = /PARAGON/.test(L), confirm = /POTWIERDZEN.{0,4}TRANSAK/.test(L);
+  // спецификация к фактуре: принимаем, но сама фактура должна найтись в KSeF
+  const spec = /SPECZAKUP|SPECYFIKACJA/.test(L);
+  // чек с платёжного терминала без фактуры/парагона и без NIP фирмы
+  const terminal = /KODAUTORYZACJI|ARQC|POTWIERDZENIEZAPLATY|TERMINAL|CONTACTLESS|ZBLIZENIOW/.test(L);
+  const slip = !notInvoice && terminal && !faktura && !paragon && !confirm && buyerFound === false;
+  return { notInvoice: notInvoice || (slip ? 'potwierdzenie płatności kartą' : null), faktura, paragon, confirm, spec };
+}
+
+// магазины, где не бывает топлива и автозапчастей (продукты, стройка, техника, косметика, дом)
+const NOT_CAR_SHOPS = [
+  ['JERONI', 'Biedronka'], ['BIEDRONK', 'Biedronka'], ['LIDL', 'Lidl'], ['ZABKA', 'Żabka'],
+  ['KAUFLAND', 'Kaufland'], ['NETTOSPZ', 'Netto'], ['DINOPOLSKA', 'Dino'], ['STOKROTKA', 'Stokrotka'],
+  ['LEWIATAN', 'Lewiatan'], ['ROSSMANN', 'Rossmann'], ['HEBE', 'Hebe'], ['CASTORAMA', 'Castorama'],
+  ['LEROYMERLIN', 'Leroy Merlin'], ['OBIPOLSKA', 'OBI'], ['MEDIAEXPERT', 'Media Expert'], ['TERGEMEDIA', 'Media Expert'],
+  ['MEDIAMARKT', 'MediaMarkt'], ['EUROAGD', 'RTV Euro AGD'], ['EURONET', 'RTV Euro AGD'], ['IKEA', 'IKEA'],
+  ['PEPCO', 'Pepco'], ['ACTIONPOLSKA', 'Action'], ['RTVEURO', 'RTV Euro AGD'], ['SUPERPHARM', 'Super-Pharm']
+];
+function normLetters(t) {
+  return (t || '').toUpperCase().replace(/[ĄÀ]/g, 'A').replace(/Ć/g, 'C').replace(/Ę/g, 'E').replace(/Ł/g, 'L')
+    .replace(/Ń/g, 'N').replace(/Ó/g, 'O').replace(/Ś/g, 'S').replace(/[ŹŻ]/g, 'Z').replace(/[^A-Z]/g, '');
+}
+function notCarShop(sellerName, ocrText) {
+  const n = normLetters(sellerName), o = normLetters(ocrText);
+  for (const [key, label] of NOT_CAR_SHOPS) {
+    if (n.includes(key)) return label;
+    // по тексту чека — только если это слово есть в шапке (первые ~300 букв), чтобы не ловить рекламу
+    const head = o.slice(0, 300);
+    if (key.length >= 6 ? nearIn(head, key, 1) : head.includes(key)) return label;
+  }
+  return null;
+}
+
+// товары не для автомобиля в строках чека (строка с товаром = есть цена вида 12,34)
+const NOT_CAR_WORDS = ('PAPIEROS PAPIEROSY CYGARETKI TYTON MARLBORO CAMEL WINSTON CHESTERFIELD VICEROY VUSE IQOS HEETS TEREA ELFBAR ' +
+  'WODA NAPOJ COLA PEPSI FANTA SPRITE MONSTER TIGER OSHEE KAWA LATTE CAPPUCCINO ESPRESSO AMERICANO HERBATA ' +
+  'PIWO WINO WODKA ZYWIEC TYSKIE ZUBR HARNAS ' +
+  'HOTDOG KANAPKA BULKA ZAPIEKANKA BATON SNICKERS TWIX CHIPSY LODY CZEKOLADA SALATKA PIZZA BURGER CROISSANT ' +
+  'DROZDZOWKA PACZEK JOGURT MLEKO WAFEL CUKIERKI LOTTO ZDRAPKA DOLADOWANIE').split(' ');
+const NOT_CAR_PAIRS = [['HOT', 'DOG'], ['RED', 'BULL'], ['PALL', 'MALL']];
+function nonCarItem(text) {
+  for (const line of (text || '').split('\n')) {
+    if (!/\d+[.,]\s?\d{2}/.test(line)) continue;
+    const toks = line.split(/\s+/).map(normLetters).filter(Boolean);
+    for (let i = 0; i < toks.length; i++) {
+      const w = toks[i];
+      for (const k of NOT_CAR_WORDS) {
+        if (w === k || (k.length >= 4 && w.length > k.length + 2 && w.startsWith(k)) || (k.length >= 7 && w.length === k.length && nearIn(w, k, 1))) return k;
+      }
+      for (const [a, b] of NOT_CAR_PAIRS) if (w === a && toks[i + 1] === b) return a + ' ' + b;
+    }
+  }
+  return null;
+}
+
+// дата документа с фото: все даты в тексте, берётся самая частая (дата продажи/выставления повторяется)
+function extractDate(text) {
+  const found = {}, now = Date.now();
+  const add = (y, m, d) => {
+    y = +y; m = +m; d = +d;
+    if (m < 1 || m > 12 || d < 1 || d > 31) return;
+    const dt = Date.UTC(y, m - 1, d);
+    if (new Date(dt).getUTCMonth() !== m - 1) return;
+    const diff = (now - dt) / 864e5;
+    if (diff < -1 || diff > 400) return;
+    const k = `${y}-${String(m).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
+    found[k] = (found[k] || 0) + 1;
+  };
+  const s = (text || '').replace(/[ \t]*([.\-\/])[ \t]*/g, '$1');
+  for (const m of s.matchAll(/(?<!\d)(20\d\d)[.\-\/](\d{1,2})[.\-\/](\d{1,2})(?!\d)/g)) add(m[1], m[2], m[3]);
+  for (const m of s.matchAll(/(?<!\d)(\d{1,2})[.\-\/](\d{1,2})[.\-\/](20\d\d)(?!\d)/g)) add(m[3], m[2], m[1]);
+  let keys = Object.keys(found);
+  if (!keys.length) {
+    // запасной путь: дата прочитана с одной типичной ошибкой (2026-40-21, 2026-18-17, 2028-10-24) —
+    // пробуем заменить одну цифру на похожую; берём, только если получается ровно одна правильная дата
+    const CONF = { '0': '8', '1': '47', '3': '8', '4': '1', '5': '6', '6': '58', '7': '1', '8': '063' };
+    const s2 = (text || '').replace(/[ \t]*([.\-\/])[ \t]*/g, '$1');
+    const raw = [];
+    for (const m of s2.matchAll(/(?<!\d)(\d{4})[.\-\/](\d{2})[.\-\/](\d{2})(?!\d)/g)) raw.push([m[1], m[2], m[3]]);
+    for (const m of s2.matchAll(/(?<!\d)(\d{2})[.\-\/](\d{2})[.\-\/](\d{4})(?!\d)/g)) raw.push([m[3], m[2], m[1]]);
+    for (const [y, m, d] of raw) {
+      const str = y + m + d;
+      for (let p = 0; p < 8; p++) for (const c of (CONF[str[p]] || '')) {
+        const v = str.slice(0, p) + c + str.slice(p + 1);
+        add(v.slice(0, 4), v.slice(4, 6), v.slice(6, 8));
+      }
+    }
+    keys = Object.keys(found);
+    if (keys.length !== 1) return null;   // несколько похожих дат — не угадываем, водитель введёт сам
+  }
+  keys.sort((a, b) => found[b] - found[a] || (a < b ? 1 : -1));
+  return keys[0];
+}
+
+// номер фактуры с фото (подсказка, водитель может исправить)
+function extractInvoiceNumber(text) {
+  const lines = (text || '').split('\n');
+  const cands = [];
+  const LABEL = /(?:^|[^A-Za-z])(numer|nu[tv]er|nr|no)\s*[.:]?\s*/gi;
+  const SKIP = /(dok|rej|sys|trans|kas|kart|kont|rap|zam|klient|paliw|stacj|sklep|bdo|tel|nip)\W{0,3}$/i;
+  const clean = v => v.replace(/\s*([\/\-])\s*/g, '$1').replace(/^[^A-Za-z0-9]+|[^A-Za-z0-9]+$/g, '');
+  lines.forEach((line, i) => {
+    for (const m of line.matchAll(LABEL)) {
+      const pre = line.slice(Math.max(0, m.index - 12), m.index + 1);
+      if (SKIP.test(pre) || /^\s*(dok|rej|sys|trans|kasy|karty)/i.test(line.slice(m.index + m[0].length))) continue;
+      let rest = line.slice(m.index + m[0].length);
+      if (!/\d/.test(rest) && i + 1 < lines.length) rest = lines[i + 1];          // номер на следующей строке
+      rest = rest.replace(/^([A-Za-z]{1,2})[^A-Za-z0-9\s]{1,2}\s/, '$1 ')           // «f° 32393/…» → «f 32393/…»
+                 .replace(/(\d)\s(?=\d+[\/\-])/g, '$1').replace(/([\/\-]\d+)\s(\d)/g, '$1$2'); // «202 6-02 803» → «2026-02803»
+      const mm = rest.match(/^\W{0,3}((?:[A-Za-z]{1,3}\s)?[A-Za-z0-9]+(?:\s?[\/\-]\s?[A-Za-z0-9]+)*)/);
+      if (!mm) continue;
+      let v = clean(mm[1]);
+      const digits = (v.match(/\d/g) || []).length;
+      if (digits < 3 || /^\d{1,4}$/.test(v)) continue;                            // «nr 320», «nr: 3896» — не номер фактуры
+      if (/^(PL)?\d{10}$/i.test(v) && !/faktur/i.test(line)) continue;            // похоже на NIP
+      let score = 0;
+      if (/faktur|\bfv\b|f\s?v\b/i.test(line) || (i > 0 && /faktur/i.test(lines[i - 1]))) score += 3;
+      if (/[\/\-]/.test(v)) score += 2;
+      if (/^nu/i.test(m[1])) score += 1;
+      if (digits >= 6) score += 1;
+      cands.push({ v, score, i });
+    }
+  });
+  if (!cands.length) return null;
+  cands.sort((a, b) => b.score - a.score || a.i - b.i);
+  return cands[0].v;
+}
+
+// есть ли в цепочке цифр нужное число (допускается 1 неверно прочитанная цифра)
+function nearIn(stream, target, maxd) {
+  const n = target.length;
+  for (let i = 0; i + n <= stream.length; i++) {
+    let dd = 0;
+    for (let j = 0; j < n && dd <= maxd; j++) if (stream[i + j] !== target[j]) dd++;
+    if (dd <= maxd) return true;
+  }
+  return false;
+}
+function withTimeout(p, ms) {
+  return Promise.race([p, new Promise((_, rej) => setTimeout(() => rej(new Error('timeout')), ms))]);
+}
+function checkText(text, v) {
+  const digits = text.replace(/\D/g, '');
+  const flat = text.replace(/\s/g, '');
+  const money = flat.replace(/\./g, ',');
+  const dates = flat.replace(/[.\/]/g, '-');
+  const [y, m, d] = (v.date || '0000-00-00').split('-');
+  const am = v.amount.toFixed(2).replace('.', ',');
+  return {
+    seller: nearIn(digits, v.sellerNip, 1),
+    buyer: FIRM_NIP ? nearIn(digits, FIRM_NIP, 1) : true,
+    amount: money.includes(am),
+    date: !v.date ? null : dates.includes(`${d}-${m}-${y}`) || dates.includes(`${y}-${m}-${d}`) || dates.includes(`${d}-${m}-${y.slice(2)}`)
+          || nearIn(digits, d + m + y, 1) || nearIn(digits, y + m + d, 1)
+  };
+}
+let vatCache = {};
+async function checkVat(nip) {
+  if (!sb || !/^\d{10}$/.test(nip)) return { ok: null };
+  if (vatCache[nip]) return vatCache[nip];
+  try {
+    const { data, error } = await withTimeout(sb.rpc('check_vat_nip', { p_nip: nip }), 15000);
+    const r = error ? { ok: null, error: error.message } : (data || { ok: null });
+    if (r.ok !== null) vatCache[nip] = r;
+    return r;
+  } catch (e) { return { ok: null, error: String(e.message || e) }; }
+}
+$('sellerNip').addEventListener('change', async () => {
+  const nip = $('sellerNip').value.replace(/\D/g, '');
+  $('sellerInfo').textContent = '';
+  if (!nipValid(nip)) return;
+  $('sellerInfo').textContent = t('vatChecking');
+  const r = await checkVat(nip);
+  $('sellerInfo').textContent = r.ok === null ? '' : r.found ? t('sellerIs') + (r.name || '') + (r.ok ? ' ✓' : ' — ' + t('vatInactive')) : t('vatNotFound');
+});
+
+function fillNumberFrom(text) {
+  if ($('docType').value === 'paragon') return;
+  if ($('invNumber').value && !numAuto) return;     // водитель ввёл сам — не трогаем
+  const n = extractInvoiceNumber(text);
+  if (!n) return;
+  $('invNumber').value = n; numAuto = true; show('numHint');
+}
+$('invNumber').addEventListener('input', () => { numAuto = false; show('numHint', false); });
+
+function clearWarn() { warned = false; $('sendBtn').textContent = t('send'); }
+['amount', 'invNumber', 'invDate', 'sellerNip', 'docType'].forEach(id =>
+  $(id).addEventListener('input', () => { if (warned) { clearWarn(); msg('sendMsg', ''); } }));
+
+// ---------- отправка ----------
+$('sendBtn').onclick = async () => {
+  const amount = parseFloat(($('amount').value || '').replace(/\s/g, '').replace(',', '.'));
+  let number = $('invNumber').value.trim();
+  const docType = $('docType').value;
+  const manualDate = $('dateRow').classList.contains('hidden') ? '' : $('invDate').value;
+  const par = docType === 'paragon', other = docType === 'inny';
+  const sellerNip = $('sellerNip').value.replace(/\D/g, '');
+  const qr = prepared && prepared.qr;
+  let date = qr ? qr.date : '';          // дата: из QR-кода или читается с фото
+  if (!prepared || !(amount > 0) || !sellerNip || (!qr && !$('fullVisible').checked))
+    return msg('sendMsg', () => (t('fillAll')), 'bad');
+  if (sellerNip && !nipValid(sellerNip)) return msg('sendMsg', () => (t('badNip')), 'bad');
+  if (par && !prepared.fresh) return msg('sendMsg', () => (t('paragonCamera')), 'bad');
+
+  $('sendBtn').disabled = true;
+  let check = { ran: false };
+  if (ocrJob) {
+    msg('sendMsg', () => (t('verifying')));
+    const job = ocrJob, v = { sellerNip, amount, date: date || null };
+    try {
+      await withTimeout(job.first, 45000);
+      let r = checkText(job.text, v);
+      // не всё нашлось — читаем ещё раз другими способами, тексты объединяем
+      const dateOk = () => v.date ? r.date : !!extractDate(job.text);
+      while (!(r.seller && r.buyer && r.amount && dateOk()) && job.idx < job.plan.length) {
+        msg('sendMsg', () => (t('verifying') + ' (' + (job.idx + 1) + '/' + job.plan.length + ')'));
+        await withTimeout(ocrStep(job), 45000);
+        r = checkText(job.text, v);
+      }
+      fillNumberFrom(job.text);
+      if (!v.date) { const d = extractDate(job.text); if (d) { date = d; r.date = true; } else r.date = false; }
+      check = Object.assign({ ran: true }, r);
+      const kind = docKind(job.text, r.buyer);
+      check.kind = kind;
+      if (kind.notInvoice) {
+        $('sendBtn').disabled = false;
+        return msg('sendMsg', () => (t('notInvoice').replace('{x}', kind.notInvoice)), 'bad');
+      }
+      const item = nonCarItem(job.text);
+      if (item) {
+        $('sendBtn').disabled = false;
+        return msg('sendMsg', () => (t('notCarItems').replace('{x}', item.toLowerCase())), 'bad');
+      }
+    } catch (e) {
+      check = job.text ? Object.assign({ ran: true }, checkText(job.text, v)) : { ran: false, error: String(e.message || e) };
+    }
+  }
+  let ksef = { inKsef: false };
+  if (qrPromise) {
+    const ocrText = ocrJob ? ocrJob.text : '';
+    try { ksef = ksefInfo(await withTimeout(qrPromise, 10000), ocrText); } catch (e) {}
+    // QR-код KSeF содержит NIP продавца и дату — сверяем с тем, что ввёл водитель
+    if (ksef.qrNip && check.ran) check.seller = check.seller && ksef.qrNip === sellerNip;
+    if (ksef.qrNip && ksef.qrNip !== sellerNip) { check.ran = true; check.seller = false; }
+    if (ksef.qrDate && !date) { date = ksef.qrDate; if (check.ran) check.date = true; }
+    else if (ksef.qrDate && ksef.qrDate !== date) { check.ran = true; check.date = false; }
+  }
+  check.ksef = ksef;
+  msg('sendMsg', () => (t('vatChecking')));
+  const vat = await checkVat(sellerNip);
+  const shop = notCarShop(vat && vat.name, ocrJob ? ocrJob.text : '');
+  if (shop) { $('sendBtn').disabled = false; return msg('sendMsg', () => (t('notCar').replace('{x}', shop)), 'bad'); }
+  const missing = check.ran ? ['seller', 'buyer', 'amount', 'date'].filter(k => check[k] === false) : [];
+  const vatProblemKey = vat.ok === false ? (vat.found ? 'vatInactive' : 'vatNotFound') : '';
+  const vatProblem = vatProblemKey ? t(vatProblemKey) : '';
+  if (missing.length) failCount++;
+  const listHtml = (vatProblemKey ? '<b>' + t(vatProblemKey) + '</b><br>' : '') + (missing.length ? t('notFound') + '<ul>' + missing.map(k => '<li>' + t('f_' + k) + '</li>').join('') + '</ul>' : '<br>');
+  const retakeHtml = '<button class="btn secondary" id="retakeBtn">' + t('retake') + '</button><div class="small">' + t('retakeHint') + '</div>';
+  if (missing.length && failCount < MAX_TRIES) {
+    $('sendBtn').disabled = false; clearWarn();
+    msg('sendMsg', () => (listHtml + t('tryOf').replace('{n}', failCount).replace('{m}', MAX_TRIES) + retakeHtml), 'bad');
+    document.getElementById('retakeBtn').onclick = () => $('camInput').click();
+    return;
+  }
+  if ((missing.length || vatProblem) && !warned) {
+    if (!date) show('dateRow');
+    warned = true; $('sendBtn').disabled = false; $('sendBtn').textContent = t('sendAnyway');
+    msg('sendMsg', () => ((vatProblemKey ? '<b>' + t(vatProblemKey) + '</b><br>' : '') + (missing.length ? t('notFound') + '<ul>' + missing.map(k => '<li>' + t('f_' + k) + '</li>').join('') + '</ul>' : '<br>') + t('fixOrSend')
+      + (missing.length ? '<button class="btn secondary" id="retakeBtn">' + t('retake') + '</button><div class="small">' + t('retakeHint') + '</div>' : '')), 'bad');
+    const rb = document.getElementById('retakeBtn');
+    if (rb) rb.onclick = () => $('camInput').click();
+    return;
+  }
+  number = $('invNumber').value.trim();
+  if (!date) date = manualDate;
+  if (!date) {
+    show('dateRow'); $('sendBtn').disabled = false;
+    return msg('sendMsg', () => t('enterDate'), 'bad');
+  }
+  if (manualDate && check.ran && !check.date) check.dateManual = true;
+  msg('sendMsg', () => (t('sending')));
+  const month = date.slice(0, 7);
+  const path = `${driverId}/${month}/${uuid()}.${prepared.ext}`;
+
+  const up = await sb.storage.from(BUCKET).upload(path, prepared.blob, { contentType: prepared.contentType, upsert: false });
+  if (up.error) { $('sendBtn').disabled = false; return msg('sendMsg', () => (t('sendErr') + up.error.message), 'bad'); }
+
+  const ins = await sb.from('invoices').insert({
+    driver_id: driverId, storage_path: path, file_hash: prepared.hash,
+    period_month: month + '-01', doc_type: (!qr && !par && check.kind && (check.kind.spec || check.kind.confirm)) ? 'inny' : docType, invoice_number: par ? null : (number || null), invoice_date: date,
+    seller_nip: sellerNip || null, buyer_nip: FIRM_NIP || null,
+    ocr_check: check, ocr_ok: check.ran ? missing.length === 0 : null, vat_check: vat,
+    in_ksef: !!(qr || other || (ksef && ksef.inKsef) || (check.kind && check.kind.spec)), ksef_hash: qr ? qr.hash : null,
+    needs_ksef: !!(!qr && (other || (check.kind && (check.kind.spec || check.kind.confirm)))),
+    gross_amount: Math.round(amount * 100) / 100, category: $('category').value
+  }).select('id').single();
+
+  $('sendBtn').disabled = false;
+  if (ins.error) {
+    await sb.storage.from(BUCKET).remove([path]);   // не оставляем «сиротский» файл
+    return msg('sendMsg', () => (ins.error.code === '23505' ? t('duplicate') : t('sendErr') + ins.error.message), 'bad');
+  }
+  ['amount', 'invNumber', 'sellerNip'].forEach(id => $(id).value = '');
+  $('fullVisible').checked = false;
+  pendingQr = null;
+  const wasSpec = !qr && (other || !!(check.kind && (check.kind.spec || check.kind.confirm)));
+  resetForm(); clearWarn(); failCount = 0; $('sellerInfo').textContent = '';
+  let auto = false;
+  try {
+    const st = await sb.from('invoices').select('status').eq('id', ins.data.id).single();
+    auto = st.data && st.data.status === 'accepted';
+  } catch (e) {}
+  msg('sendMsg', () => (auto ? t('sentAuto') : (wasSpec ? t('sentKsef') : t('sent'))), 'ok');
+  loadList();
+};
+
+// ---------- список ----------
+async function loadList() {
+  if (!driverId) return;
+  const { data, error } = await sb.from('invoices')
+    .select('doc_type, invoice_number, invoice_date, gross_amount, status, reject_reason')
+    .order('uploaded_at', { ascending: false }).limit(30);
+  if (error) { $('list').textContent = error.message; return; }
+  if (!data.length) { $('list').innerHTML = `<div class="small">${t('empty')}</div>`; return; }
+  $('list').innerHTML = data.map(r => `
+    <div class="inv">
+      <div>
+        <div><b>${Number(r.gross_amount || 0).toFixed(2)} zł</b> · ${r.doc_type === 'paragon' ? t('docFaktura') === 'Invoice' ? 'Receipt' : 'Paragon' : ''} ${esc(r.invoice_number || '')}</div>
+        <div class="small">${r.invoice_date || ''}${r.status === 'rejected' && r.reject_reason ? ' — ' + esc(reasonText(r.reject_reason)) : ''}</div>
+      </div>
+      <span class="badge ${r.status}">${t(r.status)}</span>
+    </div>`).join('');
+}
+function nipValid(n) {
+  if (!/^\d{10}$/.test(n)) return false;
+  const w = [6,5,7,2,3,4,5,6,7];
+  const sum = w.reduce((a, x, i) => a + x * +n[i], 0) % 11;
+  return sum !== 10 && sum === +n[9];
+}
+// причины отклонения хранятся кодом и переводятся; свободный текст владельца показывается как есть
+function reasonText(r) {
+  if (r === 'duplicate' || /^Дубликат/i.test(r)) return t('duplicate');
+  if (T.pl['rj_' + r]) return t('rj_' + r);   // код причины из панели владельца
+  return r;                                     // свой текст владельца
+}
+function esc(s) { return String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+
+init();
+</script>
+</body>
+</html>
