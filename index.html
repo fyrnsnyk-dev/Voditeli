@@ -70,6 +70,13 @@ td:first-child,th:first-child{text-align:start}
 td.n{text-align:end;font-variant-numeric:tabular-nums;white-space:nowrap;padding-inline-start:8px;direction:ltr}
 tr:last-child td{border-bottom:0;font-weight:700}
 
+.tabs{display:flex;gap:8px}
+.tabs button{flex:1;font:inherit;font-weight:600;padding:11px 8px;border-radius:12px;border:2px solid var(--bd);background:var(--card);color:var(--fg);cursor:pointer}
+.tabs button[aria-pressed="true"]{background:var(--ink);color:var(--inkfg);border-color:var(--ink)}
+.chipst{display:inline-block;font-size:.78rem;font-weight:600;padding:2px 8px;border-radius:99px;border:1px solid var(--bd);color:var(--mut)}
+.chipst.ok{color:var(--pos);border-color:var(--pos)}.chipst.bad{color:var(--neg);border-color:var(--neg)}
+input[type=file]{padding:10px}
+.msgb{font-weight:600}
 [hidden]{display:none!important}
 body{margin:0}
 </style>
@@ -98,6 +105,7 @@ body{margin:0}
 
   <main id="app" class="stack" hidden>
     <div class="top"><div class="av" id="av"></div><div class="t"><span class="mut small" id="hi"></span><b id="who"></b></div><button class="ghost" id="out" data-i="logout"></button></div>
+    <div class="tabs"><button id="tS" aria-pressed="true" data-i="tabStat"></button><button id="tI" aria-pressed="false" data-i="tabInv"></button></div>
     <div id="content" class="stack">
       <div class="wk"><button class="arrow" id="prev"></button><div class="mid"><b id="wl"></b><span class="mut small" id="pub"></span></div><button class="arrow" id="next"></button></div>
       <div class="hero" id="hero"></div>
@@ -107,6 +115,19 @@ body{margin:0}
       </div>
       <div class="card"><h2 data-i="faqTitle"></h2><details><summary data-i="q1"></summary><p class="small" data-i="a1" style="padding-top:8px"></p></details></div>
       <p class="mut small" data-i="foot" style="text-align:center"></p>
+    </div>
+    <div id="invbox" class="stack" hidden>
+      <div class="card stack">
+        <h2 data-i="invTitle"></h2>
+        <p class="mut small" data-i="invHelp"></p>
+        <div><label for="im" data-i="invMonth"></label><input id="im" type="month"></div>
+        <div><label for="if" data-i="invPick"></label><input id="if" type="file" accept="image/*,application/pdf"></div>
+        <div><label for="ia" data-i="invAmount"></label><input id="ia" inputmode="decimal"></div>
+        <div><label for="in" data-i="invNote"></label><input id="in"></div>
+        <button class="btn" id="isend" data-i="invSend"></button>
+        <p class="small msgb" id="imsg" role="status"></p>
+      </div>
+      <div class="card"><h2 data-i="invList"></h2><div id="ilist"></div></div>
     </div>
     <p class="mut" id="empty" hidden></p>
   </main>
@@ -143,6 +164,13 @@ en:{errPhone:"Enter the number like +48123456789",errNotFound:"This number is no
 pl:{errPhone:"Wpisz numer w formacie +48123456789",errNotFound:"Ten numer nie jest zarejestrowany. Skontaktuj się z właścicielem floty.",errCode:"Zły lub wygasły kod. Poproś o nowy.",errNet:"Brak połączenia lub usługa niedostępna. Spróbuj ponownie.",nodata:"Nie opublikowano jeszcze żadnego tygodnia. Rozliczenie pojawi się, gdy właściciel floty je opublikuje.",sending:"Wysyłamy…"},
 uk:{errPhone:"Введіть номер у форматі +48123456789",errNotFound:"Цей номер не зареєстровано. Зверніться до власника парку.",errCode:"Невірний або прострочений код. Запросіть новий.",errNet:"Немає зв’язку або сервіс недоступний. Спробуйте ще раз.",nodata:"Поки немає опублікованих тижнів. Розрахунок з’явиться, коли власник парку його опублікує.",sending:"Надсилаємо…"}};
 Object.keys(E).forEach(k=>Object.assign(L[k],E[k]));
+const E2={
+ru:{tabStat:"Расчёты",tabInv:"Фактуры",invTitle:"Загрузить фактуру или чек",invHelp:"Сфотографируйте фактуру целиком, при хорошем свете, чтобы весь текст читался. Можно выбрать фото из галереи или PDF.",invMonth:"Месяц",invPick:"Фото или файл",invAmount:"Сумма, zł (необязательно)",invNote:"Комментарий (необязательно)",invSend:"Отправить",invSending:"Отправляем…",invOk:"Фактура отправлена.",invDup:"Эта фактура уже загружена.",invSmall:"Фото слишком мелкое. Снимите ближе и при хорошем свете.",invBig:"Файл больше 10 МБ.",invNoFile:"Сначала выберите фото или файл.",invErr:"Не удалось отправить. Попробуйте ещё раз.",invList:"Загружено за выбранный месяц",invNone:"Пока ничего нет.",stNew:"Получено",stOk:"Принято",stBad:"Нужна другая"},
+en:{tabStat:"Statement",tabInv:"Invoices",invTitle:"Upload an invoice or receipt",invHelp:"Photograph the whole invoice in good light so all the text is readable. You can pick a photo from the gallery or a PDF.",invMonth:"Month",invPick:"Photo or file",invAmount:"Amount, zł (optional)",invNote:"Comment (optional)",invSend:"Send",invSending:"Sending…",invOk:"Invoice sent.",invDup:"This invoice has already been uploaded.",invSmall:"The photo is too small. Take it closer and in good light.",invBig:"The file is larger than 10 MB.",invNoFile:"Choose a photo or file first.",invErr:"Could not send. Try again.",invList:"Uploaded for the selected month",invNone:"Nothing yet.",stNew:"Received",stOk:"Accepted",stBad:"Send another"},
+pl:{tabStat:"Rozliczenie",tabInv:"Faktury",invTitle:"Prześlij fakturę lub paragon",invHelp:"Sfotografuj całą fakturę przy dobrym świetle, żeby cały tekst był czytelny. Możesz wybrać zdjęcie z galerii lub PDF.",invMonth:"Miesiąc",invPick:"Zdjęcie lub plik",invAmount:"Kwota, zł (opcjonalnie)",invNote:"Komentarz (opcjonalnie)",invSend:"Wyślij",invSending:"Wysyłamy…",invOk:"Faktura wysłana.",invDup:"Ta faktura została już przesłana.",invSmall:"Zdjęcie jest za małe. Zrób bliżej i przy dobrym świetle.",invBig:"Plik jest większy niż 10 MB.",invNoFile:"Najpierw wybierz zdjęcie lub plik.",invErr:"Nie udało się wysłać. Spróbuj ponownie.",invList:"Przesłane w wybranym miesiącu",invNone:"Na razie nic nie ma.",stNew:"Otrzymano",stOk:"Przyjęto",stBad:"Potrzebna inna"},
+uk:{tabStat:"Розрахунки",tabInv:"Фактури",invTitle:"Завантажити фактуру або чек",invHelp:"Сфотографуйте фактуру повністю, за гарного освітлення, щоб увесь текст читався. Можна вибрати фото з галереї або PDF.",invMonth:"Місяць",invPick:"Фото або файл",invAmount:"Сума, zł (необов’язково)",invNote:"Коментар (необов’язково)",invSend:"Надіслати",invSending:"Надсилаємо…",invOk:"Фактуру надіслано.",invDup:"Цю фактуру вже завантажено.",invSmall:"Фото занадто мале. Знімайте ближче й за гарного освітлення.",invBig:"Файл більший за 10 МБ.",invNoFile:"Спершу виберіть фото або файл.",invErr:"Не вдалося надіслати. Спробуйте ще раз.",invList:"Завантажено за вибраний місяць",invNone:"Поки нічого немає.",stNew:"Отримано",stOk:"Прийнято",stBad:"Потрібна інша"}};
+Object.keys(E2).forEach(k=>Object.assign(L[k],E2[k]));
+
 
 const SU="https://qehwfuwpcphqixukjbtz.supabase.co",SK="sb_publishable_U8NLOMPpkToIXkQ-ddYg1A_T6iEx9yM";
 const SB=supabase.createClient(SU,SK);
@@ -160,7 +188,7 @@ $("prev").textContent=rtl?"›":"‹";$("next").textContent=rtl?"‹":"›";$("p
 if(!$("app").hidden){greet();draw()}}
 function greet(){const h=new Date().getHours();$("hi").textContent=T(h<5?"g0":h<12?"g1":h<17?"g2":"g3")}
 const p2=n=>String(n).padStart(2,"0");
-function draw(){if(!weeks.length){$("content").hidden=true;$("empty").hidden=false;$("empty").textContent=T("nodata");return}$("content").hidden=false;$("empty").hidden=true;show(cur)}
+function draw(){if(tab==="i"){$("content").hidden=true;$("empty").hidden=true;$("invbox").hidden=false;loadInv();return}$("invbox").hidden=true;if(!weeks.length){$("content").hidden=true;$("empty").hidden=false;$("empty").textContent=T("nodata");return}$("content").hidden=false;$("empty").hidden=true;show(cur)}
 function show(i){cur=i;const w=weeks[i],d=w.data||{};
 const x={bolt:d.bolt||[0,0],uber:d.uber||[0,0],fn:d.fn||[0,0],inv:+d.inv||0,rent:+d.rent||0,debt:+d.debt||0,zus:+d.zus||0,carry:+d.carry||0};
 const c={g:+d.g||0,n:+d.n||0,inc:+d.inc||0,fee:+d.fee||0,tot:+d.tot||0};
@@ -182,14 +210,61 @@ const pl=[["Bolt","#34d186",x.bolt],["Uber","#10241e",x.uber],["FreeNow","#e0457
 $("src").innerHTML=pl.map(p=>'<div class="li"><span class="dot" style="background:'+p[1]+'"></span><div class="nm"><span>'+p[0]+'</span><span class="mut small">'+T("withCash",{n:fm(p[2][0])})+'</span></div><b class="'+(p[2][1]<0?'neg':'')+'">'+fm(p[2][1])+'</b></div>').join("")||'<p class="mut small">'+T("noIncome")+'</p>';
 const R=(a,b,cl)=>'<tr><td>'+a+'</td><td class="n '+(cl||'')+'">'+b+'</td></tr>';
 $("full").innerHTML='<table><tr><th></th><th>zł</th></tr>'+R(T("gross"),fm(c.g))+R(T("invoices"),x.inv?"−"+fm(x.inv):"0,00")+R(T("incBase"),fm(c.inc))+R(T("onAcc"),fm(c.n))+R(T("comm"),fm(-c.fee),"neg")+R(T("rent"),fm(x.rent),x.rent<0?"neg":"")+R(T("debt"),fm(x.debt),x.debt<0?"neg":"")+R(T("zus"),fm(x.zus))+R(T("carry"),fm(x.carry))+R(T("total"),fm(c.tot),c.tot<0?"neg":"pos")+'</table>'}
+
+let tab="s";
+function setTab(t){tab=t;$("tS").setAttribute("aria-pressed",t==="s");$("tI").setAttribute("aria-pressed",t==="i");draw()}
+$("tS").onclick=()=>setTab("s");$("tI").onclick=()=>setTab("i");
+const nowM=()=>{const d=new Date();return d.getFullYear()+"-"+p2(d.getMonth()+1)};
+$("im").value=nowM();
+const imsg=(t,bad)=>{$("imsg").textContent=t||"";$("imsg").className="small msgb "+(bad?"neg":"pos")};
+async function sha(buf){const h=await crypto.subtle.digest("SHA-256",buf);return [...new Uint8Array(h)].map(b=>b.toString(16).padStart(2,"0")).join("")}
+async function prep(file){
+ if(file.type==="application/pdf")return{blob:file,ext:"pdf",type:"application/pdf"};
+ const img=await createImageBitmap(file);
+ /* проверки качества идут по исходному фото, до сжатия */
+ if(Math.max(img.width,img.height)<1000)throw{code:"small"};
+ /* сжатие до ~150 КБ: уменьшаем размер и качество, пока файл не станет достаточно лёгким */
+ const LIM=150*1024;let side=Math.min(1,1800/Math.max(img.width,img.height)),blob=null;
+ for(let step=0;step<8;step++){
+  const c=document.createElement("canvas");c.width=Math.round(img.width*side);c.height=Math.round(img.height*side);
+  c.getContext("2d").drawImage(img,0,0,c.width,c.height);
+  for(const q of [.8,.7,.6,.5]){blob=await new Promise(r=>c.toBlob(r,"image/jpeg",q));if(blob.size<=LIM)return{blob,ext:"jpg",type:"image/jpeg"}}
+  side*=.85}
+ return{blob,ext:"jpg",type:"image/jpeg"}}
+async function loadInv(){
+ if(!me)return;const m=$("im").value||nowM();
+ const r=await SB.from("invoices").select("id,amount,note,status,created_at").eq("driver_id",me.id).eq("month",m).order("created_at",{ascending:false});
+ if(r.error){$("ilist").textContent=T("invErr");return}
+ const st={new:"stNew",ok:"stOk",bad:"stBad"};
+ $("ilist").innerHTML=(r.data||[]).length?r.data.map(x=>{const d=new Date(x.created_at);return '<div class="li"><div class="nm"><span>'+p2(d.getDate())+"."+p2(d.getMonth()+1)+(x.amount?" · "+fm(x.amount)+" zł":"")+'</span>'+(x.note?'<span class="mut small">'+x.note.replace(/[&<>]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;"}[c]))+'</span>':'')+'</div><span class="chipst '+x.status+'">'+T(st[x.status]||"stNew")+'</span></div>'}).join(""):'<p class="mut small">'+T("invNone")+'</p>'}
+$("im").onchange=loadInv;
+$("isend").onclick=async()=>{
+ imsg("");const f=$("if").files[0];if(!f){imsg(T("invNoFile"),1);return}
+ if(f.size>10*1024*1024){imsg(T("invBig"),1);return}
+ $("isend").disabled=true;imsg(T("invSending"));
+ try{
+  const hash=await sha(await f.arrayBuffer());
+  const p=await prep(f),m=$("im").value||nowM(),path=me.id+"/"+m+"/"+hash.slice(0,20)+"."+p.ext;
+  const up=await SB.storage.from("invoices").upload(path,p.blob,{contentType:p.type,upsert:false});
+  if(up.error&&!/exist|duplicate/i.test(up.error.message||""))throw up.error;
+  const a=pn($("ia").value);
+  const ins=await SB.from("invoices").insert({driver_id:me.id,month:m,path,file_hash:hash,amount:isNaN(a)?null:a,note:$("in").value.trim()||null});
+  if(ins.error){if(ins.error.code==="23505"){imsg(T("invDup"),1);return}throw ins.error}
+  imsg(T("invOk"));$("if").value="";$("ia").value="";$("in").value="";loadInv()
+ }catch(e){imsg(e&&e.code==="small"?T("invSmall"):T("invErr"),1)}
+ finally{$("isend").disabled=false}};
+function pn(s){const v=parseFloat(String(s).replace(",",".").replace(/[^\d.\-]/g,""));return v}
 function showLogin(){$("app").hidden=true;$("login").hidden=false;$("f1").hidden=false;$("f2").hidden=true;$("b1").disabled=false;$("b2").disabled=false}
 async function enter(){
  try{await SB.rpc("claim_driver");
- const r1=await SB.from("drivers").select("id,name").maybeSingle();
+ const ur=await SB.auth.getUser();
+ const uid=ur.data&&ur.data.user?ur.data.user.id:null;
+ if(!uid){showLogin();return}
+ const r1=await SB.from("drivers").select("id,name").eq("user_id",uid).maybeSingle();
  if(r1.error)throw r1.error;
- if(!r1.data){await SB.auth.signOut();showLogin();msg(T("errNotFound"));return}
+ if(!r1.data){showLogin();msg(T("errNotFound"));return}
  me=r1.data;
- const r2=await SB.from("statements").select("week_start,published_at,data").order("week_start",{ascending:false});
+ const r2=await SB.from("statements").select("week_start,published_at,data").eq("driver_id",me.id).order("week_start",{ascending:false});
  if(r2.error)throw r2.error;weeks=r2.data||[];
  $("login").hidden=true;$("app").hidden=false;$("who").textContent=me.name;$("av").textContent=me.name.split(/\s+/).map(w=>w[0]).join("").slice(0,2).toUpperCase();greet();cur=0;draw();msg("")
  }catch(e){showLogin();msg(T("errNet"))}}
@@ -199,7 +274,7 @@ $("f1").onsubmit=async e=>{e.preventDefault();msg("");phone=normPhone($("ph").va
  $("b1").disabled=true;msg(T("sending"));
  const {error}=await SB.auth.signInWithOtp({phone});
  $("b1").disabled=false;
- if(error){msg(error.status===403||/зарегистрирован|not allowed|not registered|hook/i.test(error.message||"")?T("errNotFound"):T("errNet"));return}
+ if(error){const det=" ["+(error.status||"")+" "+(error.code||"")+" "+(error.message||"")+"]";msg((error.status===403||/зарегистрирован|not allowed|not registered|hook/i.test(error.message||"")?T("errNotFound"):T("errNet"))+det);return}
  msg("");$("f1").hidden=true;$("f2").hidden=false;$("cd").focus()};
 $("back").onclick=()=>{msg("");$("f2").hidden=true;$("f1").hidden=false};
 $("f2").onsubmit=async e=>{e.preventDefault();msg("");$("b2").disabled=true;
