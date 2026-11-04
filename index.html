@@ -93,6 +93,7 @@ body{margin:0}
     <form id="f1" class="stack">
       <div><label for="ph" data-i="phone"></label><input id="ph" type="tel" inputmode="tel" autocomplete="tel" placeholder="+48 600 000 000"></div>
       <button class="btn" type="submit" id="b1" data-i="getCode"></button>
+      <button class="link" type="button" id="have">У меня уже есть код / I already have a code</button>
     </form>
     <form id="f2" class="stack" hidden>
       <div><label for="cd" data-i="codeLabel"></label><input id="cd" inputmode="numeric" autocomplete="one-time-code" maxlength="8"></div>
@@ -173,7 +174,7 @@ Object.keys(E2).forEach(k=>Object.assign(L[k],E2[k]));
 
 
 const SU="https://qehwfuwpcphqixukjbtz.supabase.co",SK="sb_publishable_U8NLOMPpkToIXkQ-ddYg1A_T6iEx9yM";
-const VER="v3";
+const VER="v4";
 window.addEventListener("error",e=>{const m=document.getElementById("msg");if(m)m.textContent="JS error "+VER+": "+(e.message||"")});
 if(typeof supabase==="undefined"){document.addEventListener("DOMContentLoaded",()=>{const m=document.getElementById("msg");if(m)m.textContent="Library not loaded ("+VER+"): cdn.jsdelivr.net blocked or offline"})}
 const SB=supabase.createClient(SU,SK);
@@ -279,6 +280,7 @@ $("f1").onsubmit=async e=>{e.preventDefault();msg("");phone=normPhone($("ph").va
  $("b1").disabled=false;
  if(error){const det=" ["+VER+" "+(error.status||"")+" "+(error.code||"")+" "+(error.message||"")+"]";msg((error.status===403||/зарегистрирован|not allowed|not registered|hook/i.test(error.message||"")?T("errNotFound"):T("errNet"))+det);return}
  msg("");$("f1").hidden=true;$("f2").hidden=false;$("cd").focus()};
+$("have").onclick=()=>{msg("");phone=normPhone($("ph").value);if(!/^\+\d{9,15}$/.test(phone)){msg(T("errPhone"));return}$("f1").hidden=true;$("f2").hidden=false;$("cd").focus()};
 $("back").onclick=()=>{msg("");$("f2").hidden=true;$("f1").hidden=false};
 $("f2").onsubmit=async e=>{e.preventDefault();msg("");$("b2").disabled=true;
  const {error}=await SB.auth.verifyOtp({phone,token:$("cd").value.trim(),type:"sms"});
