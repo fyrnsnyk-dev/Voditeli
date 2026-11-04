@@ -174,7 +174,7 @@ Object.keys(E2).forEach(k=>Object.assign(L[k],E2[k]));
 
 
 const SU="https://qehwfuwpcphqixukjbtz.supabase.co",SK="sb_publishable_U8NLOMPpkToIXkQ-ddYg1A_T6iEx9yM";
-const VER="v8";
+const VER="v9";
 window.addEventListener("error",e=>{const m=document.getElementById("msg");if(m)m.textContent="JS error "+VER+": "+(e.message||"")});
 if(typeof supabase==="undefined"){document.addEventListener("DOMContentLoaded",()=>{const m=document.getElementById("msg");if(m)m.textContent="Library not loaded ("+VER+"): cdn.jsdelivr.net blocked or offline"})}
 const SB=supabase.createClient(SU,SK);
@@ -202,7 +202,7 @@ $("prev").disabled=i>=weeks.length-1;$("next").disabled=i<=0;
 const h=c.tot>=0;
 $("hero").className="hero"+(h?"":" debt");
 const zp=d.wz!==undefined&&d.wz!==null?+d.wz||0:Math.max(0,-x.carry);
-const gz=zp>0.004?'<div style="margin-top:12px;display:flex;justify-content:space-between;align-items:center;gap:12px;background:#fff;color:var(--pos);border-radius:14px;padding:10px 14px;font-weight:700"><span>'+T("carry")+'</span><span style="direction:ltr;white-space:nowrap">'+fm(zp)+' zł</span></div>':'';
+const gz=zp>0.004?'<div class="lab" style="margin-top:18px">'+T("carry")+'</div><div class="sum">'+fm(zp)+'<small>zł</small></div>':'';
 $("hero").innerHTML=h?'<div class="lab">'+T("heroPay")+'</div><div class="sum">'+fm(c.tot)+'<small>zł</small></div><div class="sub">'+T("heroPaySub")+'</div>'+gz:'<div class="lab">'+T("heroDebt")+'</div><div class="sum">'+fm(-c.tot)+'<small>zł</small></div><div class="sub">'+T("heroDebtSub")+'</div>'+gz;
 const note=d.std?(c.inc<1500?T("feeLow"):T("feeStd",{x:fm(c.inc)})):"";
 const dd=[[T("fee"),c.fee,"var(--c2)",note],[T("rent"),-x.rent,"var(--c3)",""],[T("debt"),-x.debt,"var(--c4)",""],[T("zus"),-x.zus,"var(--c4)",""],[T("carry"),zp,"#5bbf8a","",1]].filter(r=>r[1]>0);
