@@ -49,7 +49,7 @@
 </head>
 <body>
 <header>
-  <h1 data-t="title">Фактуры</h1><a href="index.html" style="margin-inline-start:auto;margin-inline-end:10px;font-weight:600;color:inherit">← Расчёты / Rozliczenia</a>
+  <h1 data-t="title">Фактуры</h1><a id="backLink" href="index.html" style="margin-inline-start:auto;margin-inline-end:10px;font-weight:600;color:inherit">← Rozliczenia</a>
   <select id="lang" aria-label="Language" style="width:auto;padding:6px 8px"><option value="pl">Polski</option><option value="ru">Русский</option><option value="uk">Українська</option><option value="be">Беларуская</option><option value="en">English</option><option value="ka">ქართული</option><option value="pa">ਪੰਜਾਬੀ</option><option value="hi">हिन्दी</option><option value="ur">اردو</option></select>
 </header>
 
@@ -997,6 +997,7 @@ function applyLang() {
   document.querySelectorAll('[data-t]').forEach(el => el.textContent = t(el.dataset.t));
   if (document.getElementById('docType')) applyDocType();
   if (document.getElementById('sendBtn')) $('sendBtn').textContent = warned ? t('sendAnyway') : t('send');
+  try{const bl=document.getElementById('backLink');if(bl)bl.textContent=({pl:'← Rozliczenia',ru:'← Расчёты',uk:'← Розрахунки',be:'← Разлікі',en:'← Statement',ka:'← გაანგარიშება',hi:'← हिसाब',pa:'← ਹਿਸਾਬ',ur:'← حساب'})[lang]||'← Statement'}catch(e){}
   Object.keys(lastMsg).forEach(renderMsg);   // сообщения тоже переводятся
 }
 
