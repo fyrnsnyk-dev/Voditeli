@@ -1,0 +1,681 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Панель владельца — документы</title>
+<style>
+  :root { --bg:#f4f5f7; --card:#fff; --text:#1d2129; --muted:#6b7280; --accent:#1f6feb;
+          --ok:#1a7f37; --warn:#b26b00; --bad:#c62828; --line:#e3e6ea; --info:#eef2f7; }
+  * { box-sizing:border-box; }
+  body { margin:0; background:var(--bg); color:var(--text); font:15px/1.4 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif; }
+  header { position:sticky; top:0; z-index:5; background:var(--card); border-bottom:1px solid var(--line); padding:10px 16px; }
+  .bar { display:flex; flex-wrap:wrap; gap:8px; align-items:center; max-width:1100px; margin:0 auto; }
+  .bar h1 { font-size:18px; margin:0 12px 0 0; }
+  main { max-width:1100px; margin:0 auto; padding:16px; }
+  table.wk { width:100%; border-collapse:collapse; background:var(--card); border-radius:12px; overflow:hidden; }
+  table.wk th, table.wk td { padding:8px 10px; border-bottom:1px solid var(--line); text-align:left; }
+  table.wk td.num, table.wk th.num { text-align:right; font-variant-numeric:tabular-nums; }
+  table.wk tfoot td { font-weight:700; }
+  input, select, button, textarea { font:inherit; }
+  input[type=text], input[type=email], input[type=password], input[type=month], select, textarea {
+    padding:8px 10px; border:1px solid var(--line); border-radius:8px; background:#fff; }
+  .btn { padding:8px 14px; border:0; border-radius:8px; background:var(--accent); color:#fff; font-weight:600; cursor:pointer; }
+  .btn.ok { background:var(--ok); } .btn.bad { background:var(--bad); } .btn.ghost { background:#e8eefc; color:var(--accent); }
+  .btn:disabled { opacity:.5; cursor:default; }
+  .tabs { display:flex; flex-wrap:wrap; gap:6px; max-width:1100px; margin:10px auto 0; }
+  .tab { padding:6px 12px; border-radius:999px; background:#eef0f3; border:0; cursor:pointer; }
+  .tab.on { background:var(--accent); color:#fff; }
+  .tab .n { font-weight:700; margin-left:4px; }
+  .card { background:var(--card); border-radius:12px; padding:12px; margin-bottom:12px; box-shadow:0 1px 3px rgba(0,0,0,.06);
+          display:grid; grid-template-columns:150px 1fr; gap:14px; }
+  .card.hl { outline:2px solid var(--warn); }
+  .thumb { width:150px; height:200px; object-fit:cover; border-radius:8px; background:#eee; cursor:zoom-in; }
+  .pdf { width:150px; height:200px; display:flex; align-items:center; justify-content:center; border-radius:8px; background:#eee; color:var(--muted); text-decoration:none; }
+  .row { display:flex; flex-wrap:wrap; gap:6px 16px; align-items:baseline; }
+  .amt { font-size:20px; font-weight:700; }
+  .muted { color:var(--muted); font-size:13px; }
+  .tag { display:inline-block; font-size:12px; padding:2px 8px; border-radius:999px; margin:2px 4px 2px 0; background:var(--info); }
+  .tag.warn { background:#fff4e0; color:var(--warn); } .tag.bad { background:#fdecea; color:var(--bad); }
+  .tag.ok { background:#e6f4ea; color:var(--ok); } .tag.ksef { background:#ede7f6; color:#5e35b1; }
+  .actions { display:flex; flex-wrap:wrap; gap:8px; align-items:center; margin-top:10px; }
+  .actions input.amtEdit { width:110px; }
+  .msg { padding:10px 12px; border-radius:8px; margin:10px 0; }
+  .msg.bad { background:#fdecea; color:var(--bad); } .msg.ok { background:#e6f4ea; color:var(--ok); } .msg.info { background:var(--info); }
+  .hidden { display:none !important; }
+  .login { max-width:360px; margin:60px auto; background:var(--card); padding:20px; border-radius:12px; }
+  .login input { width:100%; margin:6px 0 10px; }
+  #zoom { position:fixed; inset:0; background:rgba(0,0,0,.85); display:flex; align-items:center; justify-content:center; z-index:20; cursor:zoom-out; }
+  #zoom img { max-width:96vw; max-height:96vh; }
+  .sum { margin-left:auto; font-weight:600; }
+  /* 100dvh — видимая высота экрана без панелей браузера/планшета */
+  #viewer { position:fixed; inset:0; z-index:30; background:#111; display:grid; grid-template-columns:1fr 380px;
+            height:100vh; height:100dvh; padding-bottom:env(safe-area-inset-bottom); }
+  #vImg { overflow:auto; display:flex; align-items:center; justify-content:center; cursor:zoom-in; min-height:0;
+          -webkit-overflow-scrolling:touch; user-select:none; }
+  #vImg img { max-width:100%; max-height:100%; display:block; -webkit-user-drag:none; }
+  #vImg.zoomed { display:block; cursor:grab; }
+  #vImg.zoomed.drag { cursor:grabbing; }
+  #vImg.zoomed img { max-width:none; max-height:none; margin:0 auto; }
+  #vImg iframe { width:100%; height:100%; border:0; background:#fff; }
+  #vZoomHint { position:absolute; left:12px; bottom:calc(12px + env(safe-area-inset-bottom)); color:#ddd; font-size:12px; background:rgba(0,0,0,.5); padding:4px 8px; border-radius:6px; pointer-events:none; }
+  #vSide { background:var(--card); display:flex; flex-direction:column; height:100%; min-height:0; }
+  #vTop { padding:12px; border-bottom:1px solid var(--line); }
+  #vTop .nav { display:grid; grid-template-columns:48px 1fr 48px 48px; gap:8px; align-items:center; margin-bottom:12px; }
+  #vTop .nav .btn { padding:10px 0; }
+  #vPos { text-align:center; font-weight:600; }
+  #vTop .grid2 { display:grid; grid-template-columns:1fr 1fr; gap:8px; }
+  #vTop .grid2 .btn, #vTop .full { padding:12px 0; width:100%; font-size:16px; }
+  #vTop input, #vTop select { width:100%; }
+  #vTop label { font-size:12px; color:var(--muted); display:block; margin:8px 0 3px; }
+  #vInfo { padding:12px; overflow:auto; flex:1; }
+  #vInfo .amt { font-size:24px; }
+  #vMsg:empty { display:none; }
+  @media (max-width:800px) { #viewer { grid-template-columns:1fr; grid-template-rows:55% 45%; } }
+  @media (max-width:640px) { .card { grid-template-columns:1fr; } .thumb, .pdf { width:100%; height:240px; } .sum { margin-left:0; } }
+</style>
+</head>
+<body>
+
+<section id="setupBox" class="login hidden">
+  <h2>Подключение к Supabase</h2>
+  <div class="muted">Settings → API. Вводится один раз на этом компьютере.</div>
+  <label>Project URL</label><input id="cfgUrl" type="text" placeholder="https://xxxx.supabase.co">
+  <label>anon / publishable key</label><input id="cfgKey" type="text">
+  <button class="btn" id="cfgSave">Сохранить</button>
+  <div id="cfgMsg"></div>
+</section>
+
+<section id="loginBox" class="login hidden">
+  <h2>Вход владельца</h2>
+  <label>Email</label><input id="email" type="email" autocomplete="username" autocapitalize="none">
+  <label>Пароль</label><input id="password" type="password" autocomplete="current-password">
+  <button class="btn" id="loginBtn">Войти</button>
+  <div id="loginMsg"></div>
+  <p class="muted">Нет пароля? Supabase → Authentication → Users → ваш пользователь → «Send password recovery» или создайте пароль там же.</p>
+</section>
+
+<div id="app" class="hidden">
+  <header>
+    <div class="bar">
+      <h1>Документы водителей</h1>
+      <input id="month" type="month">
+      <button class="btn ghost" id="allMonths" title="Показать документы за все месяцы">Все месяцы</button>
+      <input id="search" type="text" placeholder="Поиск: водитель, NIP, номер, сумма" style="flex:1;min-width:200px">
+      <button class="btn ghost" id="reload">Обновить</button>
+      <button class="btn" id="zipBtn">⬇ Пакет бухгалтеру (ZIP)</button>
+      <button class="btn ghost" id="weekBtn">📅 Итоги недели</button>
+      <button class="btn ghost" id="logout">Выйти</button>
+    </div>
+    <div class="tabs" id="tabs"></div>
+  </header>
+  <main>
+    <div id="topMsg"></div>
+    <div class="row" style="margin-bottom:10px"><span id="listInfo" class="muted"></span><span id="listSum" class="sum"></span></div>
+    <div id="list"></div>
+  </main>
+  <main id="weekView" class="hidden">
+    <div class="row" style="margin-bottom:12px">
+      <b>Неделя (пн–вс):</b>
+      <select id="weekSel"></select>
+      <button class="btn ghost" id="weekBack">← К документам</button>
+      <button class="btn" id="weekCopy">📋 Копировать для Excel</button>
+      <button class="btn ghost" id="weekCsv">⬇ CSV</button>
+      <span id="weekState"></span>
+      <button class="btn bad" id="weekClose">🔒 Закрыть неделю</button>
+      <button class="btn ghost hidden" id="weekOpen">Открыть снова</button>
+    </div>
+    <div class="muted" style="margin-bottom:10px">Сумма принятых документов, <b>загруженных</b> водителем с понедельника 00:00 по воскресенье 23:59 (время Польши). Это число идёт в колонку «Фактуры».
+      После расчёта нажмите <b>«Закрыть неделю»</b>: документы этой недели, которые вы примете позже, автоматически перейдут в следующую неделю.</div>
+    <div id="weekMsg"></div>
+    <div id="weekTable"></div>
+  </main>
+</div>
+
+<div id="zoom" class="hidden"><img alt=""></div>
+
+<div id="viewer" class="hidden">
+  <div style="position:relative;min-height:0;display:flex"><div id="vImg" style="flex:1"></div>
+    <div id="vZoomHint">Клик — увеличить · зажмите и тяните — двигать · клик ещё раз — уменьшить</div></div>
+  <div id="vSide">
+    <div id="vTop">
+      <div class="nav">
+        <button class="btn ghost" id="vPrev" title="Предыдущий (←)">◀</button>
+        <div id="vPos"></div>
+        <button class="btn ghost" id="vNext" title="Следующий (→)">▶</button>
+        <button class="btn ghost" id="vClose" title="Закрыть (Esc)">✕</button>
+      </div>
+      <label>Сумма, zł (можно исправить)</label>
+      <input id="vAmt" type="text" inputmode="decimal">
+      <div class="grid2" style="margin-top:8px">
+        <button class="btn ok" id="vAccept">✓ Принять</button>
+        <button class="btn ghost" id="vReopen">↺ Вернуть на проверку</button>
+      </div>
+      <label>Причина отклонения</label>
+      <select id="vReason"></select>
+      <button class="btn bad full" id="vReject" style="margin-top:8px">✕ Отклонить</button>
+      <div id="vMsg"></div>
+    </div>
+    <div id="vInfo"></div>
+  </div>
+</div>
+
+<section id="pkgView" class="hidden"></section>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+<script>
+const BUCKET = 'invoices';
+const $ = id => document.getElementById(id);
+const show = (id, on = true) => $(id).classList.toggle('hidden', !on);
+const msg = (id, html, kind = 'info') => { $(id).innerHTML = html ? `<div class="msg ${kind}">${html}</div>` : ''; };
+const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const money = n => (Number(n) || 0).toFixed(2).replace('.', ',');
+
+// Причины отклонения: код хранится в базе, водитель видит её на своём языке
+const REASONS = [
+  ['duplicate',  'Дубликат — уже отправлен'],
+  ['notCar',     'Не расходы на автомобиль'],
+  ['unreadable', 'Фото нечитаемое'],
+  ['wrongData',  'Неверные данные (сумма / NIP / дата)'],
+  ['noFirmNip',  'Нет NIP нашей фирмы'],
+  ['notInvoice', 'Не фактура (WZ, KP, подтверждение оплаты…)'],
+  ['notInKsef',  'Фактуры нет в KSeF'],
+  ['other',      'Другое (написать текст)…']
+];
+const REASON_RU = Object.fromEntries(REASONS);
+const CAT = { fuel: 'Топливо', parts: 'Запчасти, ремонт', other: 'Химчистка, электроника, другое', repair: 'Ремонт', cleaning: 'Химчистка', electronics: 'Электроника' };
+const DOC = { faktura: 'Фактура', paragon: 'Парагон', inny: 'Подтверждение / KSeF' };
+const F_RU = { seller: 'NIP продавца', buyer: 'NIP фирмы', amount: 'сумма', date: 'дата' };
+
+let sb = null, rows = [], urls = {}, tab = 'review';
+
+// ---------- подключение ----------
+function getCfg() {
+  return { u: 'https://qehwfuwpcphqixukjbtz.supabase.co', k: 'sb_publishable_U8NLOMPpkToIXkQ-ddYg1A_T6iEx9yM' };
+}
+$('cfgSave').onclick = () => {
+  const u = $('cfgUrl').value.trim().replace(/\/+$/, ''), k = $('cfgKey').value.trim();
+  if (!/^https:\/\//.test(u) || k.length < 20) return msg('cfgMsg', 'Проверьте URL и ключ.', 'bad');
+  try { localStorage.setItem('sbUrl', u); localStorage.setItem('sbKey', k); } catch (e) {}
+  show('setupBox', false); init();
+};
+$('loginBtn').onclick = async () => {
+  $('loginBtn').disabled = true;
+  const { error } = await sb.auth.signInWithPassword({ email: $('email').value.trim().toLowerCase(), password: $('password').value });
+  $('loginBtn').disabled = false;
+  if (error) return msg('loginMsg', 'Не удалось войти: ' + esc(error.message), 'bad');
+  init();
+};
+$('logout').onclick = async () => { await sb.auth.signOut(); location.reload(); };
+
+async function init() {
+  if (!window.supabase) return document.body.innerHTML = '<div class="msg bad">Нет интернета или не загрузилась библиотека.</div>';
+  const c = getCfg();
+  if (!c) return show('setupBox');
+  sb = sb || window.supabase.createClient(c.u, c.k);
+  const { data: { session } } = await sb.auth.getSession();
+  if (!session) return show('loginBox');
+  const { data: admin } = await sb.rpc('is_admin');
+  if (!admin) { show('loginBox'); return msg('loginMsg', 'Этот пользователь не отмечен как владелец (таблица admins).', 'bad'); }
+  show('loginBox', false); show('app');
+  if (!$('month').value) {
+    const d = new Date(); d.setDate(1); d.setMonth(d.getMonth() - (new Date().getDate() <= 10 ? 1 : 0));
+    $('month').value = d.toISOString().slice(0, 7);
+  }
+  load();
+}
+
+// ---------- загрузка ----------
+function driverName(d) {
+  if (!d) return '—';
+  const n = d.name || d.full_name || d.driver_name || d.imie_nazwisko ||
+            [d.first_name || d.imie, d.last_name || d.nazwisko].filter(Boolean).join(' ');
+  return n || d.phone || String(d.id || '').slice(0, 8);
+}
+async function load() {
+  msg('topMsg', 'Загружаем…');
+  const m = $('month').value;
+  let qry = sb.from('invoices').select('*, drivers(*)');
+  if (m) qry = qry.eq('period_month', m + '-01');
+  let { data, error } = await qry.order('uploaded_at', { ascending: false }).range(0, 2999);
+  if (error && /drivers/i.test(error.message)) {
+    // имена водителей недоступны (не запущен update_9) — показываем документы без имён
+    let q2 = sb.from('invoices').select('*');
+    if (m) q2 = q2.eq('period_month', m + '-01');
+    ({ data, error } = await q2.order('uploaded_at', { ascending: false }).range(0, 2999));
+  }
+  if (error) return msg('topMsg', 'Ошибка загрузки: ' + esc(error.message), 'bad');
+  rows = data || [];
+  // ссылки на фото (действуют 1 час)
+  const paths = rows.map(r => r.storage_path).filter(p => p && !urls[p]);
+  for (let i = 0; i < paths.length; i += 100) {
+    const { data: s } = await sb.storage.from(BUCKET).createSignedUrls(paths.slice(i, i + 100), 3600);
+    (s || []).forEach(x => { if (x.signedUrl) urls[x.path] = x.signedUrl; });
+  }
+  msg('topMsg', '');
+  render();
+}
+
+// ---------- вкладки и список ----------
+const TABS = [
+  ['review',   'Ждут решения',   r => r.status === 'pending' && !r.needs_ksef],
+  ['ksef',     'Сверить с KSeF', r => r.status === 'pending' && r.needs_ksef],
+  ['auto',     'Автопринятые',   r => r.status === 'accepted' && r.auto_accepted],
+  ['accepted', 'Принятые',       r => r.status === 'accepted'],
+  ['rejected', 'Отклонённые',    r => r.status === 'rejected'],
+  ['all',      'Все',            r => true]
+];
+function similar(r) {
+  const d0 = Date.parse(r.invoice_date);
+  return rows.filter(o => o.id !== r.id && o.status !== 'rejected' && o.seller_nip === r.seller_nip &&
+    Math.abs(Number(o.gross_amount) - Number(r.gross_amount)) < 0.01 &&
+    Math.abs(Date.parse(o.invoice_date) - d0) <= 3 * 864e5);
+}
+function matchesSearch(r, q) {
+  if (!q) return true;
+  const hay = [driverName(r.drivers), r.seller_nip, r.invoice_number, money(r.gross_amount), r.vat_check && r.vat_check.name].join(' ').toLowerCase();
+  return q.toLowerCase().split(/\s+/).every(w => hay.includes(w.replace('.', ',')) || hay.includes(w));
+}
+function render() {
+  const q = $('search').value.trim();
+  $('tabs').innerHTML = TABS.map(([k, label, f]) =>
+    `<button class="tab ${k === tab ? 'on' : ''}" data-tab="${k}">${label}<span class="n">${rows.filter(f).length}</span></button>`).join('');
+  const f = TABS.find(x => x[0] === tab)[2];
+  const list = rows.filter(f).filter(r => matchesSearch(r, q));
+  $('listInfo').textContent = `${list.length} док.`;
+  $('listSum').textContent = 'Сумма: ' + money(list.reduce((s, r) => s + Number(r.gross_amount || 0), 0)) + ' zł';
+  $('list').innerHTML = list.length ? list.map(card).join('') : '<div class="muted">Здесь пусто.</div>';
+}
+function card(r) {
+  const url = urls[r.storage_path] || '';
+  const isPdf = /\.pdf$/i.test(r.storage_path || '');
+  const img = !url ? '<div class="pdf">нет фото</div>' : isPdf
+    ? `<a class="pdf" href="${url}" target="_blank" rel="noopener">PDF ↗</a>`
+    : `<img class="thumb" src="${url}" data-zoom="${url}" alt="" loading="lazy">`;
+  const oc = r.ocr_check || {}, tags = [];
+  if (r.review_reason) tags.push(`<span class="tag warn">Оставлен вам: ${esc(r.review_reason)}</span>`);
+  if (oc.ran) {
+    const miss = ['seller', 'buyer', 'amount', 'date'].filter(k => oc[k] === false);
+    tags.push(miss.length ? `<span class="tag bad">Не найдено на фото: ${miss.map(k => F_RU[k]).join(', ')}</span>` : '<span class="tag ok">Фото совпало</span>');
+  } else if (oc.source !== 'ksef_qr') tags.push('<span class="tag warn">Фото не сверялось</span>');
+  if (oc.dateManual) tags.push('<span class="tag warn">Дата введена вручную</span>');
+  const vat = r.vat_check || {};
+  if (vat.ok === true) tags.push('<span class="tag ok">NIP в реестре VAT</span>');
+  else if (vat.ok === false) tags.push(`<span class="tag bad">${vat.found ? 'Продавец не активен в VAT' : 'NIP нет в реестре VAT'}</span>`);
+  if (r.in_ksef) tags.push(`<span class="tag ksef">KSeF${r.ksef_hash ? ' (QR)' : ''} — не бухгалтеру</span>`);
+  if (r.auto_accepted) tags.push('<span class="tag ok">Автоприём</span>');
+  const sim = similar(r);
+  if (sim.length) tags.push(`<span class="tag bad">Похожий документ: ${sim.map(o => esc(driverName(o.drivers)) + ' ' + esc(o.invoice_date)).join('; ')}</span>`);
+  const st = { pending: '<span class="tag warn">на проверке</span>', accepted: '<span class="tag ok">принят</span>', rejected: '<span class="tag bad">отклонён</span>' }[r.status] || '';
+  const rej = r.status === 'rejected' && r.reject_reason ? `<div class="muted">Причина: ${esc(REASON_RU[r.reject_reason] || r.reject_reason)}</div>` : '';
+  const actions = r.status === 'pending' ? `
+      <input class="amtEdit" type="text" inputmode="decimal" value="${money(r.gross_amount)}" title="Сумму можно исправить перед приёмом">
+      <button class="btn ok" data-act="accept">Принять</button>
+      <select class="reason"><option value="">Причина отклонения…</option>${REASONS.map(([k, l]) => `<option value="${k}">${l}</option>`).join('')}</select>
+      <button class="btn bad" data-act="reject">Отклонить</button>`
+    : `<button class="btn ghost" data-act="reopen">Вернуть на проверку</button>`
+      + (r.status === 'accepted' ? ` <select class="reason"><option value="">Причина отклонения…</option>${REASONS.map(([k, l]) => `<option value="${k}">${l}</option>`).join('')}</select> <button class="btn bad" data-act="reject">Отклонить</button>` : '');
+  return `<div class="card ${sim.length ? 'hl' : ''}" data-id="${r.id}">
+    <div>${img}</div>
+    <div>
+      <div class="row"><span class="amt">${money(r.gross_amount)} zł</span>${st}
+        <b>${esc(driverName(r.drivers))}</b>
+        <span class="muted">${esc(DOC[r.doc_type] || r.doc_type || '')} · ${esc(CAT[r.category] || r.category || '')}</span></div>
+      <div class="row">
+        <span>Дата: <b>${esc(r.invoice_date || '—')}</b></span>
+        <span>Номер: <b>${esc(r.invoice_number || '—')}</b></span>
+        <span>NIP продавца: <b>${esc(r.seller_nip || '—')}</b>${vat.name ? ' — ' + esc(vat.name) : ''}</span>
+      </div>
+      <div class="muted">Загружен: ${new Date(r.uploaded_at).toLocaleString('ru-RU')}</div>
+      <div>${tags.join('')}</div>
+      ${rej}
+      <div class="actions">${actions}</div>
+    </div>
+  </div>`;
+}
+
+// ---------- действия ----------
+async function doAction(r, act, amountText, reason) {
+  let upd;
+  if (act === 'accept') {
+    const a = parseFloat(String(amountText ?? r.gross_amount).replace(/\s/g, '').replace(',', '.'));
+    if (!(a > 0)) return 'Неверная сумма.';
+    upd = { status: 'accepted', gross_amount: Math.round(a * 100) / 100, reject_reason: null };
+  } else if (act === 'reject') {
+    if (!reason) return 'Выберите причину отклонения — водитель увидит её в приложении.';
+    if (reason === 'other') {
+      reason = (prompt('Причина отклонения (водитель увидит этот текст):') || '').trim();
+      if (!reason) return 'cancel';
+    }
+    if (r.acc_batch && !confirm(`Этот документ уже ушёл бухгалтеру в пакете ${r.acc_batch}. Всё равно отклонить?`)) return 'cancel';
+    upd = { status: 'rejected', reject_reason: reason, auto_accepted: false };
+  } else if (act === 'reopen') {
+    if (r.acc_batch && !confirm(`Этот документ уже ушёл бухгалтеру в пакете ${r.acc_batch}. Всё равно вернуть на проверку?`)) return 'cancel';
+    upd = { status: 'pending', reject_reason: null, auto_accepted: false };
+  } else return 'cancel';
+  const { error } = await sb.from('invoices').update(upd).eq('id', r.id);
+  if (error) return error.code === '23505'
+    ? 'Нельзя: такой же документ (продавец, сумма, дата) уже есть среди принятых или ждущих. Сначала отклоните тот.'
+    : 'Ошибка: ' + esc(error.message);
+  Object.assign(r, upd);
+  return null;
+}
+document.addEventListener('click', async e => {
+  const z = e.target.closest('[data-zoom]');
+  if (z) { openViewer(z.closest('.card').dataset.id); return; }
+  if (e.target.closest('#zoom')) return show('zoom', false);
+  const tb = e.target.closest('[data-tab]');
+  if (tb) { tab = tb.dataset.tab; return render(); }
+  const b = e.target.closest('[data-act]');
+  if (!b) return;
+  const c = b.closest('.card'), r = rows.find(x => x.id === c.dataset.id);
+  b.disabled = true;
+  const amt = c.querySelector('.amtEdit'), rs = c.querySelector('.reason');
+  const err = await doAction(r, b.dataset.act, amt && amt.value, rs && rs.value);
+  b.disabled = false;
+  if (err && err !== 'cancel') return alertMsg(err);
+  render();
+});
+
+// ---------- просмотр на весь экран ----------
+let vList = [], vIdx = 0;
+$('vReason').innerHTML = '<option value="">— выберите —</option>' + REASONS.map(([k, l]) => `<option value="${k}">${l}</option>`).join('');
+function currentList() {
+  const q = $('search').value.trim(), f = TABS.find(x => x[0] === tab)[2];
+  return rows.filter(f).filter(r => matchesSearch(r, q));
+}
+function openViewer(id) {
+  vList = currentList().map(r => r.id);
+  vIdx = Math.max(0, vList.indexOf(id));
+  show('viewer'); document.body.style.overflow = 'hidden';
+  showDoc();
+}
+function closeViewer() { show('viewer', false); document.body.style.overflow = ''; render(); }
+function showDoc() {
+  const r = rows.find(x => x.id === vList[vIdx]);
+  $('vMsg').innerHTML = '';
+  if (!r) { $('vPos').textContent = '0 / 0'; $('vImg').innerHTML = '<div class="muted" style="color:#ccc">Документов больше нет</div>'; $('vInfo').innerHTML = ''; return; }
+  $('vPos').textContent = `${vIdx + 1} / ${vList.length}`;
+  const url = urls[r.storage_path] || '';
+  $('vImg').classList.remove('zoomed'); $('vImg').scrollTo(0, 0);
+  $('vImg').innerHTML = !url ? '<div style="color:#ccc">нет фото</div>' : /\.pdf$/i.test(r.storage_path) ? `<iframe src="${url}"></iframe>` : `<img src="${url}" alt="">`;
+  $('vAmt').value = money(r.gross_amount);
+  $('vReason').value = '';
+  // кнопки всегда на своих местах — только включаются/выключаются
+  $('vAccept').disabled = r.status === 'accepted';
+  $('vReopen').disabled = r.status === 'pending';
+  $('vReject').disabled = r.status === 'rejected';
+  $('vAmt').disabled = r.status === 'accepted';
+  $('vPrev').disabled = vIdx <= 0; $('vNext').disabled = vIdx >= vList.length - 1;
+  const tmp = document.createElement('div'); tmp.innerHTML = card(r);
+  const info = tmp.querySelector('.card > div:last-child'); info.querySelector('.actions').remove();
+  $('vInfo').innerHTML = info.innerHTML + (r.acc_batch ? `<div class="tag">В пакете бухгалтеру: ${esc(r.acc_batch)}</div>` : '');
+}
+async function vAct(act) {
+  const r = rows.find(x => x.id === vList[vIdx]); if (!r) return;
+  ['vAccept', 'vReopen', 'vReject'].forEach(id => $(id).disabled = true);
+  const err = await doAction(r, act, $('vAmt').value, $('vReason').value);
+  if (err) { showDoc(); if (err !== 'cancel') $('vMsg').innerHTML = `<div class="msg bad">${err}</div>`; return; }
+  // документ ушёл из текущей вкладки — убираем его из очереди и показываем следующий
+  const f = TABS.find(x => x[0] === tab)[2];
+  if (!f(r)) { vList.splice(vIdx, 1); if (vIdx >= vList.length) vIdx = Math.max(0, vList.length - 1); }
+  else if (vIdx < vList.length - 1) vIdx++;
+  showDoc();
+}
+$('vAccept').onclick = () => vAct('accept');
+$('vReject').onclick = () => vAct('reject');
+$('vReopen').onclick = () => vAct('reopen');
+$('vPrev').onclick = () => { if (vIdx > 0) { vIdx--; showDoc(); } };
+$('vNext').onclick = () => { if (vIdx < vList.length - 1) { vIdx++; showDoc(); } };
+$('vClose').onclick = closeViewer;
+// ---- увеличение и перемещение ----
+const ZOOM = 2.5;
+function zoomAt(clientX, clientY) {
+  const box = $('vImg'), img = box.querySelector('img'); if (!img) return;
+  if (box.classList.contains('zoomed')) {               // уменьшить обратно
+    box.classList.remove('zoomed'); img.style.width = ''; box.scrollTo(0, 0); return;
+  }
+  const r = img.getBoundingClientRect();
+  const fx = (clientX - r.left) / r.width, fy = (clientY - r.top) / r.height;   // куда кликнули на фото (0..1)
+  box.classList.add('zoomed');
+  img.style.width = Math.round(r.width * ZOOM) + 'px';
+  // то место, куда кликнули, ставим в центр экрана
+  box.scrollLeft = fx * img.offsetWidth - box.clientWidth / 2;
+  box.scrollTop  = fy * img.offsetHeight - box.clientHeight / 2;
+}
+let drag = null;
+$('vImg').addEventListener('pointerdown', e => {
+  const zoomed = $('vImg').classList.contains('zoomed');
+  if (e.target.tagName !== 'IMG' && !zoomed) return;   // увеличенное фото можно тянуть за любое место
+  drag = { x: e.clientX, y: e.clientY, sl: $('vImg').scrollLeft, st: $('vImg').scrollTop, moved: false, mouse: e.pointerType === 'mouse' };
+  if (drag.mouse && $('vImg').classList.contains('zoomed')) { $('vImg').setPointerCapture(e.pointerId); e.preventDefault(); }
+});
+$('vImg').addEventListener('pointermove', e => {
+  if (!drag) return;
+  const dx = e.clientX - drag.x, dy = e.clientY - drag.y;
+  if (Math.abs(dx) + Math.abs(dy) > 6) drag.moved = true;
+  if (drag.mouse && drag.moved && $('vImg').classList.contains('zoomed')) {   // мышь: тянем фото
+    $('vImg').classList.add('drag');
+    $('vImg').scrollLeft = drag.sl - dx; $('vImg').scrollTop = drag.st - dy;
+  }
+  // палец: двигает сам браузер (обычная прокрутка)
+});
+$('vImg').addEventListener('pointerup', e => {
+  if (!drag) return;
+  const d = drag; drag = null; $('vImg').classList.remove('drag');
+  if (!d.moved) zoomAt(e.clientX, e.clientY);   // простой клик: увеличить / уменьшить
+});
+$('vImg').addEventListener('pointercancel', () => { drag = null; $('vImg').classList.remove('drag'); });
+document.addEventListener('keydown', e => {
+  if ($('viewer').classList.contains('hidden') || /INPUT|SELECT|TEXTAREA/.test(document.activeElement.tagName)) return;
+  if (e.key === 'ArrowRight') $('vNext').click();
+  if (e.key === 'ArrowLeft') $('vPrev').click();
+  if (e.key === 'Escape') closeViewer();
+});
+function alertMsg(t) { msg('topMsg', t, 'bad'); window.scrollTo(0, 0); }
+$('reload').onclick = () => load();
+$('month').onchange = () => load();
+$('allMonths').onclick = () => { $('month').value = ''; load(); };
+$('search').oninput = () => render();
+document.addEventListener('keydown', e => { if (e.key === 'Escape') show('zoom', false); });
+
+// ---------- пакет бухгалтеру ----------
+function safe(s) { return String(s || '').normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/ł/g, 'l').replace(/Ł/g, 'L').replace(/[^A-Za-z0-9._-]+/g, '_').replace(/^_+|_+$/g, '').slice(0, 40); }
+const isKsef = r => r.in_ksef || r.needs_ksef || r.doc_type === 'inny' || !!r.ksef_hash;
+const MAX_AGE_DAYS = 183;   // документы старше ~полугода в пакет автоматически не берём
+function monthLabel(ym) { const [y, m] = ym.split('-'); return ['январь','февраль','март','апрель','май','июнь','июль','август','сентябрь','октябрь','ноябрь','декабрь'][+m - 1] + ' ' + y; }
+let pkgNew = [], pkgOld = [];
+$('zipBtn').onclick = openPkg;
+async function openPkg() {
+  document.querySelectorAll('#app > main').forEach(m => m.classList.add('hidden')); show('tabs', false);
+  $('pkgView').classList.remove('hidden');
+  $('app').appendChild($('pkgView'));
+  $('pkgView').innerHTML = '<main><div class="msg info">Загружаем…</div></main>';
+  const sel = 'id, status, doc_type, in_ksef, needs_ksef, ksef_hash, invoice_date, invoice_number, seller_nip, gross_amount, storage_path, vat_check, accepted_at, acc_batch, drivers(*)';
+  const a = await sb.from('invoices').select(sel).eq('status', 'accepted').is('acc_batch', null).range(0, 4999);
+  const b = await sb.from('invoices').select('acc_batch, gross_amount').not('acc_batch', 'is', null).range(0, 19999);
+  const p = await sb.from('invoices').select('id', { count: 'exact', head: true }).eq('status', 'pending');
+  const err = a.error || b.error;
+  if (err) return $('pkgView').innerHTML = `<main><div class="msg bad">Ошибка: ${esc(err.message)}${/acc_batch|accepted_at/.test(err.message) ? ' — запустите invoices_update_12.sql' : ''}</div><button class="btn ghost" id="pkgBack">← Назад</button></main>`, $('pkgBack').onclick = closePkg;
+  const minDate = new Date(Date.now() - MAX_AGE_DAYS * 864e5).toISOString().slice(0, 10);
+  const all = (a.data || []).filter(r => !isKsef(r));
+  pkgNew = all.filter(r => (r.invoice_date || '9999') >= minDate);
+  pkgOld = all.filter(r => (r.invoice_date || '9999') < minDate);
+  const batches = {};
+  (b.data || []).forEach(r => { const x = batches[r.acc_batch] = batches[r.acc_batch] || { n: 0, sum: 0 }; x.n++; x.sum += Number(r.gross_amount || 0); });
+  const d = new Date(); d.setDate(1); if (new Date().getDate() <= 15) d.setMonth(d.getMonth() - 1);
+  const defLabel = d.toISOString().slice(0, 7);
+  const sum = pkgNew.reduce((s, r) => s + Number(r.gross_amount || 0), 0);
+  const byMonth = {}; pkgNew.forEach(r => { const k = (r.invoice_date || '').slice(0, 7); byMonth[k] = (byMonth[k] || 0) + 1; });
+  $('pkgView').innerHTML = `<main>
+    <div class="row" style="margin-bottom:12px"><button class="btn ghost" id="pkgBack">← К документам</button><h2 style="margin:0">Пакет бухгалтеру</h2></div>
+    <div class="card" style="display:block">
+      <h3 style="margin-top:0">Новый пакет</h3>
+      <p>В пакет попадают <b>все принятые документы, которые ещё не отправлялись бухгалтеру</b> — неважно, от какого числа фактура.
+         Документы KSeF не включаются. Каждый документ уходит бухгалтеру <b>только один раз</b>.</p>
+      <div class="row"><span class="amt">${pkgNew.length} док. · ${money(sum)} zł</span>
+        <span class="muted">${Object.keys(byMonth).sort().map(k => `${k ? monthLabel(k) : 'без даты'}: ${byMonth[k]}`).join(' · ')}</span></div>
+      ${p.count ? `<div class="msg bad">⚠ Ещё ${p.count} док. ждут вашего решения и в этот пакет не попадут (попадут в следующий, когда примете).</div>` : ''}
+      ${pkgOld.length ? `<div class="msg bad">⚠ ${pkgOld.length} док. старше полугода (дата фактуры раньше ${minDate}) — бухгалтер их, скорее всего, уже не примет.
+         <label style="display:inline"><input type="checkbox" id="pkgOldInc"> всё равно включить</label></div>` : ''}
+      <div class="row" style="margin-top:10px">
+        <label>Подпись пакета: <input id="pkgLabel" type="month" value="${defLabel}"></label>
+        <button class="btn" id="pkgMake" ${pkgNew.length || pkgOld.length ? '' : 'disabled'}>⬇ Сформировать и скачать ZIP</button>
+      </div>
+      <div id="pkgMsg"></div>
+    </div>
+    <div class="card" style="display:block">
+      <h3 style="margin-top:0">Отправленные пакеты</h3>
+      ${Object.keys(batches).length ? Object.keys(batches).sort().reverse().map(k => `<div class="row" style="margin:6px 0">
+        <b style="min-width:140px">${monthLabel(k)}</b><span>${batches[k].n} док. · ${money(batches[k].sum)} zł</span>
+        <button class="btn ghost" data-redl="${k}">⬇ Скачать снова</button></div>`).join('') : '<div class="muted">Пока не было.</div>'}
+    </div></main>`;
+  $('pkgBack').onclick = closePkg;
+  $('pkgMake').onclick = makePkg;
+  document.querySelectorAll('[data-redl]').forEach(btn => btn.onclick = () => redownload(btn.dataset.redl, btn));
+}
+function closePkg() { $('pkgView').classList.add('hidden'); document.querySelectorAll('#app > main:not(#weekView)').forEach(m => m.classList.remove('hidden')); show('tabs'); load(); }
+async function buildZip(list, label, msgId) {
+  if (!window.JSZip) { msg(msgId, 'Не загрузилась библиотека для ZIP. Проверьте интернет и обновите страницу.', 'bad'); return null; }
+  const zip = new JSZip();
+  const csv = [['Lp', 'Data', 'Numer', 'NIP sprzedawcy', 'Sprzedawca', 'Kwota brutto', 'Rodzaj', 'Kierowca', 'Plik'].join(';')];
+  let n = 0, failed = [];
+  for (const r of list.slice().sort((a, b) => (a.invoice_date || '').localeCompare(b.invoice_date || ''))) {
+    n++;
+    msg(msgId, `Собираем: ${n} / ${list.length}…`);
+    const ext = (r.storage_path.split('.').pop() || 'jpg').toLowerCase();
+    const name = `${String(n).padStart(3, '0')}_${r.invoice_date}_${safe(r.seller_nip)}_${money(r.gross_amount)}_${safe(driverName(r.drivers))}.${ext}`;
+    const { data, error } = await sb.storage.from(BUCKET).download(r.storage_path);
+    if (error || !data) { failed.push(r); continue; }
+    zip.file(name, data);
+    csv.push([n, r.invoice_date, r.invoice_number || '', r.seller_nip || '', (r.vat_check && r.vat_check.name) || '',
+      money(r.gross_amount), DOC[r.doc_type] || '', driverName(r.drivers), name].map(v => `"${String(v).replace(/"/g, '""')}"`).join(';'));
+  }
+  zip.file(`zestawienie_${label}.csv`, '\ufeff' + csv.join('\r\n'));
+  const blob = await zip.generateAsync({ type: 'blob' });
+  const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = `faktury_kierowcy_${label}.zip`; a.click();
+  return failed;
+}
+async function makePkg() {
+  const label = $('pkgLabel').value;
+  if (!label) return msg('pkgMsg', 'Укажите подпись пакета (месяц).', 'bad');
+  const list = pkgNew.concat(($('pkgOldInc') && $('pkgOldInc').checked) ? pkgOld : []);
+  if (!list.length) return msg('pkgMsg', 'Нечего отправлять.', 'bad');
+  $('pkgMake').disabled = true;
+  const failed = await buildZip(list, label, 'pkgMsg');
+  if (failed === null) { $('pkgMake').disabled = false; return; }
+  const ok = list.filter(r => !failed.includes(r)).map(r => r.id);
+  // отмечаем, что эти документы ушли бухгалтеру — в следующий пакет они не попадут
+  for (let i = 0; i < ok.length; i += 200) {
+    const { error } = await sb.from('invoices').update({ acc_batch: label }).in('id', ok.slice(i, i + 200));
+    if (error) return msg('pkgMsg', 'ZIP скачан, но не удалось отметить документы как отправленные: ' + esc(error.message) + '. Не отправляйте пакет повторно, напишите мне.', 'bad');
+  }
+  msg('pkgMsg', `Готово: ${ok.length} док. отмечены как отправленные в пакете «${monthLabel(label)}».` + (failed.length ? ` Не удалось скачать ${failed.length} фото — они останутся для следующего пакета.` : ''), failed.length ? 'bad' : 'ok');
+  setTimeout(openPkg, 2500);
+}
+async function redownload(label, btn) {
+  btn.disabled = true;
+  const { data, error } = await sb.from('invoices').select('*, drivers(*)').eq('acc_batch', label).range(0, 4999);
+  if (error) { btn.disabled = false; return alert('Ошибка: ' + error.message); }
+  const tmp = document.createElement('div'); tmp.id = 'redlMsg'; btn.after(tmp);
+  await buildZip(data || [], label, 'redlMsg');
+  btn.disabled = false;
+}
+
+// ---------- итоги недели ----------
+// дата и время в Польше (учитывает летнее/зимнее время)
+function plDate(iso) {
+  const p = new Intl.DateTimeFormat('en-CA', { timeZone: 'Europe/Warsaw', year: 'numeric', month: '2-digit', day: '2-digit' }).format(new Date(iso));
+  return p; // YYYY-MM-DD
+}
+function mondayOf(ymd) {
+  const d = new Date(ymd + 'T12:00:00Z'); const wd = (d.getUTCDay() + 6) % 7;
+  d.setUTCDate(d.getUTCDate() - wd); return d.toISOString().slice(0, 10);
+}
+function addDays(ymd, n) { const d = new Date(ymd + 'T12:00:00Z'); d.setUTCDate(d.getUTCDate() + n); return d.toISOString().slice(0, 10); }
+const fmtD = ymd => ymd.slice(8, 10) + '.' + ymd.slice(5, 7);
+function fillWeeks() {
+  const thisMon = mondayOf(plDate(new Date().toISOString()));
+  let html = '';
+  for (let i = 0; i < 10; i++) {
+    const m = addDays(thisMon, -7 * i), su = addDays(m, 6);
+    html += `<option value="${m}">${fmtD(m)} – ${fmtD(su)}.${su.slice(0, 4)}${i === 0 ? ' (текущая)' : i === 1 ? ' (прошлая)' : ''}</option>`;
+  }
+  $('weekSel').innerHTML = html;
+  $('weekSel').selectedIndex = 1;   // обычно считаете прошлую неделю
+}
+let weekRows = [];
+async function loadWeek() {
+  const mon = $('weekSel').value, nextMon = addDays(mon, 7);
+  msg('weekMsg', 'Считаем…');
+  // 1) принятые документы, отнесённые к этой неделе (в т.ч. перенесённые с прошлых)
+  const acc = await sb.from('invoices').select('id, driver_id, status, gross_amount, uploaded_at, drivers(*)')
+    .eq('status', 'accepted').eq('week_start', mon).range(0, 4999);
+  // 2) загруженные за неделю, но ещё не принятые — для предупреждения
+  const up = await sb.from('invoices').select('id, driver_id, status, gross_amount, uploaded_at, drivers(*)')
+    .neq('status', 'accepted').gte('uploaded_at', addDays(mon, -1) + 'T00:00:00Z').lt('uploaded_at', addDays(nextMon, 1) + 'T00:00:00Z').range(0, 4999);
+  const st = await sb.from('settled_weeks').select('week_start, closed_at').eq('week_start', mon);
+  const err = acc.error || up.error || st.error;
+  if (err) return msg('weekMsg', 'Ошибка: ' + esc(err.message) + (/settled_weeks|week_start/.test(err.message) ? ' — запустите invoices_update_10.sql' : ''), 'bad');
+  const closed = (st.data || []).length > 0;
+  $('weekState').innerHTML = closed ? `<span class="tag ok">🔒 закрыта ${new Date(st.data[0].closed_at).toLocaleDateString('ru-RU')}</span>` : '<span class="tag warn">открыта</span>';
+  show('weekClose', !closed); show('weekOpen', closed);
+  const notAcc = (up.data || []).filter(r => { const d = plDate(r.uploaded_at); return d >= mon && d < nextMon; });
+  const by = {};
+  const row = r => (by[r.driver_id] = by[r.driver_id] || { name: driverName(r.drivers), sum: 0, acc: 0, moved: 0, movedSum: 0, pend: 0, pendSum: 0, rej: 0 });
+  for (const r of acc.data || []) {
+    const x = row(r); x.sum += Number(r.gross_amount || 0); x.acc++;
+    if (plDate(r.uploaded_at) < mon) { x.moved++; x.movedSum += Number(r.gross_amount || 0); }
+  }
+  for (const r of notAcc) {
+    const x = row(r);
+    if (r.status === 'pending') { x.pend++; x.pendSum += Number(r.gross_amount || 0); } else x.rej++;
+  }
+  weekRows = Object.values(by).sort((a, b) => a.name.localeCompare(b.name, 'pl'));
+  const pendAll = weekRows.reduce((s, r) => s + r.pend, 0);
+  msg('weekMsg', pendAll
+    ? `⚠ Ещё <b>${pendAll}</b> док. этой недели ждут вашего решения и не вошли в суммы.` + (closed
+        ? ' Неделя закрыта — если вы их примете, они перейдут в следующую неделю.'
+        : ' Разберите их во вкладке «Ждут решения» до закрытия недели — или закройте неделю сейчас, тогда после приёма они перейдут в следующую.')
+    : '', closed ? 'info' : 'bad');
+  if (!weekRows.length) return $('weekTable').innerHTML = '<div class="muted">За эту неделю документов нет.</div>';
+  const tot = weekRows.reduce((s, r) => s + r.sum, 0);
+  $('weekTable').innerHTML = `<table class="wk"><thead><tr><th>Водитель</th><th class="num">Фактуры, zł</th><th class="num">Принято</th><th class="num">из них с прошлых недель</th><th class="num">Ждут</th><th class="num">Отклонено</th></tr></thead><tbody>` +
+    weekRows.map(r => `<tr><td>${esc(r.name)}</td><td class="num"><b>${money(r.sum)}</b></td><td class="num">${r.acc}</td>` +
+      `<td class="num">${r.moved ? `<span class="tag ksef">${r.moved} · ${money(r.movedSum)}</span>` : ''}</td>` +
+      `<td class="num">${r.pend ? `<span class="tag warn">${r.pend} · ${money(r.pendSum)}</span>` : '0'}</td><td class="num">${r.rej}</td></tr>`).join('') +
+    `</tbody><tfoot><tr><td>Итого</td><td class="num">${money(tot)}</td><td colspan="4"></td></tr></tfoot></table>`;
+}
+$('weekClose').onclick = async () => {
+  const mon = $('weekSel').value;
+  if (!confirm(`Закрыть неделю ${fmtD(mon)} – ${fmtD(addDays(mon, 6))}? Её суммы больше не изменятся, поздно принятые документы пойдут в следующую неделю.`)) return;
+  const { error } = await sb.from('settled_weeks').insert({ week_start: mon });
+  if (error && error.code !== '23505') return msg('weekMsg', 'Ошибка: ' + esc(error.message), 'bad');
+  loadWeek();
+};
+$('weekOpen').onclick = async () => {
+  const mon = $('weekSel').value;
+  if (!confirm('Открыть неделю снова? Уже перенесённые документы останутся в следующей неделе, новые принятые снова пойдут в эту.')) return;
+  const { error } = await sb.from('settled_weeks').delete().eq('week_start', mon);
+  if (error) return msg('weekMsg', 'Ошибка: ' + esc(error.message), 'bad');
+  loadWeek();
+};
+$('weekBtn').onclick = () => { show('weekView'); document.querySelectorAll('main:not(#weekView)').forEach(m => m.classList.add('hidden')); show('tabs', false); if (!$('weekSel').options.length) fillWeeks(); loadWeek(); };
+$('weekBack').onclick = () => { show('weekView', false); document.querySelectorAll('main:not(#weekView)').forEach(m => m.classList.remove('hidden')); show('tabs'); };
+$('weekSel').onchange = loadWeek;
+$('weekCopy').onclick = async () => {
+  const text = weekRows.map(r => `${r.name}\t${money(r.sum)}`).join('\r\n');
+  try { await navigator.clipboard.writeText(text); msg('weekMsg', 'Скопировано: водитель и сумма — вставьте в Excel (Ctrl+V).', 'ok'); }
+  catch (e) { prompt('Скопируйте вручную (Ctrl+C):', text); }
+};
+$('weekCsv').onclick = () => {
+  const csv = '\ufeff' + ['Kierowca;Faktury'].concat(weekRows.map(r => `"${r.name.replace(/"/g, '""')}";${money(r.sum)}`)).join('\r\n');
+  const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([csv], { type: 'text/csv' }));
+  a.download = `faktury_tydzien_${$('weekSel').value}.csv`; a.click();
+};
+
+init();
+</script>
+</body>
+</html>
