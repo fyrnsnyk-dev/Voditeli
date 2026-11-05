@@ -5,53 +5,68 @@
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Фактуры</title>
 <style>
-  :root { --bg:#f4f5f7; --card:#fff; --text:#1d2129; --muted:#6b7280; --accent:#1f6feb;
-          --ok:#1a7f37; --warn:#b26b00; --bad:#c62828; --line:#e3e6ea; }
+  :root { --bg:#edf1ee; --card:#ffffff; --text:#10241e; --muted:#5a6b64; --line:#d9e1dc;
+          --hero:#ffc629; --ink:#10241e; --inkfg:#f2f6f3;
+          --accent:#ffc629; --ok:#12805c; --warn:#a86400; --bad:#c8372d;
+          --sans:"Onest","Noto Sans Georgian","Noto Sans Devanagari","Noto Sans Gurmukhi","Noto Naskh Arabic",system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
+          color-scheme:light; }
   * { box-sizing:border-box; }
-  body { margin:0; background:var(--bg); color:var(--text);
-         font:16px/1.4 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif; }
-  header { display:flex; justify-content:space-between; align-items:center;
-           padding:12px 16px; background:var(--card); border-bottom:1px solid var(--line);
-           position:sticky; top:0; z-index:2; }
-  header h1 { font-size:18px; margin:0; }
-  main { max-width:520px; margin:0 auto; padding:16px; }
-  .card { background:var(--card); border-radius:14px; padding:16px; margin-bottom:16px;
-          box-shadow:0 1px 3px rgba(0,0,0,.06); }
+  body { margin:0; background:var(--bg); color:var(--text); font-family:var(--sans); font-size:16px; line-height:1.5;
+         padding:14px max(16px,env(safe-area-inset-right,0px)) 48px max(16px,env(safe-area-inset-left,0px)); }
+  .wrap { max-width:440px; margin:0 auto; display:flex; flex-direction:column; gap:16px; }
+  .bar0 { display:flex; justify-content:space-between; align-items:center; gap:10px; }
+  .logo { width:44px; height:44px; border-radius:50%; display:block; flex:none; }
+  select { font:inherit; font-size:.9rem; color:var(--text); background:var(--card); border:1px solid var(--line); border-radius:10px; padding:7px 8px; max-width:45%; }
+  .top { display:flex; align-items:center; gap:12px; }
+  .av { width:44px; height:44px; border-radius:50%; background:var(--ink); color:var(--inkfg); display:grid; place-items:center; font-weight:700; flex:none; }
+  .top .t { flex:1; min-width:0; } .top .t b { display:block; font-size:1.1rem; }
+  .ghost { background:none; border:1px solid var(--line); border-radius:10px; color:var(--muted); font:inherit; font-size:.85rem; padding:7px 10px; cursor:pointer; }
+  .tabs { display:flex; gap:8px; }
+  .tabs button, .tabs a { flex:1; font:inherit; font-weight:600; padding:11px 8px; border-radius:12px; border:2px solid var(--line); background:var(--card); color:var(--text); cursor:pointer; text-align:center; text-decoration:none; }
+  .tabs [aria-pressed="true"] { background:var(--ink); color:var(--inkfg); border-color:var(--ink); }
+  main { display:flex; flex-direction:column; gap:16px; }
+  .card { background:var(--card); border-radius:20px; padding:18px; }
   .hidden { display:none !important; }
-  h2 { font-size:17px; margin:0 0 12px; }
-  label { display:block; font-size:14px; color:var(--muted); margin:12px 0 4px; }
+  h1 { font-size:1.7rem; line-height:1.2; margin:0; font-weight:700; }
+  h2 { font-size:1rem; margin:0 0 10px; font-weight:700; }
+  label { display:block; font-size:.9rem; font-weight:600; color:var(--muted); margin:12px 0 4px; }
   input, select, button { font:inherit; }
-  input[type=text], input[type=email], input[type=password], input[type=date], select {
-    width:100%; padding:12px; border:1px solid var(--line); border-radius:10px; background:#fff; }
-  .btn { display:block; width:100%; padding:14px; border:0; border-radius:12px;
-         background:var(--accent); color:#fff; font-weight:600; cursor:pointer; margin-top:12px; }
-  .btn.secondary { background:#e8eefc; color:var(--accent); }
+  input[type=text], input[type=email], input[type=password], input[type=date], select.full {
+    width:100%; font-size:1.05rem; color:var(--text); padding:13px; border:2px solid var(--line); border-radius:14px; background:var(--bg); }
+  #docType, #category { width:100%; font-size:1.05rem; padding:13px; border:2px solid var(--line); border-radius:14px; background:var(--bg); max-width:none; }
+  :is(input,button,summary,select):focus-visible { outline:3px solid var(--hero); outline-offset:2px; }
+  .btn { display:block; width:100%; padding:15px 16px; border:0; border-radius:14px; background:var(--hero); color:var(--ink);
+         font-weight:700; font-size:1.05rem; cursor:pointer; margin-top:12px; }
+  .btn.secondary { background:var(--ink); color:var(--inkfg); }
   .btn:disabled { opacity:.5; cursor:default; }
   .row2 { display:grid; grid-template-columns:1fr 1fr; gap:10px; }
   .row2 .btn { margin-top:0; }
-  .msg { padding:10px 12px; border-radius:10px; margin-top:12px; font-size:15px; }
-  .msg.ok { background:#e6f4ea; color:var(--ok); }
+  .msg { padding:10px 12px; border-radius:12px; margin-top:12px; font-size:.95rem; }
+  .msg.ok { background:#e3f4ec; color:var(--ok); }
   .msg.bad { background:#fdecea; color:var(--bad); }
-  .msg.info { background:#eef2f7; color:var(--text); }
-  #preview { width:100%; max-height:360px; object-fit:contain; border-radius:10px;
-             background:#eee; margin-top:12px; }
-  .small { font-size:13px; color:var(--muted); }
-  .check { display:flex; gap:10px; align-items:flex-start; margin-top:14px; font-size:15px; color:var(--text); }
+  .msg.info { background:#eef2ef; color:var(--text); }
+  #preview { width:100%; max-height:360px; object-fit:contain; border-radius:12px; background:#eee; margin-top:12px; }
+  .small { font-size:.86rem; color:var(--muted); }
+  .check { display:flex; gap:10px; align-items:flex-start; margin-top:14px; font-size:.95rem; color:var(--text); }
   .check input { width:22px; height:22px; margin:0; flex:none; }
   .inv { display:flex; justify-content:space-between; gap:8px; padding:10px 0; border-bottom:1px solid var(--line); }
   .inv:last-child { border-bottom:0; }
   .badge { font-size:12px; padding:3px 8px; border-radius:999px; white-space:nowrap; align-self:flex-start; }
-  .badge.pending { background:#fff4e0; color:var(--warn); }
-  .badge.accepted { background:#e6f4ea; color:var(--ok); }
+  .badge.pending { background:#fff1d6; color:var(--warn); }
+  .badge.accepted { background:#e3f4ec; color:var(--ok); }
   .badge.rejected { background:#fdecea; color:var(--bad); }
-  .linkbtn { background:none; border:0; color:var(--accent); cursor:pointer; padding:0; font-size:14px; }
+  .linkbtn { background:none; border:0; color:var(--muted); text-decoration:underline; cursor:pointer; padding:0; font-size:.9rem; }
+  .msum { padding:10px 0 12px; border-bottom:2px solid var(--line); margin-bottom:4px; }
+  .msum .h { display:flex; justify-content:space-between; font-weight:700; font-size:1.05rem; }
+  .msum .r { display:flex; justify-content:space-between; font-size:.92rem; color:var(--muted); margin-top:3px; }
+  .msum .r b { color:var(--text); font-variant-numeric:tabular-nums; white-space:nowrap; direction:ltr; }
 </style>
 </head>
 <body>
-<header>
-  <h1 data-t="title">Фактуры</h1><a id="backLink" href="index.html" style="margin-inline-start:auto;margin-inline-end:10px;font-weight:600;color:inherit">← Rozliczenia</a>
-  <select id="lang" aria-label="Language" style="width:auto;padding:6px 8px"><option value="pl">Polski</option><option value="ru">Русский</option><option value="uk">Українська</option><option value="be">Беларуская</option><option value="en">English</option><option value="ka">ქართული</option><option value="pa">ਪੰਜਾਬੀ</option><option value="hi">हिन्दी</option><option value="ur">اردو</option></select>
-</header>
+<div class="wrap">
+<div class="bar0"><img class="logo" src="logo.png" alt="ALEX GROUP" width="44" height="44"><select id="lang" aria-label="Language"><option value="pl">Polski</option><option value="ru">Русский</option><option value="uk">Українська</option><option value="be">Беларуская</option><option value="en">English</option><option value="ka">ქართული</option><option value="pa">ਪੰਜਾਬੀ</option><option value="hi">हिन्दी</option><option value="ur">اردو</option></select></div>
+<div class="top" id="topRow"><div class="av" id="av">··</div><div class="t"><b id="who">&nbsp;</b></div><button class="ghost" id="logout0" data-t="logout">Выйти</button></div>
+<div class="tabs"><a href="index.html" id="tabStat">Statement</a><button id="tabInv" aria-pressed="true" data-t="title">Фактуры</button></div>
 
 <main>
   <!-- Настройка подключения (показывается, если ключи не вписаны в файл) -->
@@ -140,9 +155,10 @@
   <section id="listBox" class="card hidden">
     <h2 data-t="myInvoices">Мои фактуры</h2>
     <div id="list"></div>
-    <button class="linkbtn" id="logout2" data-t="logout" style="margin-top:12px">Выйти</button>
+    <button class="linkbtn" id="logout2" data-t="logout" style="display:none">Выйти</button>
   </section>
 </main>
+</div>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
@@ -997,7 +1013,7 @@ function applyLang() {
   document.querySelectorAll('[data-t]').forEach(el => el.textContent = t(el.dataset.t));
   if (document.getElementById('docType')) applyDocType();
   if (document.getElementById('sendBtn')) $('sendBtn').textContent = warned ? t('sendAnyway') : t('send');
-  try{const bl=document.getElementById('backLink');if(bl)bl.textContent=({pl:'← Rozliczenia',ru:'← Расчёты',uk:'← Розрахунки',be:'← Разлікі',en:'← Statement',ka:'← გაანგარიშება',hi:'← हिसाब',pa:'← ਹਿਸਾਬ',ur:'← حساب'})[lang]||'← Statement'}catch(e){}
+  try{const ts=document.getElementById('tabStat');if(ts)ts.textContent=({pl:'Rozliczenie',ru:'Расчёты',uk:'Розрахунки',be:'Разлікі',en:'Statement',ka:'ანგარიში',hi:'हिसाब',pa:'ਹਿਸਾਬ',ur:'حساب'})[lang]||'Statement'}catch(e){}
   Object.keys(lastMsg).forEach(renderMsg);   // сообщения тоже переводятся
 }
 
@@ -1063,6 +1079,9 @@ async function init() {
   if (error || !data) { show('noDriver'); return; }
   driverId = data;
   show('loginBox', false); show('uploadBox'); show('listBox');
+  try { const me = await sb.from('drivers').select('name').eq('id', driverId).maybeSingle();
+    const nm = (me.data && me.data.name) || ''; $('who').textContent = nm;
+    $('av').textContent = nm.split(/\s+/).map(w => w[0] || '').join('').slice(0, 2).toUpperCase() || '·'; } catch (e) {}
   loadList();
 }
 
@@ -1086,7 +1105,7 @@ $('loginBtn').onclick = async () => {
   init();
 };
 $('resetCfg').onclick = () => { try { localStorage.removeItem('sbUrl'); localStorage.removeItem('sbKey'); } catch(e) {} memUrl = memKey = ''; sb = null; show('loginBox', false); $('cfgUrl').value=''; $('cfgKey').value=''; show('setupBox'); };
-$('logout1').onclick = $('logout2').onclick = async () => { await sb.auth.signOut(); location.reload(); };
+$('logout0').onclick = $('logout1').onclick = $('logout2').onclick = async () => { await sb.auth.signOut(); location.reload(); };
 $('lang').onchange = e => { lang = e.target.value; try { localStorage.setItem('lang', lang); } catch(_) {} applyLang(); loadList(); };
 
 // ---------- фактура / парагон ----------
@@ -1744,11 +1763,26 @@ $('sendBtn').onclick = async () => {
 async function loadList() {
   if (!driverId) return;
   const { data, error } = await sb.from('invoices')
-    .select('doc_type, invoice_number, invoice_date, gross_amount, status, reject_reason')
-    .order('uploaded_at', { ascending: false }).limit(30);
+    .select('doc_type, invoice_number, invoice_date, gross_amount, status, reject_reason, period_month, uploaded_at')
+    .order('uploaded_at', { ascending: false }).limit(300);
   if (error) { $('list').textContent = error.message; return; }
   if (!data.length) { $('list').innerHTML = `<div class="small">${t('empty')}</div>`; return; }
-  $('list').innerHTML = data.map(r => `
+  const fm = n => (Number(n) || 0).toFixed(2).replace('.', ',');
+  const by = {};
+  data.forEach(r => {
+    const m = String(r.period_month || r.uploaded_at || '').slice(0, 7) || '—';
+    const x = by[m] = by[m] || { n: 0, sum: 0, st: { accepted: [0, 0], pending: [0, 0], rejected: [0, 0] } };
+    const a = Number(r.gross_amount) || 0;
+    x.n++; x.sum += a;
+    if (x.st[r.status]) { x.st[r.status][0]++; x.st[r.status][1] += a; }
+  });
+  const sums = Object.keys(by).sort().reverse().slice(0, 3).map(m => {
+    const x = by[m];
+    return `<div class="msum"><div class="h"><span>${m}</span><span style="direction:ltr">Σ ${fm(x.sum)} zł · ${x.n}</span></div>` +
+      ['accepted', 'pending', 'rejected'].filter(k => x.st[k][0]).map(k =>
+        `<div class="r"><span>${t(k)} (${x.st[k][0]})</span><b>${fm(x.st[k][1])} zł</b></div>`).join('') + '</div>';
+  }).join('');
+  $('list').innerHTML = sums + data.slice(0, 30).map(r => `
     <div class="inv">
       <div>
         <div><b>${Number(r.gross_amount || 0).toFixed(2)} zł</b> · ${r.doc_type === 'paragon' ? t('docFaktura') === 'Invoice' ? 'Receipt' : 'Paragon' : ''} ${esc(r.invoice_number || '')}</div>
