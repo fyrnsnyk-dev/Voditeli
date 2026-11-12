@@ -166,6 +166,8 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
 <script>
 const BUCKET = 'invoices';
+// фото удалено кнопкой «Удалить фото» в пакете: запись остаётся, а путь заменяется на deleted/<id>
+const gone = p => !p || String(p).startsWith('deleted/');
 const $ = id => document.getElementById(id);
 const show = (id, on = true) => $(id).classList.toggle('hidden', !on);
 const msg = (id, html, kind = 'info') => { $(id).innerHTML = html ? `<div class="msg ${kind}">${html}</div>` : ''; };
@@ -248,7 +250,7 @@ async function load() {
   if (error) return msg('topMsg', 'Ошибка загрузки: ' + esc(error.message), 'bad');
   rows = data || [];
   // ссылки на фото (действуют 1 час)
-  const paths = rows.map(r => r.storage_path).filter(p => p && !urls[p]);
+  const paths = rows.map(r => r.storage_path).filter(p => p && !gone(p) && !urls[p]);
   for (let i = 0; i < paths.length; i += 100) {
     const { data: s } = await sb.storage.from(BUCKET).createSignedUrls(paths.slice(i, i + 100), 3600);
     (s || []).forEach(x => { if (x.signedUrl) urls[x.path] = x.signedUrl; });
@@ -494,7 +496,7 @@ async function openPkg() {
   $('pkgView').innerHTML = '<main><div class="msg info">Загружаем…</div></main>';
   const sel = 'id, status, doc_type, in_ksef, needs_ksef, ksef_hash, invoice_date, invoice_number, seller_nip, gross_amount, storage_path, vat_check, accepted_at, acc_batch, drivers(*)';
   const a = await sb.from('invoices').select(sel).eq('status', 'accepted').is('acc_batch', null).range(0, 4999);
-  const b = await sb.from('invoices').select('acc_batch, gross_amount').not('acc_batch', 'is', null).range(0, 19999);
+  const b = await sb.from('invoices').select('acc_batch, gross_amount, storage_path').not('acc_batch', 'is', null).range(0, 19999);
   const p = await sb.from('invoices').select('id', { count: 'exact', head: true }).eq('status', 'pending');
   const err = a.error || b.error;
   if (err) return $('pkgView').innerHTML = `<main><div class="msg bad">Ошибка: ${esc(err.message)}${/acc_batch|accepted_at/.test(err.message) ? ' — запустите invoices_update_12.sql' : ''}</div><button class="btn ghost" id="pkgBack">← Назад</button></main>`, $('pkgBack').onclick = closePkg;
@@ -503,7 +505,7 @@ async function openPkg() {
   pkgNew = all.filter(r => (r.invoice_date || '9999') >= minDate);
   pkgOld = all.filter(r => (r.invoice_date || '9999') < minDate);
   const batches = {};
-  (b.data || []).forEach(r => { const x = batches[r.acc_batch] = batches[r.acc_batch] || { n: 0, sum: 0 }; x.n++; x.sum += Number(r.gross_amount || 0); });
+  (b.data || []).forEach(r => { const x = batches[r.acc_batch] = batches[r.acc_batch] || { n: 0, sum: 0, ph: 0 }; x.n++; x.sum += Number(r.gross_amount || 0); if (!gone(r.storage_path)) x.ph++; });
   const d = new Date(); d.setDate(1); if (new Date().getDate() <= 15) d.setMonth(d.getMonth() - 1);
   const defLabel = d.toISOString().slice(0, 7);
   const sum = pkgNew.reduce((s, r) => s + Number(r.gross_amount || 0), 0);
@@ -529,11 +531,12 @@ async function openPkg() {
       <h3 style="margin-top:0">Отправленные пакеты</h3>
       ${Object.keys(batches).length ? Object.keys(batches).sort().reverse().map(k => `<div class="row" style="margin:6px 0">
         <b style="min-width:140px">${monthLabel(k)}</b><span>${batches[k].n} док. · ${money(batches[k].sum)} zł</span>
-        <button class="btn ghost" data-redl="${k}">⬇ Скачать снова</button></div>`).join('') : '<div class="muted">Пока не было.</div>'}
+        ${batches[k].ph ? `<button class="btn ghost" data-redl="${k}">⬇ Скачать снова</button><button class="btn ghost" data-delph="${k}">🗑 Удалить фото (${batches[k].ph})</button>` : '<span class="muted">фото удалены</span>'}</div>`).join('') : '<div class="muted">Пока не было.</div>'}
     </div></main>`;
   $('pkgBack').onclick = closePkg;
   $('pkgMake').onclick = makePkg;
   document.querySelectorAll('[data-redl]').forEach(btn => btn.onclick = () => redownload(btn.dataset.redl, btn));
+  document.querySelectorAll('[data-delph]').forEach(btn => btn.onclick = () => delPhotos(btn.dataset.delph, btn));
 }
 function closePkg() { $('pkgView').classList.add('hidden'); document.querySelectorAll('#app > main:not(#weekView)').forEach(m => m.classList.remove('hidden')); show('tabs'); load(); }
 async function buildZip(list, label, msgId) {
@@ -542,6 +545,7 @@ async function buildZip(list, label, msgId) {
   const csv = [['Lp', 'Data', 'Numer', 'NIP sprzedawcy', 'Sprzedawca', 'Kwota brutto', 'Rodzaj', 'Kierowca', 'Plik'].join(';')];
   let n = 0, failed = [];
   for (const r of list.slice().sort((a, b) => (a.invoice_date || '').localeCompare(b.invoice_date || ''))) {
+    if (gone(r.storage_path)) continue;   // фото уже удалено
     n++;
     msg(msgId, `Собираем: ${n} / ${list.length}…`);
     const ext = (r.storage_path.split('.').pop() || 'jpg').toLowerCase();
@@ -573,6 +577,29 @@ async function makePkg() {
   }
   msg('pkgMsg', `Готово: ${ok.length} док. отмечены как отправленные в пакете «${monthLabel(label)}».` + (failed.length ? ` Не удалось скачать ${failed.length} фото — они останутся для следующего пакета.` : ''), failed.length ? 'bad' : 'ok');
   setTimeout(openPkg, 2500);
+}
+// удаляет только фото пакета из хранилища; записи и суммы остаются, водитель их по-прежнему видит
+async function delPhotos(label, btn) {
+  if (!btn.dataset.arm) { btn.dataset.arm = 1; btn.textContent = 'Точно удалить? Сначала сохраните ZIP. Нажмите ещё раз'; return; }
+  btn.disabled = true;
+  const tmp = document.createElement('div'); tmp.id = 'delMsg'; btn.after(tmp);
+  const { data, error } = await sb.from('invoices').select('id, storage_path').eq('acc_batch', label).range(0, 4999);
+  if (error) { btn.disabled = false; return msg('delMsg', 'Ошибка: ' + esc(error.message), 'bad'); }
+  const rows = (data || []).filter(r => !gone(r.storage_path));
+  let done = 0;
+  for (let i = 0; i < rows.length; i += 100) {
+    const part = rows.slice(i, i + 100);
+    msg('delMsg', `Удаляю фото: ${done} / ${rows.length}…`);
+    const rm = await sb.storage.from(BUCKET).remove(part.map(r => r.storage_path));
+    if (rm.error) { btn.disabled = false; return msg('delMsg', 'Не удалось удалить файлы: ' + esc(rm.error.message) + '. Записи не изменены.', 'bad'); }
+    for (const r of part) {
+      const up = await sb.from('invoices').update({ storage_path: 'deleted/' + r.id }).eq('id', r.id);
+      if (up.error) { btn.disabled = false; return msg('delMsg', 'Файлы удалены, но запись не обновлена: ' + esc(up.error.message) + '. Напишите мне.', 'bad'); }
+    }
+    done += part.length;
+  }
+  msg('delMsg', `Готово: удалено фото ${done}. Записи и суммы остались.`);
+  setTimeout(openPkg, 2000);
 }
 async function redownload(label, btn) {
   btn.disabled = true;
