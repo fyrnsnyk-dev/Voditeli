@@ -1471,7 +1471,7 @@ function ksefInfo(qrTexts, ocrText) {
   const word = /\d{10}\s?-\s?\d{8}\s?-\s?[0-9A-F]{6}/i.test(ocrText || '');
   // «Potwierdzenie transakcji» (ORLEN и др.) — сама фактура уходит в KSeF
   const letters = (ocrText || '').toUpperCase().replace(/[^A-ZĄĆĘŁŃÓŚŹŻ]/g, '');
-  const confirm = /OTWIERDZ.{0,12}(TRANSA|RANSAK)/.test(letters);
+  const confirm = /OTWIERDZ.{0,12}(TRANSA|RANSAK)/.test(letters) || /NIEFISKAL/.test(letters) || /KSEF/.test(letters) || (/OFFLINE/.test(letters) && /CERTYFIKAT/.test(letters));
   return { inKsef: links.length > 0 || word || confirm, links, qrNip, qrDate, word, confirm };
 }
 
@@ -1488,7 +1488,7 @@ function docKind(text, buyerFound) {
       /DOWODWYDANIA/.test(L) ? 'Dowód wydania' :
       (/RAPORTUKASOWEGO|DOKKASOWEGO|KASAPRZYJMIE|DOWODWPLATY/.test(L) || /\bKP\s+NR\b/i.test(raw)) ? 'KP — dowód wpłaty, nie faktura' :
       /POTWIERDZENIE(WYKONANIA)?PRZELEWU|POTWIERDZENIEOPERACJI/.test(L) ? 'Potwierdzenie przelewu' : null;
-  const faktura = /FAKTUR/.test(L), paragon = /PARAGON/.test(L), confirm = /POTWIERDZEN.{0,4}TRANSAK/.test(L);
+  const faktura = /FAKTUR/.test(L), paragon = /PARAGON/.test(L), confirm = /OTWIERDZ.{0,12}(TRANSA|RANSAK)/.test(L) || /NIEFISKAL/.test(L) || /KSEF/.test(L) || (/OFFLINE/.test(L) && /CERTYFIKAT/.test(L));   // подтверждение транзакции: заголовок, «NIEFISKALNY» или QR OFFLINE+CERTYFIKAT
   // спецификация к фактуре: принимаем, но сама фактура должна найтись в KSeF
   const spec = /SPECZAKUP|SPECYFIKACJA/.test(L);
   // чек с платёжного терминала без фактуры/парагона и без NIP фирмы
