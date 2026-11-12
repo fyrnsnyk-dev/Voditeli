@@ -1151,11 +1151,8 @@ async function handleQrFile(file) {
   msg('fileMsg', () => (t('checking')));
   let img;
   try { img = await loadImage(file); } catch (e) { return msg('fileMsg', () => (t('badFile')), 'bad'); }
-  const w = img.width, h = img.height, k = Math.min(1, 2000 / Math.max(w, h));
-  const c = document.createElement('canvas'); c.width = Math.round(w * k); c.height = Math.round(h * k);
-  c.getContext('2d').drawImage(img, 0, 0, c.width, c.height);
   let texts = [];
-  try { texts = await findQrTexts(c); } catch (e) {}
+  try { texts = await findQrDeep(img); } catch (e) {}
   if (!texts.length) return msg('fileMsg', () => (t('qrNone')), 'bad');
   const qr = parseKsefQr(texts);
   if (!qr) return msg('fileMsg', () => (t('qrNotKsef')), 'bad');
@@ -1208,7 +1205,7 @@ async function handleFile(file, source) {
   const fresh = source === 'camera' && (!file.lastModified || Math.abs(Date.now() - file.lastModified) < 15 * 60 * 1000);
   prepared = { blob, contentType: 'image/jpeg', ext: 'jpg', hash: await sha256(file), source, fresh, qr: source === 'camera' ? pendingQr : null };
   ocrJob = startOcr(img, w, h);
-  qrPromise = findQrTexts(ocrJob.plan[0][0]).catch(() => []);
+  qrPromise = findQrTexts(ocrJob.plan[0][0]).then(r => r.length ? r : findQrDeep(img)).catch(() => []);
   $('preview').src = URL.createObjectURL(blob); show('preview');
   $('sizeInfo').textContent = kb(file.size) + ' → ' + kb(blob.size) + ' · ' + w + '×' + h;
   msg('fileMsg', () => (t('qualityOk')), 'ok');
@@ -1415,6 +1412,54 @@ async function findQrTexts(c) {
   }
   return [...out];
 }
+// Глубокий поиск QR (iPhone: нет BarcodeDetector): оригинал в нескольких масштабах + перекрывающиеся плитки, затем ZXing
+function scaledCanvas(img, side) {
+  const w = img.naturalWidth || img.width, h = img.naturalHeight || img.height, k = Math.min(1, side / Math.max(w, h));
+  const c = document.createElement('canvas'); c.width = Math.max(1, Math.round(w * k)); c.height = Math.max(1, Math.round(h * k));
+  c.getContext('2d').drawImage(img, 0, 0, c.width, c.height); return c;
+}
+function loadZxing() {
+  if (window.ZXing) return Promise.resolve(true);
+  return new Promise(res => {
+    const sc = document.createElement('script');
+    sc.src = 'https://cdn.jsdelivr.net/npm/@zxing/library@0.21.3/umd/index.min.js';
+    sc.onload = () => res(!!window.ZXing); sc.onerror = () => res(false);
+    document.head.appendChild(sc); setTimeout(() => res(!!window.ZXing), 8000);
+  });
+}
+async function zxingTexts(c) {
+  if (!(await loadZxing())) return [];
+  try {
+    const hints = new Map(); hints.set(ZXing.DecodeHintType.TRY_HARDER, true);
+    hints.set(ZXing.DecodeHintType.POSSIBLE_FORMATS, [ZXing.BarcodeFormat.QR_CODE]);
+    const rd = new ZXing.QRCodeReader();
+    const src = new ZXing.HTMLCanvasElementLuminanceSource(c);
+    const bmp = new ZXing.BinaryBitmap(new ZXing.HybridBinarizer(src));
+    const r = rd.decode(bmp, hints); return r && r.getText() ? [r.getText()] : [];
+  } catch (e) { return []; }
+}
+async function findQrDeep(img) {
+  const out = new Set(), add = a => a.forEach(x => out.add(x)), tick = () => new Promise(r => setTimeout(r, 0));
+  const big = Math.max(img.naturalWidth || img.width, img.naturalHeight || img.height);
+  for (const side of [1600, 2600, Math.min(4000, big)]) {
+    if (out.size) break;
+    const c = scaledCanvas(img, side);
+    add(await findQrTexts(c)); await tick();
+    if (out.size || !window.jsQR) continue;
+    const ctx = c.getContext('2d', { willReadFrequently: true });
+    const tw = Math.round(c.width * 0.5), th = Math.round(c.height * 0.5);
+    for (const fy of [0, 0.25, 0.5]) for (const fx of [0, 0.25, 0.5]) {
+      const x = Math.round(c.width * fx), y = Math.round(c.height * fy);
+      const d = ctx.getImageData(x, y, Math.min(tw, c.width - x), Math.min(th, c.height - y));
+      const r = jsQR(d.data, d.width, d.height, { inversionAttempts: 'attemptBoth' });
+      if (r && r.data) { out.add(r.data); break; }
+      await tick();
+    }
+  }
+  if (!out.size) add(await zxingTexts(scaledCanvas(img, 2200)));
+  if (!out.size) add(await zxingTexts(scaledCanvas(img, 1400)));
+  return [...out];
+}
 function ksefInfo(qrTexts, ocrText) {
   const links = qrTexts.filter(q => /ksef/i.test(q));
   let qrNip = null, qrDate = null;
@@ -1426,7 +1471,7 @@ function ksefInfo(qrTexts, ocrText) {
   const word = /\d{10}\s?-\s?\d{8}\s?-\s?[0-9A-F]{6}/i.test(ocrText || '');
   // «Potwierdzenie transakcji» (ORLEN и др.) — сама фактура уходит в KSeF
   const letters = (ocrText || '').toUpperCase().replace(/[^A-ZĄĆĘŁŃÓŚŹŻ]/g, '');
-  const confirm = /POTWIERDZEN.{0,4}TRANSAK/.test(letters);
+  const confirm = /OTWIERDZ.{0,12}(TRANSA|RANSAK)/.test(letters);
   return { inKsef: links.length > 0 || word || confirm, links, qrNip, qrDate, word, confirm };
 }
 
@@ -1760,36 +1805,62 @@ $('sendBtn').onclick = async () => {
 };
 
 // ---------- список ----------
+const WK = {
+  ru: { h: 'Последние 4 недели', acc: 'Принято', rej: 'Отклонено', pen: 'На проверке', none: 'нет', all: 'Все документы', more: 'Показать ещё', note: 'Неделя — по дате принятия (пн–вс; принятое в пн до 8:00 через KSeF — в прошлую).' },
+  pl: { h: 'Ostatnie 4 tygodnie', acc: 'Przyjęte', rej: 'Odrzucone', pen: 'W weryfikacji', none: 'brak', all: 'Wszystkie dokumenty', more: 'Pokaż więcej', note: 'Tydzień wg daty przyjęcia (pn–nd).' },
+  uk: { h: 'Останні 4 тижні', acc: 'Прийнято', rej: 'Відхилено', pen: 'На перевірці', none: 'немає', all: 'Усі документи', more: 'Показати ще', note: 'Тиждень за датою прийняття (пн–нд).' },
+  en: { h: 'Last 4 weeks', acc: 'Accepted', rej: 'Rejected', pen: 'Pending', none: 'none', all: 'All documents', more: 'Show more', note: 'Week by acceptance date (Mon–Sun).' }
+};
+const wk = k => (WK[lang] || WK.en)[k];
+const plD = ts => new Date(ts).toLocaleDateString('sv-SE', { timeZone: 'Europe/Warsaw' });
+const addD = (d, n) => { const x = new Date(d + 'T12:00:00Z'); x.setUTCDate(x.getUTCDate() + n); return x.toISOString().slice(0, 10); };
+function invWeek(ts) {   // неделя кончается в вс 24:00; в пн до 08:00 (авто-подтверждение KSeF в 7:00) ещё прошлая неделя
+  const L = new Date(ts).toLocaleString('sv-SE', { timeZone: 'Europe/Warsaw' }), d = L.slice(0, 10), hh = +L.slice(11, 13);
+  const wd = (new Date(d + 'T12:00:00Z').getUTCDay() + 6) % 7;
+  const base = (wd === 0 && hh < 8) ? addD(d, -1) : d;
+  return addD(base, -((new Date(base + 'T12:00:00Z').getUTCDay() + 6) % 7));
+}
+let listShown = 30, listData = [];
 async function loadList() {
   if (!driverId) return;
   const { data, error } = await sb.from('invoices')
-    .select('doc_type, invoice_number, invoice_date, gross_amount, status, reject_reason, period_month, uploaded_at')
-    .order('uploaded_at', { ascending: false }).limit(300);
+    .select('doc_type, invoice_number, invoice_date, gross_amount, status, reject_reason, uploaded_at, accepted_at, rejected_at')
+    .order('uploaded_at', { ascending: false }).limit(1000);
   if (error) { $('list').textContent = error.message; return; }
   if (!data.length) { $('list').innerHTML = `<div class="small">${t('empty')}</div>`; return; }
+  listData = data;
   const fm = n => (Number(n) || 0).toFixed(2).replace('.', ',');
-  const by = {};
+  const cur = invWeek(new Date().toISOString());
+  const weeks = [0, 1, 2, 3].map(i => addD(cur, -7 * i));
+  const by = {}; weeks.forEach(w => by[w] = { a: 0, s: 0, r: 0, p: 0 });
   data.forEach(r => {
-    const m = String(r.period_month || r.uploaded_at || '').slice(0, 7) || '—';
-    const x = by[m] = by[m] || { n: 0, sum: 0, st: { accepted: [0, 0], pending: [0, 0], rejected: [0, 0] } };
-    const a = Number(r.gross_amount) || 0;
-    x.n++; x.sum += a;
-    if (x.st[r.status]) { x.st[r.status][0]++; x.st[r.status][1] += a; }
+    if (r.status === 'accepted') { const w = invWeek(r.accepted_at || r.uploaded_at); if (by[w]) { by[w].a++; by[w].s += Number(r.gross_amount) || 0; } }
+    else if (r.status === 'rejected') { const w = invWeek(r.rejected_at || r.uploaded_at); if (by[w]) by[w].r++; }
+    else if (r.status === 'pending') { by[cur].p++; }
   });
-  const sums = Object.keys(by).sort().reverse().slice(0, 3).map(m => {
-    const x = by[m];
-    return `<div class="msum"><div class="h"><span>${m}</span><span style="direction:ltr">Σ ${fm(x.sum)} zł · ${x.n}</span></div>` +
-      ['accepted', 'pending', 'rejected'].filter(k => x.st[k][0]).map(k =>
-        `<div class="r"><span>${t(k)} (${x.st[k][0]})</span><b>${fm(x.st[k][1])} zł</b></div>`).join('') + '</div>';
+  const dd = d => d.slice(8) + '.' + d.slice(5, 7);
+  const sums = `<div class="small" style="margin-bottom:4px"><b>${wk('h')}</b> · ${wk('note')}</div>` + weeks.map(w => {
+    const x = by[w];
+    return `<div class="msum"><div class="h"><span>${dd(w)} – ${dd(addD(w, 6))}</span><span style="direction:ltr">${fm(x.s)} zł</span></div>` +
+      `<div class="r"><span>${wk('acc')} (${x.a})</span><b>${fm(x.s)} zł</b></div>` +
+      (x.r ? `<div class="r"><span>${wk('rej')}</span><b>${x.r}</b></div>` : '') +
+      (w === cur && x.p ? `<div class="r"><span>${wk('pen')}</span><b>${x.p}</b></div>` : '') + '</div>';
   }).join('');
-  $('list').innerHTML = sums + data.slice(0, 30).map(r => `
+  $('list').innerHTML = sums + `<div class="small" style="margin:12px 0 4px"><b>${wk('all')}</b> (${data.length})</div><div id="invScroll" style="max-height:60vh;overflow-y:auto;-webkit-overflow-scrolling:touch;border-top:1px solid var(--line)"></div>`;
+  drawInv();
+}
+function drawInv() {
+  const box = $('invScroll'); if (!box) return;
+  const rows = listData.slice(0, listShown);
+  box.innerHTML = rows.map(r => `
     <div class="inv">
       <div>
         <div><b>${Number(r.gross_amount || 0).toFixed(2)} zł</b> · ${r.doc_type === 'paragon' ? t('docFaktura') === 'Invoice' ? 'Receipt' : 'Paragon' : ''} ${esc(r.invoice_number || '')}</div>
         <div class="small">${r.invoice_date || ''}${r.status === 'rejected' && r.reject_reason ? ' — ' + esc(reasonText(r.reject_reason)) : ''}</div>
       </div>
       <span class="badge ${r.status}">${t(r.status)}</span>
-    </div>`).join('');
+    </div>`).join('') + (listData.length > listShown ? `<button class="btn ghost" id="invMore" style="width:100%;margin:8px 0">${wk('more')}</button>` : '');
+  const m = $('invMore'); if (m) m.onclick = () => { listShown += 50; drawInv(); };
 }
 function nipValid(n) {
   if (!/^\d{10}$/.test(n)) return false;

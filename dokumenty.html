@@ -122,11 +122,10 @@
       <button class="btn" id="weekCopy">📋 Копировать для Excel</button>
       <button class="btn ghost" id="weekCsv">⬇ CSV</button>
       <span id="weekState"></span>
-      <button class="btn bad" id="weekClose">🔒 Закрыть неделю</button>
+      <button class="btn bad hidden" id="weekClose">🔒 Закрыть неделю</button>
       <button class="btn ghost hidden" id="weekOpen">Открыть снова</button>
     </div>
-    <div class="muted" style="margin-bottom:10px">Сумма принятых документов, <b>загруженных</b> водителем с понедельника 00:00 по воскресенье 23:59 (время Польши). Это число идёт в колонку «Фактуры».
-      После расчёта нажмите <b>«Закрыть неделю»</b>: документы этой недели, которые вы примете позже, автоматически перейдут в следующую неделю.</div>
+    <div class="muted" style="margin-bottom:10px">Сумма <b>принятых</b> документов за расчётную неделю (пн–вс). Документ относится к той неделе, в которую он <b>принят</b> (вручную или через KSeF), независимо от даты фактуры и загрузки. Неделя заканчивается в воскресенье в 24:00. Исключение: документы, принятые в понедельник до 8:00 (авто-подтверждение KSeF в 7:00), идут в только что закончившуюся неделю; всё остальное — в новую. Отклонённые и ждущие в сумму не входят. В сумму входят все принятые: оригиналы, парагоны и подтверждения, найденные в KSeF.</div>
     <div id="weekMsg"></div>
     <div id="weekTable"></div>
   </main>
@@ -487,42 +486,50 @@ function safe(s) { return String(s || '').normalize('NFD').replace(/[̀-ͯ]/g, '
 const isKsef = r => r.in_ksef || r.needs_ksef || r.doc_type === 'inny' || !!r.ksef_hash;
 const MAX_AGE_DAYS = 183;   // документы старше ~полугода в пакет автоматически не берём
 function monthLabel(ym) { const [y, m] = ym.split('-'); return ['январь','февраль','март','апрель','май','июнь','июль','август','сентябрь','октябрь','ноябрь','декабрь'][+m - 1] + ' ' + y; }
-let pkgNew = [], pkgOld = [];
+let pkgNew = [], pkgOld = [], pkgSel = '';
 $('zipBtn').onclick = openPkg;
-async function openPkg() {
+async function openPkg(selMonth) {
+  if (typeof selMonth !== 'string') selMonth = '';
   document.querySelectorAll('#app > main').forEach(m => m.classList.add('hidden')); show('tabs', false);
   $('pkgView').classList.remove('hidden');
   $('app').appendChild($('pkgView'));
   $('pkgView').innerHTML = '<main><div class="msg info">Загружаем…</div></main>';
-  const sel = 'id, status, doc_type, in_ksef, needs_ksef, ksef_hash, invoice_date, invoice_number, seller_nip, gross_amount, storage_path, vat_check, accepted_at, acc_batch, drivers(*)';
+  const sel = 'id, status, doc_type, in_ksef, needs_ksef, ksef_hash, invoice_date, invoice_number, seller_nip, gross_amount, storage_path, vat_check, accepted_at, uploaded_at, acc_batch, drivers(*)';
   const a = await sb.from('invoices').select(sel).eq('status', 'accepted').is('acc_batch', null).range(0, 4999);
   const b = await sb.from('invoices').select('acc_batch, gross_amount, storage_path').not('acc_batch', 'is', null).range(0, 19999);
   const p = await sb.from('invoices').select('id', { count: 'exact', head: true }).eq('status', 'pending');
   const err = a.error || b.error;
   if (err) return $('pkgView').innerHTML = `<main><div class="msg bad">Ошибка: ${esc(err.message)}${/acc_batch|accepted_at/.test(err.message) ? ' — запустите invoices_update_12.sql' : ''}</div><button class="btn ghost" id="pkgBack">← Назад</button></main>`, $('pkgBack').onclick = closePkg;
   const minDate = new Date(Date.now() - MAX_AGE_DAYS * 864e5).toISOString().slice(0, 10);
-  const all = (a.data || []).filter(r => !isKsef(r));
-  pkgNew = all.filter(r => (r.invoice_date || '9999') >= minDate);
-  pkgOld = all.filter(r => (r.invoice_date || '9999') < minDate);
+  // месяц документа: неделя принятия относится к месяцу понедельника выплаты (как в расчётах ZUS)
+  const monthOfWeek = W => addDays(W, 7).slice(0, 7);
+  const all = (a.data || []).filter(r => !isKsef(r)).map(r => Object.assign(r, { _m: monthOfWeek(invWeek(r.accepted_at || r.uploaded_at)) }));
+  const monthsAvail = [...new Set(all.map(r => r._m))].sort();
+  if (!selMonth || !monthsAvail.includes(selMonth)) selMonth = monthsAvail[0] || '';
+  pkgSel = selMonth;
+  const inM = all.filter(r => r._m === selMonth);
+  pkgNew = inM.filter(r => (r.invoice_date || '9999') >= minDate);
+  pkgOld = inM.filter(r => (r.invoice_date || '9999') < minDate);
   const batches = {};
   (b.data || []).forEach(r => { const x = batches[r.acc_batch] = batches[r.acc_batch] || { n: 0, sum: 0, ph: 0 }; x.n++; x.sum += Number(r.gross_amount || 0); if (!gone(r.storage_path)) x.ph++; });
   const d = new Date(); d.setDate(1); if (new Date().getDate() <= 15) d.setMonth(d.getMonth() - 1);
-  const defLabel = d.toISOString().slice(0, 7);
+  const defLabel = pkgSel;
+  const monthSel = monthsAvail.length ? `<label>Месяц: <select id="pkgMonthSel">${monthsAvail.map(m => { const L = all.filter(r => r._m === m); return `<option value="${m}"${m === pkgSel ? ' selected' : ''}>${monthLabel(m)} — ${L.length} док. · ${money(L.reduce((x, r) => x + Number(r.gross_amount || 0), 0))} zł</option>`; }).join('')}</select></label>` : '<span class="muted">Нет принятых документов для пакета.</span>';
   const sum = pkgNew.reduce((s, r) => s + Number(r.gross_amount || 0), 0);
   const byMonth = {}; pkgNew.forEach(r => { const k = (r.invoice_date || '').slice(0, 7); byMonth[k] = (byMonth[k] || 0) + 1; });
   $('pkgView').innerHTML = `<main>
     <div class="row" style="margin-bottom:12px"><button class="btn ghost" id="pkgBack">← К документам</button><h2 style="margin:0">Пакет бухгалтеру</h2></div>
     <div class="card" style="display:block">
       <h3 style="margin-top:0">Новый пакет</h3>
-      <p>В пакет попадают <b>все принятые документы, которые ещё не отправлялись бухгалтеру</b> — неважно, от какого числа фактура.
-         Документы KSeF не включаются. Каждый документ уходит бухгалтеру <b>только один раз</b>.</p>
+      <p>В пакет попадают <b>оригиналы фактур и парагоны</b>, принятые в расчётных неделях выбранного месяца (неделя относится к месяцу своего понедельника выплаты, как для ZUS). Подтверждения транзакций и документы KSeF не включаются. Каждый документ уходит бухгалтеру <b>только один раз</b>.</p>
+      <div class="row">${monthSel}</div>
       <div class="row"><span class="amt">${pkgNew.length} док. · ${money(sum)} zł</span>
         <span class="muted">${Object.keys(byMonth).sort().map(k => `${k ? monthLabel(k) : 'без даты'}: ${byMonth[k]}`).join(' · ')}</span></div>
       ${p.count ? `<div class="msg bad">⚠ Ещё ${p.count} док. ждут вашего решения и в этот пакет не попадут (попадут в следующий, когда примете).</div>` : ''}
       ${pkgOld.length ? `<div class="msg bad">⚠ ${pkgOld.length} док. старше полугода (дата фактуры раньше ${minDate}) — бухгалтер их, скорее всего, уже не примет.
          <label style="display:inline"><input type="checkbox" id="pkgOldInc"> всё равно включить</label></div>` : ''}
       <div class="row" style="margin-top:10px">
-        <label>Подпись пакета: <input id="pkgLabel" type="month" value="${defLabel}"></label>
+        <span class="muted">Подпись пакета: <b>${defLabel ? monthLabel(defLabel) : ''}</b></span><input id="pkgLabel" type="hidden" value="${defLabel}">
         <button class="btn" id="pkgMake" ${pkgNew.length || pkgOld.length ? '' : 'disabled'}>⬇ Сформировать и скачать ZIP</button>
       </div>
       <div id="pkgMsg"></div>
@@ -535,6 +542,7 @@ async function openPkg() {
     </div></main>`;
   $('pkgBack').onclick = closePkg;
   $('pkgMake').onclick = makePkg;
+  if ($('pkgMonthSel')) $('pkgMonthSel').onchange = () => openPkg($('pkgMonthSel').value);
   document.querySelectorAll('[data-redl]').forEach(btn => btn.onclick = () => redownload(btn.dataset.redl, btn));
   document.querySelectorAll('[data-delph]').forEach(btn => btn.onclick = () => delPhotos(btn.dataset.delph, btn));
 }
@@ -633,42 +641,42 @@ function fillWeeks() {
   $('weekSel').selectedIndex = 1;   // обычно считаете прошлую неделю
 }
 let weekRows = [];
+// Расчётная неделя документа: по дате ПРИНЯТИЯ (Польша). Понедельник целиком ещё относится к прошлой неделе, со вторника начинается новая.
+function invWeek(ts) {   // неделя кончается в вс 24:00; в пн до 08:00 (авто-подтверждение KSeF в 7:00) ещё прошлая неделя
+  const L = new Date(ts).toLocaleString('sv-SE', { timeZone: 'Europe/Warsaw' }), d = L.slice(0, 10), hh = +L.slice(11, 13);
+  const wd = (new Date(d + 'T12:00:00Z').getUTCDay() + 6) % 7;
+  const base = (wd === 0 && hh < 8) ? addDays(d, -1) : d;
+  return addDays(base, -((new Date(base + 'T12:00:00Z').getUTCDay() + 6) % 7));
+}
+const accWeek = r => invWeek(r.accepted_at || r.uploaded_at);
 async function loadWeek() {
-  const mon = $('weekSel').value, nextMon = addDays(mon, 7);
+  const mon = $('weekSel').value;
   msg('weekMsg', 'Считаем…');
-  // 1) принятые документы, отнесённые к этой неделе (в т.ч. перенесённые с прошлых)
-  const acc = await sb.from('invoices').select('id, driver_id, status, gross_amount, uploaded_at, drivers(*)')
-    .eq('status', 'accepted').eq('week_start', mon).range(0, 4999);
-  // 2) загруженные за неделю, но ещё не принятые — для предупреждения
-  const up = await sb.from('invoices').select('id, driver_id, status, gross_amount, uploaded_at, drivers(*)')
-    .neq('status', 'accepted').gte('uploaded_at', addDays(mon, -1) + 'T00:00:00Z').lt('uploaded_at', addDays(nextMon, 1) + 'T00:00:00Z').range(0, 4999);
-  const st = await sb.from('settled_weeks').select('week_start, closed_at').eq('week_start', mon);
-  const err = acc.error || up.error || st.error;
-  if (err) return msg('weekMsg', 'Ошибка: ' + esc(err.message) + (/settled_weeks|week_start/.test(err.message) ? ' — запустите invoices_update_10.sql' : ''), 'bad');
-  const closed = (st.data || []).length > 0;
-  $('weekState').innerHTML = closed ? `<span class="tag ok">🔒 закрыта ${new Date(st.data[0].closed_at).toLocaleDateString('ru-RU')}</span>` : '<span class="tag warn">открыта</span>';
-  show('weekClose', !closed); show('weekOpen', closed);
-  const notAcc = (up.data || []).filter(r => { const d = plDate(r.uploaded_at); return d >= mon && d < nextMon; });
+  show('weekClose', false); show('weekOpen', false); $('weekState').innerHTML = '';
+  const lo = addDays(mon, -2) + 'T00:00:00Z', hi = addDays(mon, 10) + 'T00:00:00Z';
+  const cols = 'id, driver_id, status, gross_amount, uploaded_at, accepted_at, drivers(*)';
+  const acc = await sb.from('invoices').select(cols).eq('status', 'accepted').gte('accepted_at', lo).lt('accepted_at', hi).range(0, 4999);
+  const rej = await sb.from('invoices').select('id, driver_id, uploaded_at, rejected_at, drivers(*)').eq('status', 'rejected').gte('rejected_at', lo).lt('rejected_at', hi).range(0, 4999);
+  const pen = await sb.from('invoices').select('id, driver_id, gross_amount, drivers(*)').eq('status', 'pending').range(0, 4999);
+  const err = acc.error || rej.error || pen.error;
+  if (err) return msg('weekMsg', 'Ошибка: ' + esc(err.message) + (/accepted_at|rejected_at/.test(err.message) ? ' — запустите supabase_shag4_nedeli.sql' : ''), 'bad');
   const by = {};
   const row = r => (by[r.driver_id] = by[r.driver_id] || { name: driverName(r.drivers), sum: 0, acc: 0, moved: 0, movedSum: 0, pend: 0, pendSum: 0, rej: 0 });
   for (const r of acc.data || []) {
+    if (accWeek(r) !== mon) continue;
     const x = row(r); x.sum += Number(r.gross_amount || 0); x.acc++;
-    if (plDate(r.uploaded_at) < mon) { x.moved++; x.movedSum += Number(r.gross_amount || 0); }
+    if (invWeek(r.uploaded_at) < mon) { x.moved++; x.movedSum += Number(r.gross_amount || 0); }
   }
-  for (const r of notAcc) {
-    const x = row(r);
-    if (r.status === 'pending') { x.pend++; x.pendSum += Number(r.gross_amount || 0); } else x.rej++;
-  }
-  weekRows = Object.values(by).sort((a, b) => a.name.localeCompare(b.name, 'pl'));
+  for (const r of rej.data || []) { if (invWeek(r.rejected_at || r.uploaded_at) === mon) row(r).rej++; }
+  for (const r of pen.data || []) { const x = row(r); x.pend++; x.pendSum += Number(r.gross_amount || 0); }
+  weekRows = Object.values(by).filter(r => r.acc || r.rej || r.pend).sort((a, b) => a.name.localeCompare(b.name, 'pl'));
   const pendAll = weekRows.reduce((s, r) => s + r.pend, 0);
   msg('weekMsg', pendAll
-    ? `⚠ Ещё <b>${pendAll}</b> док. этой недели ждут вашего решения и не вошли в суммы.` + (closed
-        ? ' Неделя закрыта — если вы их примете, они перейдут в следующую неделю.'
-        : ' Разберите их во вкладке «Ждут решения» до закрытия недели — или закройте неделю сейчас, тогда после приёма они перейдут в следующую.')
-    : '', closed ? 'info' : 'bad');
+    ? `⚠ Сейчас ещё <b>${pendAll}</b> док. ждут вашего решения. В эту неделю они не вошли; попадут в ту неделю, в которую вы их примете.`
+    : '', 'info');
   if (!weekRows.length) return $('weekTable').innerHTML = '<div class="muted">За эту неделю документов нет.</div>';
   const tot = weekRows.reduce((s, r) => s + r.sum, 0);
-  $('weekTable').innerHTML = `<table class="wk"><thead><tr><th>Водитель</th><th class="num">Фактуры, zł</th><th class="num">Принято</th><th class="num">из них с прошлых недель</th><th class="num">Ждут</th><th class="num">Отклонено</th></tr></thead><tbody>` +
+  $('weekTable').innerHTML = `<table class="wk"><thead><tr><th>Водитель</th><th class="num">Фактуры, zł</th><th class="num">Принято</th><th class="num">из них загружены раньше</th><th class="num">Ждут (сейчас)</th><th class="num">Отклонено</th></tr></thead><tbody>` +
     weekRows.map(r => `<tr><td>${esc(r.name)}</td><td class="num"><b>${money(r.sum)}</b></td><td class="num">${r.acc}</td>` +
       `<td class="num">${r.moved ? `<span class="tag ksef">${r.moved} · ${money(r.movedSum)}</span>` : ''}</td>` +
       `<td class="num">${r.pend ? `<span class="tag warn">${r.pend} · ${money(r.pendSum)}</span>` : '0'}</td><td class="num">${r.rej}</td></tr>`).join('') +
