@@ -129,6 +129,8 @@
       <input id="amount" type="text" inputmode="decimal" placeholder="250,00">
       <label id="nipLabel" data-t="nip">NIP продавца *</label>
       <input id="sellerNip" type="text" inputmode="numeric">
+      <div id="nipHint" class="small hidden" data-t="numAuto"></div>
+      <div id="nipMissing" class="small hidden" data-t="nipMissing"></div>
       <div id="sellerInfo" class="small"></div>
       <label data-t="category">За что *</label>
       <select id="category">
@@ -144,9 +146,8 @@
       <div id="dateRow" class="hidden">
         <label data-t="date">Дата документа *</label>
         <input id="invDate" type="date">
+        <div id="dateHint" class="small hidden" data-t="numAuto"></div>
       </div>
-      <div class="check" id="fullRow"><input id="fullVisible" type="checkbox">
-        <span data-t="fullVisible">Вся фактура видна целиком и текст читается</span></div>
       <button class="btn" id="sendBtn" data-t="send">Отправить</button>
     </div>
     <div id="sendMsg"></div>
@@ -1005,6 +1006,10 @@ const T = {
 let lang = 'pl';
 try { lang = localStorage.getItem('lang') || (navigator.language || 'pl').slice(0,2); } catch(e) {}
 if (!T[lang]) lang = 'pl';
+Object.assign(T.ru, { nipMissing: 'NIP продавца не найден на фото. Введите его вручную или переснимите фото.' });
+Object.assign(T.pl, { nipMissing: 'Nie znaleziono NIP sprzedawcy na zdjęciu. Wpisz go ręcznie lub zrób zdjęcie ponownie.' });
+Object.assign(T.uk, { nipMissing: 'NIP продавця не знайдено на фото. Введіть його вручну або перезніміть фото.' });
+Object.assign(T.en, { nipMissing: 'Seller NIP not found on the photo. Enter it manually or retake the photo.' });
 const t = k => (T[lang] && T[lang][k]) || T.pl[k] || k;   // нет перевода — польский
 function applyLang() {
   document.documentElement.lang = lang;
@@ -1037,6 +1042,7 @@ const kb = n => n < 1024*1024 ? Math.round(n/1024) + ' KB' : (n/1024/1024).toFix
 let sb = null;
 let driverId = null;
 let prepared = null;   // { blob, contentType, ext, hash }
+let nipAuto = false, dateAuto = false, typeTouched = false;
 let numAuto = false;   // номер вставлен автоматически (водитель его не трогал)
 let ocrWorker = null, ocrJob = null, qrPromise = null, pendingQr = null, warned = false, failCount = 0;
 
@@ -1115,7 +1121,7 @@ function applyDocType() {
   show('numRow', !par);
   if (!(prepared && prepared.qr)) $('numLabel').textContent = other ? t('numOther') : t('number');
 }
-$('docType').onchange = applyDocType;
+$('docType').onchange = () => { typeTouched = true; applyDocType(); };
 
 // ---------- выбор файла ----------
 $('camBtn').onclick = () => { pendingQr = null; $('camInput').click(); };
@@ -1135,9 +1141,9 @@ function parseKsefQr(texts) {
 }
 function setQrMode(qr) {
   const on = !!qr;
-  show('qrFound', on); show('docRow', !on); show('fullRow', !on);
+  show('qrFound', on); show('docRow', !on);
   if (on) {
-    $('docType').value = 'faktura'; applyDocType();
+    $('docType').value = 'inny'; applyDocType();
     $('qrFound').textContent = t('qrOk').replace('{nip}', qr.nip).replace('{date}', qr.date);
     $('sellerNip').value = qr.nip; $('invDate').value = qr.date;
   }
@@ -1164,7 +1170,8 @@ async function handleQrFile(file) {
 
 function resetForm() {
   prepared = null; ocrJob = null; qrPromise = null; clearWarn();
-  show('dateRow', false); $('invDate').value = '';
+  show('dateRow', false); $('invDate').value = ''; dateAuto = false; show('dateHint', false);
+  if (nipAuto) $('sellerNip').value = ''; nipAuto = false; show('nipHint', false); show('nipMissing', false); typeTouched = false;
   if (numAuto) { $('invNumber').value = ''; numAuto = false; } show('numHint', false);
   if (document.getElementById('qrFound')) setQrMode(null);
   show('preview', false); show('formFields', false);
@@ -1212,11 +1219,12 @@ async function handleFile(file, source) {
   const myJob = ocrJob;
   myJob.first.then(txt => {
     if (ocrJob !== myJob) return;            // уже выбрано другое фото
-    fillNumberFrom(txt);
+    fillNumberFrom(txt); autoFillFromText(txt);
     const letters = (txt.match(/[A-Za-zĄĆĘŁŃÓŚŹŻąćęłńóśźż]/g) || []).length;
     const money = (txt.match(/\d+[.,]\s?\d{2}(?!\d)/g) || []).length;
     if (letters < 40 || money < 1) msg('fileMsg', () => t('noText'), 'bad');
   }).catch(() => {});
+  qrPromise.then(qt => { if (ocrJob === myJob && qt && qt.length) autoFillFromQr(qt); });
   if (prepared.qr) setQrMode(prepared.qr);
   show('formFields');
 }
@@ -1629,6 +1637,12 @@ function nearIn(stream, target, maxd) {
 function withTimeout(p, ms) {
   return Promise.race([p, new Promise((_, rej) => setTimeout(() => rej(new Error('timeout')), ms))]);
 }
+// покупатель по названию или адресу, если NIP не прочитался: «ALEKS-GROUP Sp. z o.o.», ул. Jana Heweliusza 11/819
+const FIRM_NAME_RX = /AL[EK]{1,2}SGROUP|ALEXGROUP|ALEKSGROUP/;
+function buyerByName(text) {
+  const L = String(text || '').toUpperCase().replace(/Ł/g, 'L').replace(/[^A-Z0-9]/g, '');
+  return FIRM_NAME_RX.test(L) || (/HEWELIUSZ/.test(L) && /11819|11\/?819/.test(L));
+}
 function checkText(text, v) {
   const digits = text.replace(/\D/g, '');
   const flat = text.replace(/\s/g, '');
@@ -1638,7 +1652,7 @@ function checkText(text, v) {
   const am = v.amount.toFixed(2).replace('.', ',');
   return {
     seller: nearIn(digits, v.sellerNip, 1),
-    buyer: FIRM_NIP ? nearIn(digits, FIRM_NIP, 1) : true,
+    buyer: FIRM_NIP ? (nearIn(digits, FIRM_NIP, 1) || buyerByName(text)) : true,
     amount: money.includes(am),
     date: !v.date ? null : dates.includes(`${d}-${m}-${y}`) || dates.includes(`${y}-${m}-${d}`) || dates.includes(`${d}-${m}-${y.slice(2)}`)
           || nearIn(digits, d + m + y, 1) || nearIn(digits, y + m + d, 1)
@@ -1664,6 +1678,45 @@ $('sellerNip').addEventListener('change', async () => {
   $('sellerInfo').textContent = r.ok === null ? '' : r.found ? t('sellerIs') + (r.name || '') + (r.ok ? ' ✓' : ' — ' + t('vatInactive')) : t('vatNotFound');
 });
 
+// NIP продавца: 10 цифр с верной контрольной суммой, не наш NIP; приоритет у номеров с пометкой NIP
+function extractSellerNip(text) {
+  const t = String(text || '');
+  const all = [];
+  for (const m of t.matchAll(/(?<!\d)\d(?:[ \t-]?\d){9}(?!\d)/g)) {   // 774-00-01-454, 583-353-04-63 и без дефисов
+    const n = m[0].replace(/\D/g, '');
+    if (n === FIRM_NIP || !nipValid(n)) continue;
+    const before = t.slice(Math.max(0, m.index - 14), m.index).toUpperCase();
+    all.push({ n, lab: /NIP|VAT|TAX/.test(before), pos: m.index });
+  }
+  const lab = all.filter(x => x.lab);
+  if (lab.length) return lab.sort((a, b) => a.pos - b.pos)[0].n;
+  const uniq = [...new Set(all.map(x => x.n))];
+  return uniq.length === 1 ? uniq[0] : null;
+}
+function setDocTypeAuto(v) {
+  if (typeTouched || $('docType').value === v) return;
+  $('docType').value = v; applyDocType();
+}
+// что удалось прочитать с фото — подставляем сами; водитель может исправить. Вручную вводится только сумма.
+function autoFillFromText(text) {
+  const nip = extractSellerNip(text);
+  if (nip && (!$('sellerNip').value || nipAuto)) {
+    $('sellerNip').value = nip; nipAuto = true; show('nipHint'); show('nipMissing', false);
+    $('sellerNip').dispatchEvent(new Event('change'));
+  } else if (!$('sellerNip').value) show('nipMissing');
+  const d = extractDate(text);
+  if (d && (!$('invDate').value || dateAuto)) { $('invDate').value = d; dateAuto = true; show('dateRow'); show('dateHint'); }
+  const k = docKind(text, undefined), ki = ksefInfo([], text);
+  if (k.confirm || k.spec || ki.inKsef) setDocTypeAuto('inny');
+  else if (k.faktura) setDocTypeAuto('faktura');
+  else if (k.paragon) setDocTypeAuto('paragon');
+}
+function autoFillFromQr(texts) {
+  const ki = ksefInfo(texts, '');
+  if (ki.links.length) setDocTypeAuto('inny');
+  if (ki.qrNip && (!$('sellerNip').value || nipAuto)) { $('sellerNip').value = ki.qrNip; nipAuto = true; show('nipHint'); show('nipMissing', false); $('sellerNip').dispatchEvent(new Event('change')); }
+  if (ki.qrDate && (!$('invDate').value || dateAuto)) { $('invDate').value = ki.qrDate; dateAuto = true; show('dateRow'); show('dateHint'); }
+}
 function fillNumberFrom(text) {
   if ($('docType').value === 'paragon') return;
   if ($('invNumber').value && !numAuto) return;     // водитель ввёл сам — не трогаем
@@ -1672,6 +1725,8 @@ function fillNumberFrom(text) {
   $('invNumber').value = n; numAuto = true; show('numHint');
 }
 $('invNumber').addEventListener('input', () => { numAuto = false; show('numHint', false); });
+$('sellerNip').addEventListener('input', () => { nipAuto = false; show('nipHint', false); show('nipMissing', false); });
+$('invDate').addEventListener('input', () => { dateAuto = false; show('dateHint', false); });
 
 function clearWarn() { warned = false; $('sendBtn').textContent = t('send'); }
 ['amount', 'invNumber', 'invDate', 'sellerNip', 'docType'].forEach(id =>
@@ -1686,8 +1741,8 @@ $('sendBtn').onclick = async () => {
   const par = docType === 'paragon', other = docType === 'inny';
   const sellerNip = $('sellerNip').value.replace(/\D/g, '');
   const qr = prepared && prepared.qr;
-  let date = qr ? qr.date : '';          // дата: из QR-кода или читается с фото
-  if (!prepared || !(amount > 0) || !sellerNip || (!qr && !$('fullVisible').checked))
+  let date = qr ? qr.date : (!$('dateRow').classList.contains('hidden') && !dateAuto ? $('invDate').value : '');   // дата: из QR, введённая/исправленная водителем или читается с фото
+  if (!prepared || !(amount > 0) || !sellerNip)
     return msg('sendMsg', () => (t('fillAll')), 'bad');
   if (sellerNip && !nipValid(sellerNip)) return msg('sendMsg', () => (t('badNip')), 'bad');
   if (par && !prepared.fresh) return msg('sendMsg', () => (t('paragonCamera')), 'bad');
@@ -1728,7 +1783,7 @@ $('sendBtn').onclick = async () => {
   let ksef = { inKsef: false };
   if (qrPromise) {
     const ocrText = ocrJob ? ocrJob.text : '';
-    try { ksef = ksefInfo(await withTimeout(qrPromise, 10000), ocrText); } catch (e) {}
+    try { const qt = await withTimeout(qrPromise, 10000); ksef = ksefInfo(qt, ocrText); ksef.qrParsed = parseKsefQr(qt); } catch (e) {}
     // QR-код KSeF содержит NIP продавца и дату — сверяем с тем, что ввёл водитель
     if (ksef.qrNip && check.ran) check.seller = check.seller && ksef.qrNip === sellerNip;
     if (ksef.qrNip && ksef.qrNip !== sellerNip) { check.ran = true; check.seller = false; }
@@ -1744,11 +1799,16 @@ $('sendBtn').onclick = async () => {
   const vatProblemKey = vat.ok === false ? (vat.found ? 'vatInactive' : 'vatNotFound') : '';
   const vatProblem = vatProblemKey ? t(vatProblemKey) : '';
   if (missing.length) failCount++;
-  const listHtml = (vatProblemKey ? '<b>' + t(vatProblemKey) + '</b><br>' : '') + (missing.length ? t('notFound') + '<ul>' + missing.map(k => '<li>' + t('f_' + k) + '</li>').join('') + '</ul>' : '<br>');
-  const retakeHtml = '<button class="btn secondary" id="retakeBtn">' + t('retake') + '</button><div class="small">' + t('retakeHint') + '</div>';
-  if (missing.length && failCount < MAX_TRIES) {
+  // строятся при каждой перерисовке, чтобы при смене языка весь текст переводился целиком
+  const listHtml = () => (vatProblemKey ? '<b>' + t(vatProblemKey) + '</b><br>' : '') + (missing.length ? t('notFound') + '<ul>' + missing.map(k => '<li>' + t('f_' + k) + '</li>').join('') + '</ul>' : '<br>');
+  const retakeHtml = () => '<button class="btn secondary" id="retakeBtn">' + t('retake') + '</button><div class="small">' + t('retakeHint') + '</div>';
+  // парагон: NIP нашей фирмы не найден или не совпал — 2 попытки переснять, потом отправка на ручную проверку владельцу
+  const parNoNip = par && missing.includes('buyer');
+  if (parNoNip) check.manual = 'paragon_nip';
+  const maxTries = parNoNip ? 2 : MAX_TRIES;
+  if (missing.length && failCount < maxTries) {
     $('sendBtn').disabled = false; clearWarn();
-    msg('sendMsg', () => (listHtml + t('tryOf').replace('{n}', failCount).replace('{m}', MAX_TRIES) + retakeHtml), 'bad');
+    msg('sendMsg', () => (listHtml() + t('tryOf').replace('{n}', failCount).replace('{m}', maxTries) + retakeHtml()), 'bad');
     document.getElementById('retakeBtn').onclick = () => $('camInput').click();
     return;
   }
@@ -1775,13 +1835,17 @@ $('sendBtn').onclick = async () => {
   const up = await sb.storage.from(BUCKET).upload(path, prepared.blob, { contentType: prepared.contentType, upsert: false });
   if (up.error) { $('sendBtn').disabled = false; return msg('sendMsg', () => (t('sendErr') + up.error.message), 'bad'); }
 
+  // любой документ с QR/номером KSeF, «Potwierdzenie transakcji» или спецификацией — это «подтверждение транзакции, фактура в KSeF»:
+  // не фактура и не парагон, принимается только после совпадения в KSeF
+  const qrUse = qr || (ksef && ksef.qrParsed) || null;
+  const isKs = !!(other || qrUse || (ksef && ksef.inKsef) || (check.kind && (check.kind.spec || check.kind.confirm)));
   const ins = await sb.from('invoices').insert({
     driver_id: driverId, storage_path: path, file_hash: prepared.hash,
-    period_month: month + '-01', doc_type: (!qr && !par && check.kind && (check.kind.spec || check.kind.confirm)) ? 'inny' : docType, invoice_number: par ? null : (number || null), invoice_date: date,
+    period_month: month + '-01', doc_type: isKs ? 'inny' : docType, invoice_number: par ? null : (number || null), invoice_date: date,
     seller_nip: sellerNip || null, buyer_nip: FIRM_NIP || null,
     ocr_check: check, ocr_ok: check.ran ? missing.length === 0 : null, vat_check: vat,
-    in_ksef: !!(qr || other || (ksef && ksef.inKsef) || (check.kind && check.kind.spec)), ksef_hash: qr ? qr.hash : null,
-    needs_ksef: !!(!qr && (other || (check.kind && (check.kind.spec || check.kind.confirm)))),
+    in_ksef: isKs, ksef_hash: qrUse ? qrUse.hash : null,
+    needs_ksef: isKs,
     gross_amount: Math.round(amount * 100) / 100, category: $('category').value
   }).select('id').single();
 
@@ -1791,9 +1855,8 @@ $('sendBtn').onclick = async () => {
     return msg('sendMsg', () => (ins.error.code === '23505' ? t('duplicate') : t('sendErr') + ins.error.message), 'bad');
   }
   ['amount', 'invNumber', 'sellerNip'].forEach(id => $(id).value = '');
-  $('fullVisible').checked = false;
   pendingQr = null;
-  const wasSpec = !qr && (other || !!(check.kind && (check.kind.spec || check.kind.confirm)));
+  const wasSpec = isKs;
   resetForm(); clearWarn(); failCount = 0; $('sellerInfo').textContent = '';
   let auto = false;
   try {
@@ -1806,10 +1869,10 @@ $('sendBtn').onclick = async () => {
 
 // ---------- список ----------
 const WK = {
-  ru: { h: 'Последние 4 недели', acc: 'Принято', rej: 'Отклонено', pen: 'На проверке', none: 'нет', all: 'Все документы', more: 'Показать ещё', note: 'Неделя — по дате принятия (пн–вс; принятое в пн до 8:00 через KSeF — в прошлую).' },
-  pl: { h: 'Ostatnie 4 tygodnie', acc: 'Przyjęte', rej: 'Odrzucone', pen: 'W weryfikacji', none: 'brak', all: 'Wszystkie dokumenty', more: 'Pokaż więcej', note: 'Tydzień wg daty przyjęcia (pn–nd).' },
-  uk: { h: 'Останні 4 тижні', acc: 'Прийнято', rej: 'Відхилено', pen: 'На перевірці', none: 'немає', all: 'Усі документи', more: 'Показати ще', note: 'Тиждень за датою прийняття (пн–нд).' },
-  en: { h: 'Last 4 weeks', acc: 'Accepted', rej: 'Rejected', pen: 'Pending', none: 'none', all: 'All documents', more: 'Show more', note: 'Week by acceptance date (Mon–Sun).' }
+  ru: { h: 'Последние 4 недели', acc: 'Принято', rej: 'Отклонено', pen: 'На проверке', none: 'нет', all: 'Все документы', more: 'Показать ещё', note: 'по дате принятия' },
+  pl: { h: 'Ostatnie 4 tygodnie', acc: 'Przyjęte', rej: 'Odrzucone', pen: 'W weryfikacji', none: 'brak', all: 'Wszystkie dokumenty', more: 'Pokaż więcej', note: 'wg daty przyjęcia' },
+  uk: { h: 'Останні 4 тижні', acc: 'Прийнято', rej: 'Відхилено', pen: 'На перевірці', none: 'немає', all: 'Усі документи', more: 'Показати ще', note: 'за датою прийняття' },
+  en: { h: 'Last 4 weeks', acc: 'Accepted', rej: 'Rejected', pen: 'Pending', none: 'none', all: 'All documents', more: 'Show more', note: 'by acceptance date' }
 };
 const wk = k => (WK[lang] || WK.en)[k];
 const plD = ts => new Date(ts).toLocaleDateString('sv-SE', { timeZone: 'Europe/Warsaw' });

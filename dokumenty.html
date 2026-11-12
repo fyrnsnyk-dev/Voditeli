@@ -300,6 +300,7 @@ function card(r) {
     const miss = ['seller', 'buyer', 'amount', 'date'].filter(k => oc[k] === false);
     tags.push(miss.length ? `<span class="tag bad">Не найдено на фото: ${miss.map(k => F_RU[k]).join(', ')}</span>` : '<span class="tag ok">Фото совпало</span>');
   } else if (oc.source !== 'ksef_qr') tags.push('<span class="tag warn">Фото не сверялось</span>');
+  if (oc.manual === 'paragon_nip') tags.push('<span class="tag bad">Парагон: NIP фирмы не найден или не совпал — проверьте вручную</span>');
   if (oc.dateManual) tags.push('<span class="tag warn">Дата введена вручную</span>');
   const vat = r.vat_check || {};
   if (vat.ok === true) tags.push('<span class="tag ok">NIP в реестре VAT</span>');
