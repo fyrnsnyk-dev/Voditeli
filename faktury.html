@@ -1767,6 +1767,8 @@ function fillNumberFrom(text) {
   $('invNumber').value = n; numAuto = true; show('numHint');
 }
 $('invNumber').addEventListener('input', () => { numAuto = false; show('numHint', false); });
+// при заходе в поле выделяем всё: набранный номер заменяет подставленный, а не дописывается к нему
+['focus', 'click'].forEach(ev => $('sellerNip').addEventListener(ev, () => { try { $('sellerNip').select(); } catch (e) {} }));
 $('sellerNip').addEventListener('input', () => { nipAuto = false; show('nipHint', false); show('nipMissing', false); });
 $('invDate').addEventListener('input', () => { dateAuto = false; show('dateHint', false); });
 
@@ -1786,7 +1788,7 @@ $('sendBtn').onclick = async () => {
   let date = qr ? qr.date : (!$('dateRow').classList.contains('hidden') && !dateAuto ? $('invDate').value : '');   // дата: из QR, введённая/исправленная водителем или читается с фото
   if (!prepared || !(amount > 0) || !sellerNip)
     return msg('sendMsg', () => (t('fillAll')), 'bad');
-  if (sellerNip && !nipValid(sellerNip)) return msg('sendMsg', () => (t('badNip')), 'bad');
+  if (sellerNip && !nipValid(sellerNip)) return msg('sendMsg', () => (t('badNip') + ' (' + sellerNip.length + ' / 10)'), 'bad');
   if (par && !prepared.fresh) return msg('sendMsg', () => (t('paragonCamera')), 'bad');
 
   $('sendBtn').disabled = true;
@@ -1872,6 +1874,11 @@ $('sendBtn').onclick = async () => {
     return msg('sendMsg', () => t('enterDate'), 'bad');
   }
   if (manualDate && check.ran && !check.date) check.dateManual = true;
+  // дубликат: тот же NIP и номер, либо тот же NIP, сумма и дата (по всем водителям) — до загрузки фото
+  try {
+    const dup = await sb.rpc('invoice_dup', { p_nip: sellerNip, p_amount: Math.round(amount * 100) / 100, p_date: date, p_number: number || null });
+    if (dup && dup.data === true) { $('sendBtn').disabled = false; return msg('sendMsg', () => (t('duplicate')), 'bad'); }
+  } catch (e) {}
   msg('sendMsg', () => (t('sending')));
   const month = date.slice(0, 7);
   const path = `${driverId}/${month}/${uuid()}.${prepared.ext}`;
