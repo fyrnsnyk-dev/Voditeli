@@ -1797,7 +1797,7 @@ $('sendBtn').onclick = async () => {
   let qtEarly = [];
   if (qrPromise) { try { qtEarly = await withTimeout(qrPromise, 10000); } catch (e) {} }
   const qrEarly = parseKsefQr(qtEarly);
-  if (ocrJob && !qrEarly) {
+  if (ocrJob) {
     msg('sendMsg', () => (t('verifying')));
     const job = ocrJob, v = { sellerNip, amount, date: date || null };
     try {
@@ -1805,7 +1805,8 @@ $('sendBtn').onclick = async () => {
       let r = checkText(job.text, v);
       // не всё нашлось — читаем ещё раз другими способами, тексты объединяем
       const dateOk = () => v.date ? r.date : !!extractDate(job.text);
-      while (!(r.seller && r.buyer && r.amount && dateOk()) && job.idx < job.plan.length) {
+      // для документов с QR KSeF не переснимаем из-за недочитанных полей, но проверки «не фактура» и «не авто» остаются
+      while (!qrEarly && !(r.seller && r.buyer && r.amount && dateOk()) && job.idx < job.plan.length) {
         msg('sendMsg', () => (t('verifying') + ' (' + (job.idx + 1) + '/' + job.plan.length + ')'));
         await withTimeout(ocrStep(job), 45000);
         r = checkText(job.text, v);
