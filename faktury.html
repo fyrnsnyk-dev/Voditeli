@@ -1547,22 +1547,34 @@ function docKind(text, buyerFound) {
   return { notInvoice: notInvoice || (slip ? 'potwierdzenie płatności kartą' : null), faktura, paragon, confirm, spec };
 }
 
-// магазины, где не бывает топлива и автозапчастей (продукты, стройка, техника, косметика, дом)
+// Жёсткая блокировка: магазины, где автомобильных расходов и техники не бывает (продукты, косметика, фастфуд, одежда)
 const NOT_CAR_SHOPS = [
   ['JERONI', 'Biedronka'], ['BIEDRONK', 'Biedronka'], ['LIDL', 'Lidl'], ['ZABKA', 'Żabka'],
-  ['KAUFLAND', 'Kaufland'], ['NETTOSPZ', 'Netto'], ['DINOPOLSKA', 'Dino'], ['STOKROTKA', 'Stokrotka'],
-  ['LEWIATAN', 'Lewiatan'], ['ROSSMANN', 'Rossmann'], ['HEBE', 'Hebe'], ['CASTORAMA', 'Castorama'],
-  ['LEROYMERLIN', 'Leroy Merlin'], ['OBIPOLSKA', 'OBI'], ['MEDIAEXPERT', 'Media Expert'], ['TERGEMEDIA', 'Media Expert'],
-  ['MEDIAMARKT', 'MediaMarkt'], ['EUROAGD', 'RTV Euro AGD'], ['EURONET', 'RTV Euro AGD'], ['IKEA', 'IKEA'],
-  ['PEPCO', 'Pepco'], ['ACTIONPOLSKA', 'Action'], ['RTVEURO', 'RTV Euro AGD'], ['SUPERPHARM', 'Super-Pharm']
+  ['NETTOSPZ', 'Netto'], ['DINOPOLSKA', 'Dino'], ['STOKROTKA', 'Stokrotka'], ['LEWIATAN', 'Lewiatan'],
+  ['ROSSMANN', 'Rossmann'], ['HEBE', 'Hebe'], ['PEPCO', 'Pepco'], ['ACTIONPOLSKA', 'Action'], ['SUPERPHARM', 'Super-Pharm'],
+  ['POLOMARKET', 'Polomarket'], ['DELIKATESYCENTRUM', 'Delikatesy Centrum'], ['EUROCASH', 'Eurocash'], ['SPOLEM', 'Społem'],
+  ['ALDI', 'Aldi'], ['TOPAZ', 'Topaz'], ['GROSZEK', 'Groszek'],
+  ['MCDONALD', "McDonald's"], ['BURGERKING', 'Burger King'], ['STARBUCKS', 'Starbucks'], ['SUBWAY', 'Subway'],
+  ['PIZZAHUT', 'Pizza Hut'], ['TELEPIZZA', 'Telepizza'], ['AMREST', 'AmRest (KFC, Starbucks)'],
+  ['HENNESMAURITZ', 'H&M'], ['RESERVED', 'Reserved'], ['DEICHMANN', 'Deichmann'], ['DOUGLAS', 'Douglas'],
+  ['NOTINO', 'Notino'], ['EMPIK', 'Empik'], ['TEDI', 'TEDi']
+];
+// Мягкая пометка: смешанные магазины и маркетплейсы. Не блокируем, но документ не принимается автоматически — владелец смотрит позиции
+const MIXED_SHOPS = [
+  ['AUCHAN', 'Auchan'], ['CARREFOUR', 'Carrefour'], ['KAUFLAND', 'Kaufland'], ['INTERMARCHE', 'Intermarché'], ['ITMPOLSKA', 'Intermarché'],
+  ['MAKRO', 'Makro'], ['SELGROS', 'Selgros'], ['CASTORAMA', 'Castorama'], ['LEROYMERLIN', 'Leroy Merlin'], ['OBIPOLSKA', 'OBI'],
+  ['IKEA', 'IKEA'], ['DECATHLON', 'Decathlon'], ['MEDIAEXPERT', 'Media Expert'], ['TERGEMEDIA', 'Media Expert'],
+  ['MEDIAMARKT', 'MediaMarkt'], ['EUROAGD', 'RTV Euro AGD'], ['EURONET', 'RTV Euro AGD'], ['RTVEURO', 'RTV Euro AGD'],
+  ['ALLEGRO', 'Allegro'], ['AMAZON', 'Amazon'], ['ALIEXPRESS', 'AliExpress'], ['TEMU', 'Temu'], ['XKOM', 'x-kom'],
+  ['MORELE', 'Morele'], ['KOMPUTRONIK', 'Komputronik']
 ];
 function normLetters(t) {
   return (t || '').toUpperCase().replace(/[ĄÀ]/g, 'A').replace(/Ć/g, 'C').replace(/Ę/g, 'E').replace(/Ł/g, 'L')
     .replace(/Ń/g, 'N').replace(/Ó/g, 'O').replace(/Ś/g, 'S').replace(/[ŹŻ]/g, 'Z').replace(/[^A-Z]/g, '');
 }
-function notCarShop(sellerName, ocrText) {
+function shopIn(list, sellerName, ocrText) {
   const n = normLetters(sellerName), o = normLetters(ocrText);
-  for (const [key, label] of NOT_CAR_SHOPS) {
+  for (const [key, label] of list) {
     if (n.includes(key)) return label;
     // по тексту чека — только если это слово есть в шапке (первые ~300 букв), чтобы не ловить рекламу
     const head = o.slice(0, 300);
@@ -1570,6 +1582,8 @@ function notCarShop(sellerName, ocrText) {
   }
   return null;
 }
+const notCarShop = (sellerName, ocrText) => shopIn(NOT_CAR_SHOPS, sellerName, ocrText);
+const mixedShop = (sellerName, ocrText) => shopIn(MIXED_SHOPS, sellerName, ocrText);
 
 // товары не для автомобиля в строках чека (строка с товаром = есть цена вида 12,34)
 const NOT_CAR_WORDS = ('PAPIEROS PAPIEROSY CYGARETKI TYTON MARLBORO CAMEL WINSTON CHESTERFIELD VICEROY VUSE IQOS HEETS TEREA ELFBAR ' +
@@ -1844,6 +1858,8 @@ $('sendBtn').onclick = async () => {
   msg('sendMsg', () => (t('vatChecking')));
   const vat = await checkVat(sellerNip);
   const shop = notCarShop(vat && vat.name, ocrJob ? ocrJob.text : '');
+  const mixed = shop ? null : mixedShop(vat && vat.name, ocrJob ? ocrJob.text : '');
+  if (mixed) check.shop = mixed;
   if (shop) { $('sendBtn').disabled = false; return msg('sendMsg', () => (t('notCar').replace('{x}', shop)), 'bad'); }
   const missing = check.ran ? ['seller', 'buyer', 'amount', 'date'].filter(k => check[k] === false) : [];
   const vatProblemKey = vat.ok === false ? (vat.found ? 'vatInactive' : 'vatNotFound') : '';
@@ -1895,7 +1911,7 @@ $('sendBtn').onclick = async () => {
     driver_id: driverId, storage_path: path, file_hash: prepared.hash,
     period_month: month + '-01', doc_type: isKs ? 'inny' : docType, invoice_number: par ? null : (number || null), invoice_date: date,
     seller_nip: sellerNip || null, buyer_nip: FIRM_NIP || null,
-    ocr_check: check, ocr_ok: check.ran ? missing.length === 0 : null, vat_check: vat,
+    ocr_check: check, ocr_ok: check.shop ? false : (check.ran ? missing.length === 0 : (check.source === 'ksef_qr' ? true : null)), vat_check: vat,
     in_ksef: isKs, ksef_hash: qrUse ? qrUse.hash : null,
     needs_ksef: isKs,
     gross_amount: Math.round(amount * 100) / 100, category: $('category').value
@@ -1929,10 +1945,10 @@ const WK = {
 const wk = k => (WK[lang] || WK.en)[k];
 const plD = ts => new Date(ts).toLocaleDateString('sv-SE', { timeZone: 'Europe/Warsaw' });
 const addD = (d, n) => { const x = new Date(d + 'T12:00:00Z'); x.setUTCDate(x.getUTCDate() + n); return x.toISOString().slice(0, 10); };
-function invWeek(ts) {   // неделя кончается в вс 24:00; в пн до 08:00 (авто-подтверждение KSeF в 7:00) ещё прошлая неделя
+function invWeek(ts) {   // неделя кончается в вс 24:00; в пн до 10:00 (авто-подтверждение KSeF в 8:00 зимой / 9:00 летом) ещё прошлая неделя
   const L = new Date(ts).toLocaleString('sv-SE', { timeZone: 'Europe/Warsaw' }), d = L.slice(0, 10), hh = +L.slice(11, 13);
   const wd = (new Date(d + 'T12:00:00Z').getUTCDay() + 6) % 7;
-  const base = (wd === 0 && hh < 8) ? addD(d, -1) : d;
+  const base = (wd === 0 && hh < 10) ? addD(d, -1) : d;
   return addD(base, -((new Date(base + 'T12:00:00Z').getUTCDay() + 6) % 7));
 }
 let listShown = 30, listData = [];

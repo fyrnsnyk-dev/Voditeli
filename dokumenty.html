@@ -125,7 +125,7 @@
       <button class="btn bad hidden" id="weekClose">🔒 Закрыть неделю</button>
       <button class="btn ghost hidden" id="weekOpen">Открыть снова</button>
     </div>
-    <div class="muted" style="margin-bottom:10px">Сумма <b>принятых</b> документов за расчётную неделю (пн–вс). Документ относится к той неделе, в которую он <b>принят</b> (вручную или через KSeF), независимо от даты фактуры и загрузки. Неделя заканчивается в воскресенье в 24:00. Исключение: документы, принятые в понедельник до 8:00 (авто-подтверждение KSeF в 7:00), идут в только что закончившуюся неделю; всё остальное — в новую. Отклонённые и ждущие в сумму не входят. В сумму входят все принятые: оригиналы, парагоны и подтверждения, найденные в KSeF.</div>
+    <div class="muted" style="margin-bottom:10px">Сумма <b>принятых</b> документов за расчётную неделю (пн–вс). Документ относится к той неделе, в которую он <b>принят</b> (вручную или через KSeF), независимо от даты фактуры и загрузки. Неделя заканчивается в воскресенье в 24:00. Исключение: документы, принятые в понедельник до 10:00 (автосверка с KSeF в 8:00 зимой, 9:00 летом), идут в только что закончившуюся неделю; всё остальное — в новую. Отклонённые и ждущие в сумму не входят. В сумму входят все принятые: оригиналы, парагоны и подтверждения, найденные в KSeF.</div>
     <div id="weekMsg"></div>
     <div id="weekTable"></div>
   </main>
@@ -301,6 +301,7 @@ function card(r) {
     tags.push(miss.length ? `<span class="tag bad">Не найдено на фото: ${miss.map(k => F_RU[k]).join(', ')}</span>` : '<span class="tag ok">Фото совпало</span>');
   } else if (oc.source !== 'ksef_qr') tags.push('<span class="tag warn">Фото не сверялось</span>');
   if (oc.manual === 'paragon_nip') tags.push('<span class="tag bad">Парагон: NIP фирмы не найден или не совпал — проверьте вручную</span>');
+  if (oc.shop) tags.push(`<span class="tag bad">Магазин: ${esc(oc.shop)} — проверьте позиции</span>`);
   if (oc.dateManual) tags.push('<span class="tag warn">Дата введена вручную</span>');
   const vat = r.vat_check || {};
   if (vat.ok === true) tags.push('<span class="tag ok">NIP в реестре VAT</span>');
@@ -643,10 +644,10 @@ function fillWeeks() {
 }
 let weekRows = [];
 // Расчётная неделя документа: по дате ПРИНЯТИЯ (Польша). Понедельник целиком ещё относится к прошлой неделе, со вторника начинается новая.
-function invWeek(ts) {   // неделя кончается в вс 24:00; в пн до 08:00 (авто-подтверждение KSeF в 7:00) ещё прошлая неделя
+function invWeek(ts) {   // неделя кончается в вс 24:00; в пн до 10:00 (авто-подтверждение KSeF в 8:00 зимой / 9:00 летом) ещё прошлая неделя
   const L = new Date(ts).toLocaleString('sv-SE', { timeZone: 'Europe/Warsaw' }), d = L.slice(0, 10), hh = +L.slice(11, 13);
   const wd = (new Date(d + 'T12:00:00Z').getUTCDay() + 6) % 7;
-  const base = (wd === 0 && hh < 8) ? addDays(d, -1) : d;
+  const base = (wd === 0 && hh < 10) ? addDays(d, -1) : d;
   return addDays(base, -((new Date(base + 'T12:00:00Z').getUTCDay() + 6) % 7));
 }
 const accWeek = r => invWeek(r.accepted_at || r.uploaded_at);
