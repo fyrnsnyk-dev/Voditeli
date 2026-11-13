@@ -103,10 +103,7 @@
       <button class="btn" id="camBtn" data-t="takePhoto">📷 Сфотографировать</button>
       <button class="btn secondary" id="galBtn" data-t="fromGallery">🖼 Из галереи / PDF</button>
     </div>
-    <button class="btn secondary" id="qrBtn" data-t="scanQr">🔳 Сканировать только QR-код KSeF</button>
-    <div class="small" data-t="scanQrHint">Для фактур с QR-кодом KSeF: снимите крупно только QR-код.</div>
     <input id="camInput" type="file" accept="image/*" capture="environment" class="hidden">
-    <input id="qrInput" type="file" accept="image/*" capture="environment" class="hidden">
     <input id="galInput" type="file" accept="image/*,application/pdf" class="hidden">
 
     <div id="fileMsg"></div>
@@ -1010,6 +1007,11 @@ Object.assign(T.ru, { nipMissing: 'NIP продавца не найден на �
 Object.assign(T.pl, { nipMissing: 'Nie znaleziono NIP sprzedawcy na zdjęciu. Wpisz go ręcznie lub zrób zdjęcie ponownie.' });
 Object.assign(T.uk, { nipMissing: 'NIP продавця не знайдено на фото. Введіть його вручну або перезніміть фото.' });
 Object.assign(T.en, { nipMissing: 'Seller NIP not found on the photo. Enter it manually or retake the photo.' });
+const NEWT = {
+  takePhoto: { ru: '📷 Сфотографировать фактуру или QR-код KSeF', pl: '📷 Zrób zdjęcie faktury lub kodu QR KSeF', uk: '📷 Сфотографувати фактуру або QR-код KSeF', be: '📷 Сфатаграфаваць фактуру або QR-код KSeF', en: '📷 Photograph invoice or KSeF QR code', ka: '📷 გადაიღეთ ფაქტურა ან KSeF QR-კოდი', hi: '📷 बिल या KSeF QR कोड की फ़ोटो लें', ur: '📷 انوائس یا KSeF QR کوڈ کی تصویر لیں', pa: '📷 ਬਿੱਲ ਜਾਂ KSeF QR ਕੋਡ ਦੀ ਫ਼ੋਟੋ ਲਵੋ' },
+  badQuality: { ru: 'Качество плохое или текст не читается. Сфотографируйте оригинал документа.', pl: 'Słaba jakość lub tekst nieczytelny. Sfotografuj oryginał dokumentu.', uk: 'Погана якість або текст не читається. Сфотографуйте оригінал документа.', be: 'Дрэнная якасць або тэкст не чытаецца. Сфатаграфуйце арыгінал дакумента.', en: 'Poor quality or unreadable text. Please photograph the original document.', ka: 'ხარისხი დაბალია ან ტექსტი არ იკითხება. გადაიღეთ დოკუმენტის ორიგინალი.', hi: 'गुणवत्ता खराब है या पाठ पढ़ा नहीं जा रहा। कृपया दस्तावेज़ के मूल की फ़ोटो लें।', ur: 'معیار خراب ہے یا متن پڑھا نہیں جا رہا۔ براہِ کرم دستاویز کے اصل کی تصویر لیں۔', pa: 'ਕੁਆਲਿਟੀ ਮਾੜੀ ਹੈ ਜਾਂ ਲਿਖਤ ਪੜ੍ਹੀ ਨਹੀਂ ਜਾ ਰਹੀ। ਕਿਰਪਾ ਕਰਕੇ ਦਸਤਾਵੇਜ਼ ਦੇ ਅਸਲ ਦੀ ਫ਼ੋਟੋ ਲਵੋ।' }
+};
+for (const k in NEWT) for (const l in NEWT[k]) if (T[l]) T[l][k] = NEWT[k][l];
 const t = k => (T[lang] && T[lang][k]) || T.pl[k] || k;   // нет перевода — польский
 function applyLang() {
   document.documentElement.lang = lang;
@@ -1035,7 +1037,7 @@ function renderMsg(id) {
 const msg = (id, text, kind = 'info') => { lastMsg[id] = text ? { text, kind } : null; renderMsg(id); };
 document.addEventListener('click', e => {
   const id = e.target && e.target.id;
-  if (id === 'retakeBtn' || id === 'qrDocBtn') $('camInput').click();
+  if (id === 'retakeBtn' || id === 'qrDocBtn') { ocrJob = null; qrPromise = null; $('camInput').click(); }   // освобождаем память перед камерой (iPhone)
 });
 const kb = n => n < 1024*1024 ? Math.round(n/1024) + ' KB' : (n/1024/1024).toFixed(1) + ' MB';
 
@@ -1128,8 +1130,6 @@ $('camBtn').onclick = () => { pendingQr = null; $('camInput').click(); };
 $('galBtn').onclick = () => $('galInput').click();
 $('camInput').onchange = e => handleFile(e.target.files[0], 'camera');
 $('galInput').onchange = e => { pendingQr = null; handleFile(e.target.files[0], 'gallery'); };
-$('qrBtn').onclick = () => $('qrInput').click();
-$('qrInput').onchange = e => handleQrFile(e.target.files[0]);
 
 // ---------- режим «только QR-код KSeF» ----------
 function parseKsefQr(texts) {
@@ -1178,18 +1178,65 @@ function resetForm() {
   $('sizeInfo').textContent = ''; msg('fileMsg', ''); msg('sendMsg', '');
 }
 
+// input сбрасываем только ПОСЛЕ чтения файла: на iPhone сброс раньше может обнулить снимок
 async function handleFile(file, source) {
+  try { await handleFileInner(file, source); }
+  finally { $('camInput').value = ''; $('galInput').value = ''; }
+}
+function wireJob(myJob, qp) {
+  myJob.first.then(txt => {
+    if (ocrJob !== myJob) return;            // уже выбрано другое фото
+    fillNumberFrom(txt); autoFillFromText(txt);
+  }).catch(() => {});
+  qp.then(qt => { if (ocrJob === myJob && qt && qt.length) autoFillFromQr(qt); });
+  Promise.all([myJob.first.catch(() => ''), qp]).then(([txt, qt]) => {
+    if (ocrJob !== myJob) return;
+    const hasQr = (qt || []).some(x => /ksef/i.test(x));
+    const letters = ((txt || '').match(/[A-Za-zĄĆĘŁŃÓŚŹŻąćęłńóśźż]/g) || []).length;
+    const money = ((txt || '').match(/\d+[.,]\s?\d{2}(?!\d)/g) || []).length;
+    if (!hasQr && (letters < 40 || money < 1)) msg('fileMsg', () => t('badQuality'), 'bad');
+  }).catch(() => {});
+}
+function loadPdfJs() {
+  if (window.pdfjsLib) return Promise.resolve(true);
+  return new Promise(res => {
+    const sc = document.createElement('script');
+    sc.src = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js';
+    sc.onload = () => { try { pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js'; } catch (e) {} res(!!window.pdfjsLib); };
+    sc.onerror = () => res(false);
+    document.head.appendChild(sc); setTimeout(() => res(!!window.pdfjsLib), 12000);
+  });
+}
+async function pdfFirstPage(file) {
+  if (!(await loadPdfJs())) return null;
+  const doc = await pdfjsLib.getDocument({ data: await file.arrayBuffer() }).promise;
+  const page = await doc.getPage(1);
+  const v1 = page.getViewport({ scale: 1 });
+  const vp = page.getViewport({ scale: Math.min(3, 2600 / Math.max(v1.width, v1.height)) });
+  const c = document.createElement('canvas'); c.width = Math.round(vp.width); c.height = Math.round(vp.height);
+  await page.render({ canvasContext: c.getContext('2d'), viewport: vp }).promise;
+  return c;
+}
+async function handleFileInner(file, source) {
   resetForm();
   if (!file) return;
-  $('camInput').value = ''; $('galInput').value = '';
 
   // PDF — без сжатия
   if (file.type === 'application/pdf') {
     if (file.size > MAX_BYTES) return msg('fileMsg', () => (t('pdfBig')), 'bad');
     prepared = { blob: file, contentType: 'application/pdf', ext: 'pdf', hash: await sha256(file), source, fresh: false };
     $('sizeInfo').textContent = 'PDF: ' + file.name + ' (' + kb(file.size) + ')';
-    msg('fileMsg', () => (t('qualityOk')), 'ok');
+    msg('fileMsg', () => (t('checking')));
     show('formFields');
+    // первая страница PDF: ищем QR-код KSeF и читаем текст, как на фото
+    let pc = null;
+    try { pc = await pdfFirstPage(file); } catch (e) {}
+    if (pc && prepared && prepared.ext === 'pdf') {
+      ocrJob = startOcr(pc, pc.width, pc.height);
+      qrPromise = findQrDeep(pc).catch(() => []);
+      msg('fileMsg', () => (t('qualityOk')), 'ok');
+      wireJob(ocrJob, qrPromise);
+    } else msg('fileMsg', () => (t('qualityOk')), 'ok');
     return;
   }
 
@@ -1201,9 +1248,11 @@ async function handleFile(file, source) {
   const w = img.width, h = img.height;
   if (Math.max(w, h) < MIN_LONG_SIDE) return msg('fileMsg', () => (t('tooSmall')), 'bad');
   const q = analyze(img, w, h);
-  if (q.sharpness < MIN_SHARPNESS) return msg('fileMsg', () => (t('blurry')), 'bad');
-  if (q.brightness < MIN_BRIGHT) return msg('fileMsg', () => (t('dark')), 'bad');
-  if (q.brightness > MAX_BRIGHT) return msg('fileMsg', () => (t('bright')), 'bad');
+  const poor = q.sharpness < MIN_SHARPNESS ? 'blurry' : q.brightness < MIN_BRIGHT ? 'dark' : q.brightness > MAX_BRIGHT ? 'bright' : '';
+  if (poor) {   // плохое фото принимаем только если на нём всё же читается QR-код KSeF
+    let qt = []; try { qt = await findQrDeep(img); } catch (e) {}
+    if (!qt.some(x => /ksef/i.test(x))) return msg('fileMsg', () => (t(poor) + ' ' + t('badQuality')), 'bad');
+  }
 
   // 2) сжатие на телефоне
   const blob = await compress(img, w, h);
@@ -1216,15 +1265,7 @@ async function handleFile(file, source) {
   $('preview').src = URL.createObjectURL(blob); show('preview');
   $('sizeInfo').textContent = kb(file.size) + ' → ' + kb(blob.size) + ' · ' + w + '×' + h;
   msg('fileMsg', () => (t('qualityOk')), 'ok');
-  const myJob = ocrJob;
-  myJob.first.then(txt => {
-    if (ocrJob !== myJob) return;            // уже выбрано другое фото
-    fillNumberFrom(txt); autoFillFromText(txt);
-    const letters = (txt.match(/[A-Za-zĄĆĘŁŃÓŚŹŻąćęłńóśźż]/g) || []).length;
-    const money = (txt.match(/\d+[.,]\s?\d{2}(?!\d)/g) || []).length;
-    if (letters < 40 || money < 1) msg('fileMsg', () => t('noText'), 'bad');
-  }).catch(() => {});
-  qrPromise.then(qt => { if (ocrJob === myJob && qt && qt.length) autoFillFromQr(qt); });
+  wireJob(ocrJob, qrPromise);
   if (prepared.qr) setQrMode(prepared.qr);
   show('formFields');
 }
@@ -1449,11 +1490,11 @@ async function zxingTexts(c) {
 async function findQrDeep(img) {
   const out = new Set(), add = a => a.forEach(x => out.add(x)), tick = () => new Promise(r => setTimeout(r, 0));
   const big = Math.max(img.naturalWidth || img.width, img.naturalHeight || img.height);
-  for (const side of [1600, 2600, Math.min(4000, big)]) {
+  for (const side of [1600, 2600, Math.min(3000, big)]) {
     if (out.size) break;
     const c = scaledCanvas(img, side);
     add(await findQrTexts(c)); await tick();
-    if (out.size || !window.jsQR) continue;
+    if (out.size || !window.jsQR) { c.width = c.height = 1; continue; }
     const ctx = c.getContext('2d', { willReadFrequently: true });
     const tw = Math.round(c.width * 0.5), th = Math.round(c.height * 0.5);
     for (const fy of [0, 0.25, 0.5]) for (const fx of [0, 0.25, 0.5]) {
@@ -1463,6 +1504,7 @@ async function findQrDeep(img) {
       if (r && r.data) { out.add(r.data); break; }
       await tick();
     }
+    c.width = c.height = 1;
   }
   if (!out.size) add(await zxingTexts(scaledCanvas(img, 2200)));
   if (!out.size) add(await zxingTexts(scaledCanvas(img, 1400)));
@@ -1749,7 +1791,11 @@ $('sendBtn').onclick = async () => {
 
   $('sendBtn').disabled = true;
   let check = { ran: false };
-  if (ocrJob) {
+  // QR KSeF читаем первым: для таких документов длинная проверка текста не нужна, их подтверждает сверка с KSeF
+  let qtEarly = [];
+  if (qrPromise) { try { qtEarly = await withTimeout(qrPromise, 10000); } catch (e) {} }
+  const qrEarly = parseKsefQr(qtEarly);
+  if (ocrJob && !qrEarly) {
     msg('sendMsg', () => (t('verifying')));
     const job = ocrJob, v = { sellerNip, amount, date: date || null };
     try {
@@ -1783,13 +1829,14 @@ $('sendBtn').onclick = async () => {
   let ksef = { inKsef: false };
   if (qrPromise) {
     const ocrText = ocrJob ? ocrJob.text : '';
-    try { const qt = await withTimeout(qrPromise, 10000); ksef = ksefInfo(qt, ocrText); ksef.qrParsed = parseKsefQr(qt); } catch (e) {}
+    try { const qt = qtEarly; ksef = ksefInfo(qt, ocrText); ksef.qrParsed = parseKsefQr(qt); } catch (e) {}
     // QR-код KSeF содержит NIP продавца и дату — сверяем с тем, что ввёл водитель
     if (ksef.qrNip && check.ran) check.seller = check.seller && ksef.qrNip === sellerNip;
     if (ksef.qrNip && ksef.qrNip !== sellerNip) { check.ran = true; check.seller = false; }
     if (ksef.qrDate && !date) { date = ksef.qrDate; if (check.ran) check.date = true; }
     else if (ksef.qrDate && ksef.qrDate !== date) { check.ran = true; check.date = false; }
   }
+  if (ksef.qrParsed && !(ksef.qrNip && ksef.qrNip !== sellerNip)) check = { ran: false, source: 'ksef_qr' };   // QR совпал с введённым NIP
   check.ksef = ksef;
   msg('sendMsg', () => (t('vatChecking')));
   const vat = await checkVat(sellerNip);
@@ -1809,7 +1856,6 @@ $('sendBtn').onclick = async () => {
   if (missing.length && failCount < maxTries) {
     $('sendBtn').disabled = false; clearWarn();
     msg('sendMsg', () => (listHtml() + t('tryOf').replace('{n}', failCount).replace('{m}', maxTries) + retakeHtml()), 'bad');
-    document.getElementById('retakeBtn').onclick = () => $('camInput').click();
     return;
   }
   if ((missing.length || vatProblem) && !warned) {
@@ -1817,8 +1863,6 @@ $('sendBtn').onclick = async () => {
     warned = true; $('sendBtn').disabled = false; $('sendBtn').textContent = t('sendAnyway');
     msg('sendMsg', () => ((vatProblemKey ? '<b>' + t(vatProblemKey) + '</b><br>' : '') + (missing.length ? t('notFound') + '<ul>' + missing.map(k => '<li>' + t('f_' + k) + '</li>').join('') + '</ul>' : '<br>') + t('fixOrSend')
       + (missing.length ? '<button class="btn secondary" id="retakeBtn">' + t('retake') + '</button><div class="small">' + t('retakeHint') + '</div>' : '')), 'bad');
-    const rb = document.getElementById('retakeBtn');
-    if (rb) rb.onclick = () => $('camInput').click();
     return;
   }
   number = $('invNumber').value.trim();
