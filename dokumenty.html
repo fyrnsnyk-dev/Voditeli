@@ -102,6 +102,8 @@
       <input id="month" type="month">
       <button class="btn ghost" id="allMonths" title="Показать документы за все месяцы">Все месяцы</button>
       <input id="search" type="text" placeholder="Поиск: водитель, NIP, номер, сумма" style="flex:1;min-width:200px">
+      <select id="drvSel" title="Показать документы одного водителя"><option value="">Все водители</option></select>
+      <select id="sortSel" title="Сортировка списка"><option value="def">Сортировка: по умолчанию</option><option value="acc">По дате принятия</option><option value="sum">По сумме</option><option value="drv">По водителю</option></select>
       <button class="btn ghost" id="reload">Обновить</button>
       <button class="btn" id="zipBtn">⬇ Пакет бухгалтеру (ZIP)</button>
       <button class="btn ghost" id="weekBtn">📅 Итоги недели</button>
@@ -234,17 +236,25 @@ function driverName(d) {
             [d.first_name || d.imie, d.last_name || d.nazwisko].filter(Boolean).join(' ');
   return n || d.phone || String(d.id || '').slice(0, 8);
 }
+// постраничная загрузка: Supabase отдаёт не больше 1000 строк за запрос, поэтому берём порциями, пока записи не кончатся
+async function pageAll(mk) {
+  const out = [];
+  for (let i = 0; i < 100000; i += 1000) {
+    const r = await mk().range(i, i + 999);
+    if (r.error) return { data: null, error: r.error };
+    out.push(...(r.data || []));
+    if (!r.data || r.data.length < 1000) break;
+  }
+  return { data: out, error: null };
+}
 async function load() {
   msg('topMsg', 'Загружаем…');
   const m = $('month').value;
-  let qry = sb.from('invoices').select('*, drivers(*)');
-  if (m) qry = qry.eq('period_month', m + '-01');
-  let { data, error } = await qry.order('uploaded_at', { ascending: false }).range(0, 2999);
+  const mkQ = () => { let q = sb.from('invoices').select('*, drivers(*)'); if (m) q = q.eq('period_month', m + '-01'); return q.order('uploaded_at', { ascending: false }).order('id'); };
+  let { data, error } = await pageAll(mkQ);
   if (error && /drivers/i.test(error.message)) {
     // имена водителей недоступны (не запущен update_9) — показываем документы без имён
-    let q2 = sb.from('invoices').select('*');
-    if (m) q2 = q2.eq('period_month', m + '-01');
-    ({ data, error } = await q2.order('uploaded_at', { ascending: false }).range(0, 2999));
+    ({ data, error } = await pageAll(() => { let q2 = sb.from('invoices').select('*'); if (m) q2 = q2.eq('period_month', m + '-01'); return q2.order('uploaded_at', { ascending: false }).order('id'); }));
   }
   if (error) return msg('topMsg', 'Ошибка загрузки: ' + esc(error.message), 'bad');
   rows = data || [];
@@ -278,16 +288,35 @@ function matchesSearch(r, q) {
   const hay = [driverName(r.drivers), r.seller_nip, r.invoice_number, money(r.gross_amount), r.vat_check && r.vat_check.name].join(' ').toLowerCase();
   return q.toLowerCase().split(/\s+/).every(w => hay.includes(w.replace('.', ',')) || hay.includes(w));
 }
+// отбор и порядок списка: вкладка + поиск + водитель + сортировка
+function shownList() {
+  const q = $('search').value.trim(), f = TABS.find(x => x[0] === tab)[2], dv = $('drvSel').value, so = $('sortSel').value;
+  let list = rows.filter(f).filter(r => matchesSearch(r, q)).filter(r => !dv || String(r.driver_id) === dv);
+  const t = (r, k) => Date.parse(r[k]) || 0;
+  const mode = so === 'def' ? ((tab === 'accepted' || tab === 'auto') ? 'acc' : '') : so;
+  if (mode === 'acc') list = list.slice().sort((a, b) => t(b, 'accepted_at') - t(a, 'accepted_at') || t(b, 'uploaded_at') - t(a, 'uploaded_at'));
+  else if (mode === 'sum') list = list.slice().sort((a, b) => Number(b.gross_amount || 0) - Number(a.gross_amount || 0));
+  else if (mode === 'drv') list = list.slice().sort((a, b) => driverName(a.drivers).localeCompare(driverName(b.drivers), 'ru') || t(b, 'uploaded_at') - t(a, 'uploaded_at'));
+  return list;
+}
+function fillDrivers() {
+  const sel = $('drvSel'), cur = sel.value, m = new Map();
+  rows.forEach(r => { if (r.driver_id != null && !m.has(String(r.driver_id))) m.set(String(r.driver_id), driverName(r.drivers)); });
+  const opts = [...m.entries()].sort((a, b) => a[1].localeCompare(b[1], 'ru'));
+  sel.innerHTML = '<option value="">Все водители</option>' + opts.map(([id, n]) => `<option value="${esc(id)}">${esc(n)}</option>`).join('');
+  sel.value = m.has(cur) ? cur : '';
+}
 function render() {
-  const q = $('search').value.trim();
+  fillDrivers();
   $('tabs').innerHTML = TABS.map(([k, label, f]) =>
     `<button class="tab ${k === tab ? 'on' : ''}" data-tab="${k}">${label}<span class="n">${rows.filter(f).length}</span></button>`).join('');
   const f = TABS.find(x => x[0] === tab)[2];
-  const list = rows.filter(f).filter(r => matchesSearch(r, q));
+  const list = shownList();
   $('listInfo').textContent = `${list.length} док.`;
   $('listSum').textContent = 'Сумма: ' + money(list.reduce((s, r) => s + Number(r.gross_amount || 0), 0)) + ' zł';
   $('list').innerHTML = list.length ? list.map(card).join('') : '<div class="muted">Здесь пусто.</div>';
 }
+function fmtDT(ts){if(!ts)return'';const L=new Date(ts).toLocaleString('sv-SE',{timeZone:'Europe/Warsaw'});return L.slice(8,10)+'.'+L.slice(5,7)+' '+L.slice(11,16)}
 function card(r) {
   const url = urls[r.storage_path] || '';
   const isPdf = /\.pdf$/i.test(r.storage_path || '');
@@ -311,6 +340,7 @@ function card(r) {
   const sim = similar(r);
   if (sim.length) tags.push(`<span class="tag bad">Похожий документ: ${sim.map(o => esc(driverName(o.drivers)) + ' ' + esc(o.invoice_date)).join('; ')}</span>`);
   const st = { pending: '<span class="tag warn">на проверке</span>', accepted: '<span class="tag ok">принят</span>', rejected: '<span class="tag bad">отклонён</span>' }[r.status] || '';
+  const dAt = r.status === 'accepted' ? (r.accepted_at ? `<span class="amt" style="color:var(--ok)" title="Дата и время принятия (Варшава)">принят ${fmtDT(r.accepted_at)}</span>` : '<span class="muted">дата принятия не записана</span>') : r.status === 'rejected' && r.rejected_at ? `<span class="amt" title="Дата и время отклонения (Варшава)">отклонён ${fmtDT(r.rejected_at)}</span>` : '';
   const rej = r.status === 'rejected' && r.reject_reason ? `<div class="muted">Причина: ${esc(REASON_RU[r.reject_reason] || r.reject_reason)}</div>` : '';
   const actions = r.status === 'pending' ? `
       <input class="amtEdit" type="text" inputmode="decimal" value="${money(r.gross_amount)}" title="Сумму можно исправить перед приёмом">
@@ -322,7 +352,7 @@ function card(r) {
   return `<div class="card ${sim.length ? 'hl' : ''}" data-id="${r.id}">
     <div>${img}</div>
     <div>
-      <div class="row"><span class="amt">${money(r.gross_amount)} zł</span>${st}
+      <div class="row"><span class="amt">${money(r.gross_amount)} zł</span>${st}${dAt}
         <b>${esc(driverName(r.drivers))}</b>
         <span class="muted">${esc(DOC[r.doc_type] || r.doc_type || '')} · ${esc(CAT[r.category] || r.category || '')}</span></div>
       <div class="row">
@@ -385,8 +415,7 @@ document.addEventListener('click', async e => {
 let vList = [], vIdx = 0;
 $('vReason').innerHTML = '<option value="">— выберите —</option>' + REASONS.map(([k, l]) => `<option value="${k}">${l}</option>`).join('');
 function currentList() {
-  const q = $('search').value.trim(), f = TABS.find(x => x[0] === tab)[2];
-  return rows.filter(f).filter(r => matchesSearch(r, q));
+  return shownList();
 }
 function openViewer(id) {
   vList = currentList().map(r => r.id);
@@ -481,6 +510,8 @@ $('reload').onclick = () => load();
 $('month').onchange = () => load();
 $('allMonths').onclick = () => { $('month').value = ''; load(); };
 $('search').oninput = () => render();
+$('drvSel').onchange = () => render();
+$('sortSel').onchange = () => render();
 document.addEventListener('keydown', e => { if (e.key === 'Escape') show('zoom', false); });
 
 // ---------- пакет бухгалтеру ----------
@@ -497,8 +528,8 @@ async function openPkg(selMonth) {
   $('app').appendChild($('pkgView'));
   $('pkgView').innerHTML = '<main><div class="msg info">Загружаем…</div></main>';
   const sel = 'id, status, doc_type, in_ksef, needs_ksef, ksef_hash, invoice_date, invoice_number, seller_nip, gross_amount, storage_path, vat_check, accepted_at, uploaded_at, acc_batch, drivers(*)';
-  const a = await sb.from('invoices').select(sel).eq('status', 'accepted').is('acc_batch', null).range(0, 4999);
-  const b = await sb.from('invoices').select('acc_batch, gross_amount, storage_path').not('acc_batch', 'is', null).range(0, 19999);
+  const a = await pageAll(() => sb.from('invoices').select(sel).eq('status', 'accepted').is('acc_batch', null).order('id'));
+  const b = await pageAll(() => sb.from('invoices').select('acc_batch, gross_amount, storage_path').not('acc_batch', 'is', null).order('id'));
   const p = await sb.from('invoices').select('id', { count: 'exact', head: true }).eq('status', 'pending');
   const err = a.error || b.error;
   if (err) return $('pkgView').innerHTML = `<main><div class="msg bad">Ошибка: ${esc(err.message)}${/acc_batch|accepted_at/.test(err.message) ? ' — запустите invoices_update_12.sql' : ''}</div><button class="btn ghost" id="pkgBack">← Назад</button></main>`, $('pkgBack').onclick = closePkg;
@@ -593,7 +624,7 @@ async function delPhotos(label, btn) {
   if (!btn.dataset.arm) { btn.dataset.arm = 1; btn.textContent = 'Точно удалить? Сначала сохраните ZIP. Нажмите ещё раз'; return; }
   btn.disabled = true;
   const tmp = document.createElement('div'); tmp.id = 'delMsg'; btn.after(tmp);
-  const { data, error } = await sb.from('invoices').select('id, storage_path').eq('acc_batch', label).range(0, 4999);
+  const { data, error } = await pageAll(() => sb.from('invoices').select('id, storage_path').eq('acc_batch', label).order('id'));
   if (error) { btn.disabled = false; return msg('delMsg', 'Ошибка: ' + esc(error.message), 'bad'); }
   const rows = (data || []).filter(r => !gone(r.storage_path));
   let done = 0;
@@ -613,7 +644,7 @@ async function delPhotos(label, btn) {
 }
 async function redownload(label, btn) {
   btn.disabled = true;
-  const { data, error } = await sb.from('invoices').select('*, drivers(*)').eq('acc_batch', label).range(0, 4999);
+  const { data, error } = await pageAll(() => sb.from('invoices').select('*, drivers(*)').eq('acc_batch', label).order('id'));
   if (error) { btn.disabled = false; return alert('Ошибка: ' + error.message); }
   const tmp = document.createElement('div'); tmp.id = 'redlMsg'; btn.after(tmp);
   await buildZip(data || [], label, 'redlMsg');
@@ -657,9 +688,9 @@ async function loadWeek() {
   show('weekClose', false); show('weekOpen', false); $('weekState').innerHTML = '';
   const lo = addDays(mon, -2) + 'T00:00:00Z', hi = addDays(mon, 10) + 'T00:00:00Z';
   const cols = 'id, driver_id, status, gross_amount, uploaded_at, accepted_at, drivers(*)';
-  const acc = await sb.from('invoices').select(cols).eq('status', 'accepted').gte('accepted_at', lo).lt('accepted_at', hi).range(0, 4999);
-  const rej = await sb.from('invoices').select('id, driver_id, uploaded_at, rejected_at, drivers(*)').eq('status', 'rejected').gte('rejected_at', lo).lt('rejected_at', hi).range(0, 4999);
-  const pen = await sb.from('invoices').select('id, driver_id, gross_amount, drivers(*)').eq('status', 'pending').range(0, 4999);
+  const acc = await pageAll(() => sb.from('invoices').select(cols).eq('status', 'accepted').gte('accepted_at', lo).lt('accepted_at', hi).order('id'));
+  const rej = await pageAll(() => sb.from('invoices').select('id, driver_id, uploaded_at, rejected_at, drivers(*)').eq('status', 'rejected').gte('rejected_at', lo).lt('rejected_at', hi).order('id'));
+  const pen = await pageAll(() => sb.from('invoices').select('id, driver_id, gross_amount, drivers(*)').eq('status', 'pending').order('id'));
   const err = acc.error || rej.error || pen.error;
   if (err) return msg('weekMsg', 'Ошибка: ' + esc(err.message) + (/accepted_at|rejected_at/.test(err.message) ? ' — запустите supabase_shag4_nedeli.sql' : ''), 'bad');
   const by = {};
