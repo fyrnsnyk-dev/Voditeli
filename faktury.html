@@ -1963,9 +1963,9 @@ async function loadList() {
   const fm = n => (Number(n) || 0).toFixed(2).replace('.', ',');
   const cur = invWeek(new Date().toISOString());
   const weeks = [0, 1, 2, 3].map(i => addD(cur, -7 * i));
-  const by = {}; weeks.forEach(w => by[w] = { a: 0, s: 0, r: 0, p: 0 });
+  const by = {}; weeks.forEach(w => by[w] = { a: 0, s: 0, r: 0, p: 0, d: [] });
   data.forEach(r => {
-    if (r.status === 'accepted') { const w = invWeek(r.accepted_at || r.uploaded_at); if (by[w]) { by[w].a++; by[w].s += Number(r.gross_amount) || 0; } }
+    if (r.status === 'accepted') { const w = invWeek(r.accepted_at || r.uploaded_at); if (by[w]) { by[w].a++; by[w].s += Number(r.gross_amount) || 0; by[w].d.push(r); } }
     else if (r.status === 'rejected') { const w = invWeek(r.rejected_at || r.uploaded_at); if (by[w]) by[w].r++; }
     else if (r.status === 'pending') { by[cur].p++; }
   });
@@ -1974,12 +1974,14 @@ async function loadList() {
     const x = by[w];
     return `<div class="msum"><div class="h"><span>${dd(w)} – ${dd(addD(w, 6))}</span><span style="direction:ltr">${fm(x.s)} zł</span></div>` +
       `<div class="r"><span>${wk('acc')} (${x.a})</span><b>${fm(x.s)} zł</b></div>` +
+      (x.d.length ? `<details style="margin:2px 0"><summary style="cursor:pointer;color:var(--mut)">▾ ${x.a}</summary>` + x.d.slice().sort((a, b) => new Date(b.accepted_at || b.uploaded_at) - new Date(a.accepted_at || a.uploaded_at)).map(d => `<div class="r"><span style="direction:ltr">${fmtDT(d.accepted_at || d.uploaded_at)} · ${esc(d.invoice_number || '')}</span><b>${fm(d.gross_amount)}</b></div>`).join('') + '</details>' : '') +
       (x.r ? `<div class="r"><span>${wk('rej')}</span><b>${x.r}</b></div>` : '') +
       (w === cur && x.p ? `<div class="r"><span>${wk('pen')}</span><b>${x.p}</b></div>` : '') + '</div>';
   }).join('');
   $('list').innerHTML = sums + `<div class="small" style="margin:12px 0 4px"><b>${wk('all')}</b> (${data.length})</div><div id="invScroll" style="max-height:60vh;overflow-y:auto;-webkit-overflow-scrolling:touch;border-top:1px solid var(--line)"></div>`;
   drawInv();
 }
+function fmtDT(ts){if(!ts)return'';const L=new Date(ts).toLocaleString('sv-SE',{timeZone:'Europe/Warsaw'});return L.slice(8,10)+'.'+L.slice(5,7)+' '+L.slice(11,16)}
 function drawInv() {
   const box = $('invScroll'); if (!box) return;
   const rows = listData.slice(0, listShown);
@@ -1989,7 +1991,7 @@ function drawInv() {
         <div><b>${Number(r.gross_amount || 0).toFixed(2)} zł</b> · ${r.doc_type === 'paragon' ? t('docFaktura') === 'Invoice' ? 'Receipt' : 'Paragon' : ''} ${esc(r.invoice_number || '')}</div>
         <div class="small">${r.invoice_date || ''}${r.status === 'rejected' && r.reject_reason ? ' — ' + esc(reasonText(r.reject_reason)) : ''}</div>
       </div>
-      <span class="badge ${r.status}">${t(r.status)}</span>
+      <div style="text-align:right"><span class="badge ${r.status}">${t(r.status)}</span>${(r.status === 'accepted' && r.accepted_at) || (r.status === 'rejected' && r.rejected_at) ? `<div style="font-size:18px;font-weight:700;margin-top:4px;direction:ltr;color:${r.status === 'accepted' ? 'var(--ok)' : 'var(--bad)'}">${fmtDT(r.status === 'accepted' ? r.accepted_at : r.rejected_at)}</div>` : ''}</div>
     </div>`).join('') + (listData.length > listShown ? `<button class="btn ghost" id="invMore" style="width:100%;margin:8px 0">${wk('more')}</button>` : '');
   const m = $('invMore'); if (m) m.onclick = () => { listShown += 50; drawInv(); };
 }
