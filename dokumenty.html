@@ -99,7 +99,8 @@
   <header>
     <div class="bar">
       <h1>Документы водителей</h1>
-      <input id="month" type="month">
+      <input id="month" type="month" title="Месяц, к которому относится фактура">
+      <select id="weekF" title="Неделя: принятые считаются по дате принятия, отклонённые по дате отклонения, остальные по дате загрузки"><option value="">Все недели</option></select>
       <button class="btn ghost" id="allMonths" title="Показать документы за все месяцы">Все месяцы</button>
       <input id="search" type="text" placeholder="Поиск: водитель, NIP, номер, сумма" style="flex:1;min-width:200px">
       <select id="drvSel" title="Показать документы одного водителя"><option value="">Все водители</option></select>
@@ -113,6 +114,7 @@
   </header>
   <main>
     <div id="topMsg"></div>
+    <div id="sumLine" style="margin-bottom:8px;font-size:15px"></div>
     <div class="row" style="margin-bottom:10px"><span id="listInfo" class="muted"></span><span id="listSum" class="sum"></span></div>
     <div id="list"></div>
   </main>
@@ -226,6 +228,7 @@ async function init() {
     const d = new Date(); d.setDate(1); d.setMonth(d.getMonth() - (new Date().getDate() <= 10 ? 1 : 0));
     $('month').value = d.toISOString().slice(0, 7);
   }
+  fillWeekF();
   load();
 }
 
@@ -247,14 +250,25 @@ async function pageAll(mk) {
   }
   return { data: out, error: null };
 }
+// неделя документа: принятые по дате принятия, отклонённые по дате отклонения, остальные по дате загрузки (как в суммах недели)
+const effWeek = r => r.status === 'accepted' ? invWeek(r.accepted_at || r.uploaded_at) : r.status === 'rejected' ? invWeek(r.rejected_at || r.uploaded_at) : invWeek(r.uploaded_at);
+function fillWeekF() {
+  const sel = $('weekF'), cur = sel.value, now = invWeek(new Date().toISOString());
+  let h = '<option value="">Все недели</option>';
+  for (let i = 0; i < 30; i++) { const w = addDays(now, -7 * i); h += `<option value="${w}">${w.slice(8)}.${w.slice(5, 7)} – ${addDays(w, 6).slice(8)}.${addDays(w, 6).slice(5, 7)}${i === 0 ? ' (текущая)' : ''}</option>`; }
+  sel.innerHTML = h; sel.value = cur;
+}
 async function load() {
   msg('topMsg', 'Загружаем…');
   const m = $('month').value;
-  const mkQ = () => { let q = sb.from('invoices').select('*, drivers(*)'); if (m) q = q.eq('period_month', m + '-01'); return q.order('uploaded_at', { ascending: false }).order('id'); };
+  const wf = $('weekF').value, lo = wf ? addDays(wf, -2) + 'T00:00:00Z' : '', hi = wf ? addDays(wf, 10) + 'T00:00:00Z' : '';
+  const flt = q => wf ? q.or(`and(accepted_at.gte.${lo},accepted_at.lt.${hi}),and(rejected_at.gte.${lo},rejected_at.lt.${hi}),and(uploaded_at.gte.${lo},uploaded_at.lt.${hi})`) : (m ? q.eq('period_month', m + '-01') : q);
+  $('month').disabled = !!wf;
+  const mkQ = () => flt(sb.from('invoices').select('*, drivers(*)')).order('uploaded_at', { ascending: false }).order('id');
   let { data, error } = await pageAll(mkQ);
   if (error && /drivers/i.test(error.message)) {
     // имена водителей недоступны (не запущен update_9) — показываем документы без имён
-    ({ data, error } = await pageAll(() => { let q2 = sb.from('invoices').select('*'); if (m) q2 = q2.eq('period_month', m + '-01'); return q2.order('uploaded_at', { ascending: false }).order('id'); }));
+    ({ data, error } = await pageAll(() => flt(sb.from('invoices').select('*')).order('uploaded_at', { ascending: false }).order('id')));
   }
   if (error) return msg('topMsg', 'Ошибка загрузки: ' + esc(error.message), 'bad');
   rows = data || [];
@@ -291,7 +305,8 @@ function matchesSearch(r, q) {
 // отбор и порядок списка: вкладка + поиск + водитель + сортировка
 function shownList() {
   const q = $('search').value.trim(), f = TABS.find(x => x[0] === tab)[2], dv = $('drvSel').value, so = $('sortSel').value;
-  let list = rows.filter(f).filter(r => matchesSearch(r, q)).filter(r => !dv || String(r.driver_id) === dv);
+  const wf = $('weekF').value;
+  let list = rows.filter(f).filter(r => matchesSearch(r, q)).filter(r => !dv || String(r.driver_id) === dv).filter(r => !wf || effWeek(r) === wf);
   const t = (r, k) => Date.parse(r[k]) || 0;
   const mode = so === 'def' ? ((tab === 'accepted' || tab === 'auto') ? 'acc' : '') : so;
   if (mode === 'acc') list = list.slice().sort((a, b) => t(b, 'accepted_at') - t(a, 'accepted_at') || t(b, 'uploaded_at') - t(a, 'uploaded_at'));
@@ -312,6 +327,10 @@ function render() {
     `<button class="tab ${k === tab ? 'on' : ''}" data-tab="${k}">${label}<span class="n">${rows.filter(f).length}</span></button>`).join('');
   const f = TABS.find(x => x[0] === tab)[2];
   const list = shownList();
+  const wf = $('weekF').value, dv = $('drvSel').value, qq = $('search').value.trim();
+  const base = rows.filter(r => matchesSearch(r, qq)).filter(r => !dv || String(r.driver_id) === dv).filter(r => !wf || effWeek(r) === wf);
+  const ac = base.filter(r => r.status === 'accepted'), au = ac.filter(r => r.auto_accepted).length, rj = base.filter(r => r.status === 'rejected').length, pe = base.filter(r => r.status === 'pending').length;
+  $('sumLine').innerHTML = `<b>Принято ${ac.length}</b> на <b>${money(ac.reduce((s, r) => s + Number(r.gross_amount || 0), 0))} zł</b> <span class="muted">(автоматически ${au}, вручную ${ac.length - au}; «Автопринятые» входят в «Принятые»)</span> · Отклонено ${rj} · Ждут решения ${pe} · <span class="muted">Всего ${base.length}</span>` + (wf ? ' <span class="muted">· неделя: принятые по дате принятия</span>' : '');
   $('listInfo').textContent = `${list.length} док.`;
   $('listSum').textContent = 'Сумма: ' + money(list.reduce((s, r) => s + Number(r.gross_amount || 0), 0)) + ' zł';
   $('list').innerHTML = list.length ? list.map(card).join('') : '<div class="muted">Здесь пусто.</div>';
@@ -507,8 +526,9 @@ document.addEventListener('keydown', e => {
 });
 function alertMsg(t) { msg('topMsg', t, 'bad'); window.scrollTo(0, 0); }
 $('reload').onclick = () => load();
-$('month').onchange = () => load();
-$('allMonths').onclick = () => { $('month').value = ''; load(); };
+$('month').onchange = () => { $('weekF').value = ''; load(); };
+$('weekF').onchange = () => load();
+$('allMonths').onclick = () => { $('month').value = ''; $('weekF').value = ''; load(); };
 $('search').oninput = () => render();
 $('drvSel').onchange = () => render();
 $('sortSel').onchange = () => render();
