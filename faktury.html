@@ -124,6 +124,7 @@
       <div id="paragonHint" class="msg info hidden" data-t="paragonHint">Парагон принимается только если на нём напечатан NIP нашей фирмы.</div>
       <label data-t="amount">Сумма брутто, zł *</label>
       <input id="amount" type="text" inputmode="decimal" placeholder="250,00">
+      <div id="amtHint" class="small hidden" data-t="numAuto"></div>
       <label id="nipLabel" data-t="nip">NIP продавца *</label>
       <input id="sellerNip" type="text" inputmode="numeric">
       <div id="nipHint" class="small hidden" data-t="numAuto"></div>
@@ -226,7 +227,7 @@ const T = {
 "qualityOk": "Фото чёткое ✓ Остальное проверим при отправке.",
 "fillAll": "Заполните все поля со звёздочкой и поставьте галочку.",
 "badNip": "NIP продавца неверный: проверьте 10 цифр.",
-"paragonCamera": "Парагон нужно сфотографировать камерой сейчас. Из галереи подойдёт только снимок не старше 2 дней.",
+"paragonCamera": "Парагон нужно сфотографировать камерой сейчас. Из галереи подойдёт только снимок не старше 10 дней.",
 "verifying": "Сверяем данные с фото…",
 "notFound": "На фото не нашлось:",
 "f_seller": "NIP продавца",
@@ -317,7 +318,7 @@ const T = {
 "qualityOk": "Zdjęcie ostre ✓ Resztę sprawdzimy przy wysyłaniu.",
 "fillAll": "Wypełnij wszystkie pola z gwiazdką i zaznacz pole.",
 "badNip": "Błędny NIP sprzedawcy: sprawdź 10 cyfr.",
-"paragonCamera": "Paragon trzeba sfotografować aparatem teraz. Z galerii przyjmujemy tylko zdjęcie nie starsze niż 2 dni.",
+"paragonCamera": "Paragon trzeba sfotografować aparatem teraz. Z galerii przyjmujemy tylko zdjęcie nie starsze niż 10 dni.",
 "verifying": "Porównujemy dane ze zdjęciem…",
 "notFound": "Na zdjęciu nie znaleziono:",
 "f_seller": "NIP sprzedawcy",
@@ -408,7 +409,7 @@ const T = {
 "qualityOk": "Фото чітке ✓ Решту перевіримо під час надсилання.",
 "fillAll": "Заповніть усі поля із зірочкою та поставте галочку.",
 "badNip": "Невірний NIP продавця: перевірте 10 цифр.",
-"paragonCamera": "Парагон потрібно сфотографувати камерою зараз. З галереї підійде лише знімок не старший за 2 дні.",
+"paragonCamera": "Парагон потрібно сфотографувати камерою зараз. З галереї підійде лише знімок не старший за 10 днів.",
 "verifying": "Звіряємо дані з фото…",
 "notFound": "На фото не знайдено:",
 "f_seller": "NIP продавця",
@@ -499,7 +500,7 @@ const T = {
 "qualityOk": "Фота выразнае ✓ Астатняе праверым пры адпраўцы.",
 "fillAll": "Запоўніце ўсе палі з зорачкай і пастаўце адзнаку.",
 "badNip": "NIP прадаўца няправільны: праверце 10 лічбаў.",
-"paragonCamera": "Парагон трэба сфатаграфаваць камерай зараз. З галерэі падыдзе толькі здымак не старэйшы за 2 дні.",
+"paragonCamera": "Парагон трэба сфатаграфаваць камерай зараз. З галерэі падыдзе толькі здымак не старэйшы за 10 дзён.",
 "verifying": "Зверваем даныя з фота…",
 "notFound": "На фота не знойдзена:",
 "f_seller": "NIP прадаўца",
@@ -590,7 +591,7 @@ const T = {
 "qualityOk": "Photo is sharp ✓ The rest is checked when you send.",
 "fillAll": "Fill in all fields marked * and tick the box.",
 "badNip": "Seller NIP is invalid: check the 10 digits.",
-"paragonCamera": "Photograph the receipt with the camera now. From the gallery, only a photo not older than 2 days is accepted.",
+"paragonCamera": "Photograph the receipt with the camera now. From the gallery, only a photo not older than 10 days is accepted.",
 "verifying": "Checking your data against the photo…",
 "notFound": "Not found on the photo:",
 "f_seller": "seller NIP",
@@ -681,7 +682,7 @@ const T = {
 "qualityOk": "ფოტო მკაფიოა ✓ დანარჩენს გაგზავნისას შევამოწმებთ.",
 "fillAll": "შეავსეთ ვარსკვლავიანი ველები და მონიშნეთ ნიშანი.",
 "badNip": "გამყიდველის NIP არასწორია: შეამოწმეთ 10 ციფრი.",
-"paragonCamera": "პარაგონი ახლავე გადაიღეთ კამერით. გალერეიდან მხოლოდ 2 დღეზე ახალი ფოტო მიიღება.",
+"paragonCamera": "პარაგონი ახლავე გადაიღეთ კამერით. გალერეიდან მხოლოდ 10 დღეზე ახალი ფოტო მიიღება.",
 "verifying": "მონაცემებს ფოტოს ვადარებთ…",
 "notFound": "ფოტოზე ვერ მოიძებნა:",
 "f_seller": "გამყიდველის NIP",
@@ -772,7 +773,7 @@ const T = {
 "qualityOk": "फ़ोटो साफ़ है ✓ बाकी जाँच भेजते समय होगी।",
 "fillAll": "* वाले सभी खाने भरें और बॉक्स पर निशान लगाएँ।",
 "badNip": "विक्रेता का NIP गलत है: 10 अंक जाँचें।",
-"paragonCamera": "रसीद की फ़ोटो अभी कैमरे से लें। गैलरी से केवल 2 दिन से पुरानी न हो ऐसी फ़ोटो चलेगी।",
+"paragonCamera": "रसीद की फ़ोटो अभी कैमरे से लें। गैलरी से केवल 10 दिन से पुरानी न हो ऐसी फ़ोटो चलेगी।",
 "verifying": "डेटा को फ़ोटो से मिला रहे हैं…",
 "notFound": "फ़ोटो पर नहीं मिला:",
 "f_seller": "विक्रेता का NIP",
@@ -863,7 +864,7 @@ const T = {
 "qualityOk": "تصویر واضح ہے ✓ باقی جانچ بھیجتے وقت ہوگی۔",
 "fillAll": "* والے تمام خانے پُر کریں اور باکس پر نشان لگائیں۔",
 "badNip": "بیچنے والے کا NIP غلط ہے: 10 ہندسے چیک کریں۔",
-"paragonCamera": "رسید کی تصویر ابھی کیمرے سے لیں۔ گیلری سے صرف 2 دن سے پرانی نہ ہو ایسی تصویر قبول ہوگی۔",
+"paragonCamera": "رسید کی تصویر ابھی کیمرے سے لیں۔ گیلری سے صرف 10 دن سے پرانی نہ ہو ایسی تصویر قبول ہوگی۔",
 "verifying": "ڈیٹا کو تصویر سے ملا رہے ہیں…",
 "notFound": "تصویر پر نہیں ملا:",
 "f_seller": "بیچنے والے کا NIP",
@@ -954,7 +955,7 @@ const T = {
 "qualityOk": "ਫ਼ੋਟੋ ਸਾਫ਼ ਹੈ ✓ ਬਾਕੀ ਜਾਂਚ ਭੇਜਣ ਵੇਲੇ ਹੋਵੇਗੀ।",
 "fillAll": "* ਵਾਲੇ ਸਾਰੇ ਖਾਨੇ ਭਰੋ ਅਤੇ ਡੱਬੀ ਉੱਤੇ ਨਿਸ਼ਾਨ ਲਗਾਓ।",
 "badNip": "ਵੇਚਣ ਵਾਲੇ ਦਾ NIP ਗ਼ਲਤ ਹੈ: 10 ਅੰਕ ਜਾਂਚੋ।",
-"paragonCamera": "ਰਸੀਦ ਦੀ ਫ਼ੋਟੋ ਹੁਣੇ ਕੈਮਰੇ ਨਾਲ ਖਿੱਚੋ। ਗੈਲਰੀ ਤੋਂ ਸਿਰਫ਼ 2 ਦਿਨਾਂ ਤੋਂ ਨਵੀਂ ਫ਼ੋਟੋ ਚੱਲੇਗੀ।",
+"paragonCamera": "ਰਸੀਦ ਦੀ ਫ਼ੋਟੋ ਹੁਣੇ ਕੈਮਰੇ ਨਾਲ ਖਿੱਚੋ। ਗੈਲਰੀ ਤੋਂ ਸਿਰਫ਼ 10 ਦਿਨਾਂ ਤੋਂ ਨਵੀਂ ਫ਼ੋਟੋ ਚੱਲੇਗੀ।",
 "verifying": "ਡਾਟਾ ਨੂੰ ਫ਼ੋਟੋ ਨਾਲ ਮਿਲਾ ਰਹੇ ਹਾਂ…",
 "notFound": "ਫ਼ੋਟੋ ਉੱਤੇ ਨਹੀਂ ਮਿਲਿਆ:",
 "f_seller": "ਵੇਚਣ ਵਾਲੇ ਦਾ NIP",
@@ -1044,7 +1045,7 @@ const kb = n => n < 1024*1024 ? Math.round(n/1024) + ' KB' : (n/1024/1024).toFix
 let sb = null;
 let driverId = null;
 let prepared = null;   // { blob, contentType, ext, hash }
-let nipAuto = false, dateAuto = false, typeTouched = false;
+let amtAuto = false, nipAuto = false, dateAuto = false, typeTouched = false;
 let numAuto = false;   // номер вставлен автоматически (водитель его не трогал)
 let ocrWorker = null, ocrJob = null, qrPromise = null, pendingQr = null, warned = false, failCount = 0;
 
@@ -1171,8 +1172,11 @@ async function handleQrFile(file) {
 function resetForm() {
   prepared = null; ocrJob = null; qrPromise = null; clearWarn();
   show('dateRow', false); $('invDate').value = ''; dateAuto = false; show('dateHint', false);
-  if (nipAuto) $('sellerNip').value = ''; nipAuto = false; show('nipHint', false); show('nipMissing', false); typeTouched = false;
-  if (numAuto) { $('invNumber').value = ''; numAuto = false; } show('numHint', false);
+  // новый документ — никаких значений от предыдущего: сумма, NIP и номер подставляются заново из скана или вводятся вручную
+  $('amount').value = ''; amtAuto = false; show('amtHint', false);
+  if (!(pendingQr && $('sellerNip').value.replace(/\D/g, '') === pendingQr.nip)) $('sellerNip').value = '';
+  $('invNumber').value = ''; nipAuto = false; show('nipHint', false); show('nipMissing', false); typeTouched = false;
+  numAuto = false; show('numHint', false);
   if (document.getElementById('qrFound')) setQrMode(null);
   show('preview', false); show('formFields', false);
   $('sizeInfo').textContent = ''; msg('fileMsg', ''); msg('sendMsg', '');
@@ -1260,7 +1264,7 @@ async function handleFileInner(file, source) {
 
   const age = file.lastModified ? Math.abs(Date.now() - file.lastModified) : null;
   // камера: снимок только что; галерея: допускаем снимок не старше 2 суток (дату берём из самого файла)
-  const fresh = source === 'camera' ? (age === null || age < 15 * 60 * 1000) : (age !== null && age < 48 * 3600 * 1000);
+  const fresh = source === 'camera' ? (age === null || age < 15 * 60 * 1000) : (age !== null && age < 10 * 24 * 3600 * 1000);
   prepared = { blob, contentType: 'image/jpeg', ext: 'jpg', hash: await sha256(file), source, fresh, qr: source === 'camera' ? pendingQr : null };
   ocrJob = startOcr(img, w, h);
   qrPromise = findQrTexts(ocrJob.plan[0][0]).then(r => r.length ? r : findQrDeep(img)).catch(() => []);
@@ -1409,6 +1413,14 @@ function rotateCanvas(c, deg) {
   ctx.drawImage(c, -c.width / 2, -c.height / 2);
   return r;
 }
+// небольшой наклон (чек в руке снят под углом): поворот на несколько градусов с белыми полями
+function tiltCanvas(c, deg) {
+  const a = Math.abs(deg) * Math.PI / 180, W = Math.round(c.width * Math.cos(a) + c.height * Math.sin(a)), H = Math.round(c.height * Math.cos(a) + c.width * Math.sin(a));
+  const r = document.createElement('canvas'); r.width = W; r.height = H;
+  const x = r.getContext('2d'); x.fillStyle = '#fff'; x.fillRect(0, 0, W, H);
+  x.translate(W / 2, H / 2); x.rotate(deg * Math.PI / 180); x.drawImage(c, -c.width / 2, -c.height / 2);
+  return r;
+}
 // план чтения: обычный режим → второй режим → другая обрезка → повороты (чек снят боком/вверх ногами)
 function startOcr(img, w, h) {
   const c1 = prepForOcr(img, w, h, 1), c2 = prepForOcr(img, w, h, 2);
@@ -1421,6 +1433,7 @@ function startOcr(img, w, h) {
   const plan = c1s ? [[c1, 0, '3'], [c1s, 0, '6'], [c1, 0, '6']] : [[c1, 0, '3'], [c1, 0, '6']];
   if (!same) plan.push([c2, 0, '3']);
   if (land) plan.push([c2, 90, '3'], [c2, 270, '3']); else plan.push([c2, 180, '3']);
+  plan.push([tiltCanvas(c1, -5), 0, '6'], [tiltCanvas(c1, 5), 0, '6'], [tiltCanvas(c1, -9), 0, '6'], [tiltCanvas(c1, 9), 0, '6']);
   const job = { plan, text: '', idx: 0 };
   job.first = ocrStep(job); job.first.catch(() => {});
   return job;
@@ -1656,7 +1669,7 @@ function extractDate(text) {
 function extractInvoiceNumber(text) {
   const lines = (text || '').split('\n');
   const cands = [];
-  const LABEL = /(?:^|[^A-Za-z])(numer|nu[tv]er|nr|no)\s*[.:]?\s*/gi;
+  const LABEL = /(?:^|[^A-Za-z])(numer|nu[tvnmr]er|nume[rn]|nr|no)\s*[.:]?\s*/gi;
   const SKIP = /(dok|rej|sys|trans|kas|kart|kont|rap|zam|klient|paliw|stacj|sklep|bdo|tel|nip)\W{0,3}$/i;
   const clean = v => v.replace(/\s*([\/\-])\s*/g, '$1').replace(/^[^A-Za-z0-9]+|[^A-Za-z0-9]+$/g, '');
   lines.forEach((line, i) => {
@@ -1677,6 +1690,7 @@ function extractInvoiceNumber(text) {
       if (/faktur|\bfv\b|f\s?v\b/i.test(line) || (i > 0 && /faktur/i.test(lines[i - 1]))) score += 3;
       if (/[\/\-]/.test(v)) score += 2;
       if (/^nu/i.test(m[1])) score += 1;
+      if (/\d{2,}\s?\/\s?[A-Za-z]\s?\/\s?\d/.test(v)) score += 2;
       if (digits >= 6) score += 1;
       cands.push({ v, score, i });
     }
@@ -1700,10 +1714,10 @@ function withTimeout(p, ms) {
   return Promise.race([p, new Promise((_, rej) => setTimeout(() => rej(new Error('timeout')), ms))]);
 }
 // покупатель по названию или адресу, если NIP не прочитался: «ALEKS-GROUP Sp. z o.o.», ул. Jana Heweliusza 11/819
-const FIRM_NAME_RX = /AL[EK]{1,2}SGROUP|ALEXGROUP|ALEKSGROUP/;
+const FIRM_NAME_RX = /AL[EKXC]{1,3}S?-?GR[O0]UP|ALEKSGR|ALEXGR|GR[O0]UPSP/;
 function buyerByName(text) {
   const L = String(text || '').toUpperCase().replace(/Ł/g, 'L').replace(/[^A-Z0-9]/g, '');
-  return FIRM_NAME_RX.test(L) || (/HEWELIUSZ/.test(L) && /11819|11\/?819/.test(L));
+  return FIRM_NAME_RX.test(L) || /HEWELI|EWELIUS|WELIUSZA/.test(L) || (/80890/.test(L) && /GDANSK|GDANS/.test(L)) || /GR[O0]UPSPZ/.test(L);
 }
 // поиск с допуском: в цепочке цифр ищем NIP, допуская до maxd ошибок распознавания, в том числе потерянные и лишние цифры
 function approxIn(stream, target, maxd) {
@@ -1731,7 +1745,7 @@ function checkText(text, v) {
   const am = v.amount.toFixed(2).replace('.', ',');
   return {
     seller: nearIn(digits, v.sellerNip, 1) || approxIn(digits, v.sellerNip, 2),
-    buyer: FIRM_NIP ? (nearIn(digits, FIRM_NIP, 1) || buyerByName(text)) : true,
+    buyer: FIRM_NIP ? (nearIn(digits, FIRM_NIP, 1) || approxIn(digits, FIRM_NIP, 2) || buyerByName(text)) : true,
     amount: money.includes(am) || amountIn(text, am),
     date: !v.date ? null : dates.includes(`${d}-${m}-${y}`) || dates.includes(`${y}-${m}-${d}`) || dates.includes(`${d}-${m}-${y.slice(2)}`)
           || nearIn(digits, d + m + y, 1) || nearIn(digits, y + m + d, 1)
@@ -1764,19 +1778,40 @@ function extractSellerNip(text) {
   for (const m of t.matchAll(/(?<!\d)\d(?:[ \t-]?\d){9}(?!\d)/g)) {   // 774-00-01-454, 583-353-04-63 и без дефисов
     const n = m[0].replace(/\D/g, '');
     if (n === FIRM_NIP || !nipValid(n)) continue;
-    const before = t.slice(Math.max(0, m.index - 14), m.index).toUpperCase();
-    all.push({ n, lab: /NIP|VAT|TAX/.test(before), pos: m.index });
+    const before = t.slice(Math.max(0, m.index - 34), m.index).toUpperCase();
+    all.push({ n, lab: /NIP|VAT|TAX|IDENTYFIKACJI|PODATKOW/.test(before), pos: m.index });   // NIP, NIP/VAT, VAT ID, «Nr identyfikacji podatkowej»
   }
   const lab = all.filter(x => x.lab);
   if (lab.length) return lab.sort((a, b) => a.pos - b.pos)[0].n;
   const uniq = [...new Set(all.map(x => x.n))];
   if (uniq.length === 1) return uniq[0];
   // запасной вариант: после слова NIP исправляем типичные ошибки распознавания (O→0, l→1, S→5, B→8); принимаем только при верной контрольной сумме
-  for (const m of t.matchAll(/N\s*[I1l|!]\s*P\b[:.\s]*(?:P[Ll]\s*)?([^\n]{0,24})/gi)) {   // допускается префикс PL: «NIP: PL5833530463»
+  for (const m of t.matchAll(/(?:N\s*[I1l|!]\s*P\b(?:\s*[\/-]\s*VAT)?|identyfikacji\s+podatkowej)[:.\s]*(?:P[Ll]\s*)?([^\n]{0,24})/gi)) {   // допускается префикс PL: «NIP: PL5833530463»
     const d = m[1].replace(/[Oo]/g, '0').replace(/[lI|!]/g, '1').replace(/[Ss]/g, '5').replace(/B/g, '8').replace(/\D/g, '');
     if (d.length === 10 && d !== FIRM_NIP && nipValid(d)) return d;
   }
   return null;
+}
+// итоговая сумма брутто: только уверенное чтение. Строка SUMA / RAZEM / DO ZAPŁATY / NALEŻNOŚĆ, и та же сумма
+// встречается в тексте ещё раз (колонка «brutto», строка оплаты). Иначе возвращаем null — поле остаётся пустым.
+function extractTotal(text) {
+  const AM = /(?<![\d.,])(\d{1,3}(?:[ .]\d{3})*|\d+)\s?[.,]\s?(\d{2})(?![\d])/g;
+  const KEY = /SUMA|RAZEM|DO\s*ZAP[ŁL]ATY|NALE[ŻZ]NO[ŚS][ĆC]/i;
+  const val = m => parseFloat(m[1].replace(/[ .]/g, '') + '.' + m[2]);
+  const T = String(text || ''), lines = T.split('\n');
+  const cands = new Set();
+  lines.forEach((ln, i) => {
+    if (!KEY.test(ln)) return;
+    let got = false;
+    for (const src of [ln, lines[i + 1] || '']) {
+      for (const m of src.matchAll(AM)) { const v = val(m); if (v > 0 && v < 100000) { cands.add(v); got = true; } }
+      if (got) break;
+    }
+  });
+  if (cands.size !== 1) return null;                       // нет суммы или показания расходятся
+  const v = [...cands][0];
+  let n = 0; for (const m of T.matchAll(AM)) if (Math.abs(val(m) - v) < 0.005) n++;
+  return n >= 2 ? v : null;
 }
 function setDocTypeAuto(v) {
   if (typeTouched || $('docType').value === v) return;
@@ -1784,6 +1819,8 @@ function setDocTypeAuto(v) {
 }
 // что удалось прочитать с фото — подставляем сами; водитель может исправить. Вручную вводится только сумма.
 function autoFillFromText(text) {
+  const tot = extractTotal(text);
+  if (tot && (!$('amount').value || amtAuto)) { $('amount').value = tot.toFixed(2).replace('.', ','); amtAuto = true; show('amtHint'); }
   const nip = extractSellerNip(text);
   if (nip && (!$('sellerNip').value || nipAuto)) {
     $('sellerNip').value = nip; nipAuto = true; show('nipHint'); show('nipMissing', false);
@@ -1809,6 +1846,7 @@ function fillNumberFrom(text) {
   if (!n) return;
   $('invNumber').value = n; numAuto = true; show('numHint');
 }
+$('amount').addEventListener('input', () => { amtAuto = false; show('amtHint', false); });
 $('invNumber').addEventListener('input', () => { numAuto = false; show('numHint', false); });
 // при заходе в поле выделяем всё: набранный номер заменяет подставленный, а не дописывается к нему
 ['focus', 'click'].forEach(ev => $('sellerNip').addEventListener(ev, () => { try { $('sellerNip').select(); } catch (e) {} }));
