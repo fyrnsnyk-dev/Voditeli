@@ -107,6 +107,8 @@
       <select id="sortSel" title="Сортировка списка"><option value="def">Сортировка: по умолчанию</option><option value="acc">По дате принятия</option><option value="sum">По сумме</option><option value="drv">По водителю</option></select>
       <button class="btn ghost" id="reload">Обновить</button>
       <button class="btn" id="zipBtn">⬇ Пакет бухгалтеру (ZIP)</button>
+      <button class="btn ghost" id="bkBtn" title="Копия всех данных и настроек + фото за месяц">💾 Копия базы</button>
+      <button class="btn ghost" id="rsBtn" title="Восстановить базу из ZIP-архива копии">♻ Восстановление базы</button>
       <button class="btn ghost" id="weekBtn">📅 Итоги недели</button>
       <button class="btn ghost" id="logout">Выйти</button>
     </div>
@@ -164,6 +166,28 @@
 </div>
 
 <section id="pkgView" class="hidden"></section>
+<dialog id="bkDlg" style="max-width:560px;width:92%;border:1px solid #d5d9e0;border-radius:12px;padding:18px">
+  <h2 style="margin:0 0 6px;font-size:18px">Копия базы</h2>
+  <div id="bkMobile" class="msg info hidden">Копия делается только на компьютере: на телефоне архив с фото слишком тяжёлый.</div>
+  <div id="bkMake">
+    <div class="muted" style="margin-bottom:8px">В один ZIP-файл попадают: водители, недельные расчёты, документы, сверка KSeF и фото документов за выбранный месяц (прошлые месяцы уже выгружены).</div>
+    <label>Месяц для фото <input id="bkMonth" type="month"></label>
+    <label style="display:block;margin-top:8px"><input id="bkPhotos" type="checkbox" checked> Включить фото документов</label>
+    <label style="display:block;margin-top:8px">Копия панели владельца за всё время (по желанию): файл <b>panel_kopiya_….json</b>, сохранённый кнопкой в панели
+      <input id="bkPanel" type="file" accept=".json,application/json"></label>
+    <div style="margin-top:12px"><button class="btn" id="bkRun">⬇ Сделать копию</button></div>
+    <div id="bkMsg" style="margin-top:8px"></div>
+  </div>
+  <div style="margin-top:12px;text-align:right"><button class="btn ghost" id="bkClose">Закрыть</button></div>
+</dialog>
+<dialog id="rsDlg" style="max-width:560px;width:92%;border:1px solid #d5d9e0;border-radius:12px;padding:18px">
+  <h2 style="margin:0 0 6px;font-size:18px">Восстановление базы</h2>
+  <div class="muted" style="margin-bottom:8px">Выберите ZIP-файл копии. Данные из копии записываются в базу поверх текущих (одинаковые записи заменяются, лишние не удаляются). Перед подтверждением вы увидите дату копии и количество записей.</div>
+  <input id="bkFile" type="file" accept=".zip,application/zip">
+  <div id="bkRMsg" style="margin-top:8px"></div>
+  <div style="margin-top:12px;text-align:right"><button class="btn ghost" id="rsClose">Закрыть</button></div>
+</dialog>
+
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
@@ -540,6 +564,101 @@ const isKsef = r => r.in_ksef || r.needs_ksef || r.doc_type === 'inny' || !!r.ks
 const MAX_AGE_DAYS = 183;   // документы старше ~полугода в пакет автоматически не берём
 function monthLabel(ym) { const [y, m] = ym.split('-'); return ['январь','февраль','март','апрель','май','июнь','июль','август','сентябрь','октябрь','ноябрь','декабрь'][+m - 1] + ' ' + y; }
 let pkgNew = [], pkgOld = [], pkgSel = '';
+
+// ---------- копия и восстановление базы ----------
+const BK_TABLES = ['drivers', 'statements', 'invoices', 'ksef_invoices', 'ksef_sync_log'];   // порядок важен: сначала водители
+const isMobileDev = () => /iPhone|iPad|iPod|Android|Mobile/i.test(navigator.userAgent) || (window.matchMedia && matchMedia('(pointer:coarse)').matches && innerWidth < 900);
+$('bkBtn').onclick = () => {
+  const mob = isMobileDev();
+  show('bkMobile', mob); show('bkMake', !mob);
+  $('bkMonth').value = new Date().toISOString().slice(0, 7);
+  msg('bkMsg', '');
+  $('bkDlg').showModal();
+};
+$('rsBtn').onclick = () => { msg('bkRMsg', ''); $('bkFile').value = ''; $('rsDlg').showModal(); };
+$('rsClose').onclick = () => $('rsDlg').close();
+$('bkClose').onclick = () => $('bkDlg').close();
+const readJsonFile = f => new Promise((res, rej) => { const r = new FileReader(); r.onload = () => { try { res(JSON.parse(r.result)); } catch (e) { rej(e); } }; r.onerror = rej; r.readAsText(f); });
+$('bkRun').onclick = async () => {
+  if (!window.JSZip) return msg('bkMsg', 'Не загрузилась библиотека для ZIP. Проверьте интернет и обновите страницу.', 'bad');
+  const month = $('bkMonth').value, withPh = $('bkPhotos').checked;
+  if (withPh && !month) return msg('bkMsg', 'Укажите месяц для фото.', 'bad');
+  if (!confirm('Сделать копию базы' + (withPh ? ' и фото за ' + monthLabel(month) : ' (без фото)') + '?\nФайл скачается на этот компьютер.')) return;
+  $('bkRun').disabled = true;
+  try {
+    const data = {};
+    for (const t of BK_TABLES) {
+      msg('bkMsg', 'Читаем таблицу «' + t + '»…');
+      const r = await pageAll(() => sb.from(t).select('*').order(t === 'ksef_invoices' ? 'ksef_number' : 'id'));
+      if (r.error) { if (t.startsWith('ksef')) { data[t] = []; continue; } throw new Error(t + ': ' + r.error.message); }
+      data[t] = r.data;
+    }
+    const zip = new JSZip();
+    let panel = null;
+    const pf = $('bkPanel').files[0];
+    if (pf) { try { panel = await readJsonFile(pf); } catch (e) { throw new Error('Файл копии панели не читается как JSON.'); } zip.file('panel.json', JSON.stringify(panel)); }
+    let photos = 0, failed = 0;
+    if (withPh) {
+      const lo = new Date(month + '-01T00:00:00').toISOString(), d2 = new Date(month + '-01T00:00:00'); d2.setMonth(d2.getMonth() + 1);
+      const list = data.invoices.filter(r => !gone(r.storage_path) && r.uploaded_at >= lo && r.uploaded_at < d2.toISOString());
+      for (const r of list) {
+        msg('bkMsg', `Фото: ${photos + failed + 1} / ${list.length}…`);
+        const { data: blob, error } = await sb.storage.from(BUCKET).download(r.storage_path);
+        if (error || !blob) { failed++; continue; }
+        zip.file('photos/' + r.storage_path, blob, { compression: 'STORE' });
+        photos++;
+      }
+    }
+    const counts = Object.fromEntries(BK_TABLES.map(t => [t, data[t].length]));
+    zip.file('backup.json', JSON.stringify({ app: 'alex-backup', v: 1, created: new Date().toISOString(), month: withPh ? month : null, counts, photos, hasPanel: !!panel, tables: data }));
+    msg('bkMsg', 'Упаковываем архив…');
+    const blob = await zip.generateAsync({ type: 'blob', compression: 'DEFLATE' });
+    const a = document.createElement('a'); a.href = URL.createObjectURL(blob);
+    a.download = 'ALEX_kopiya_' + new Date().toISOString().slice(0, 10) + '.zip'; a.click();
+    msg('bkMsg', `Готово: ${Object.entries(counts).map(([k, v]) => k + ' ' + v).join(', ')}; фото ${photos}` + (failed ? `, <b>не скачалось ${failed} фото</b>` : '') + (panel ? '; панель включена' : '; без копии панели') + '. Размер ' + (blob.size / 1048576).toFixed(1) + ' МБ.', failed ? 'bad' : 'ok');
+  } catch (e) { msg('bkMsg', 'Ошибка: ' + esc(e.message || e), 'bad'); }
+  $('bkRun').disabled = false;
+};
+$('bkFile').onchange = async () => {
+  const f = $('bkFile').files[0]; if (!f) return;
+  try {
+    msg('bkRMsg', 'Читаем архив…');
+    const zip = await JSZip.loadAsync(f);
+    const bf = zip.file('backup.json'); if (!bf) throw new Error('В архиве нет backup.json — это не копия базы.');
+    const bk = JSON.parse(await bf.async('string'));
+    if (bk.app !== 'alex-backup') throw new Error('Неизвестный формат копии.');
+    const photoPaths = Object.keys(zip.files).filter(n => n.startsWith('photos/') && !zip.files[n].dir);
+    const txt = 'Копия от ' + new Date(bk.created).toLocaleString('ru-RU') + '\n' + Object.entries(bk.counts).map(([k, v]) => k + ': ' + v).join('\n') + '\nФото: ' + photoPaths.length + '\n\nЗаписать данные в базу поверх текущих?';
+    if (!confirm(txt)) { msg('bkRMsg', 'Отменено.'); $('bkFile').value = ''; return; }
+    $('bkFile').disabled = true;
+    for (const t of BK_TABLES) {
+      const rowsT = bk.tables[t] || [];
+      for (let i = 0; i < rowsT.length; i += 200) {
+        msg('bkRMsg', `Записываем «${t}»: ${Math.min(i + 200, rowsT.length)} / ${rowsT.length}…`);
+        const { error } = await sb.rpc('admin_restore', { p_table: t, p_rows: rowsT.slice(i, i + 200) });
+        if (error) throw new Error(t + ': ' + error.message + (/admin_restore/.test(error.message) ? ' — сначала запустите supabase_shag10_kopiya.sql' : ''));
+      }
+    }
+    let up = 0, bad = 0;
+    for (const n of photoPaths) {
+      msg('bkRMsg', `Фото: ${up + bad + 1} / ${photoPaths.length}…`);
+      const path = n.slice(7), ext = (path.split('.').pop() || '').toLowerCase();
+      const blob = await zip.files[n].async('blob');
+      const { error } = await sb.storage.from(BUCKET).upload(path, blob, { upsert: true, contentType: ext === 'pdf' ? 'application/pdf' : ext === 'png' ? 'image/png' : 'image/jpeg' });
+      if (error) bad++; else up++;
+    }
+    let extra = '';
+    if (zip.file('panel.json')) {
+      const pb = await zip.file('panel.json').async('blob');
+      const a = document.createElement('a'); a.href = URL.createObjectURL(pb); a.download = 'panel_kopiya_iz_arhiva.json'; a.click();
+      extra = ' Файл копии панели скачан (panel_kopiya_iz_arhiva.json): загрузите его в панели кнопкой «Восстановить панель из копии».';
+    }
+    msg('bkRMsg', `Готово. Таблицы записаны, фото ${up}` + (bad ? `, <b>не записалось ${bad}</b>` : '') + '.' + extra, bad ? 'bad' : 'ok');
+    load();
+  } catch (e) { msg('bkRMsg', 'Ошибка: ' + esc(e.message || e), 'bad'); }
+  $('bkFile').disabled = false; $('bkFile').value = '';
+};
+
 $('zipBtn').onclick = openPkg;
 async function openPkg(selMonth) {
   if (typeof selMonth !== 'string') selMonth = '';
