@@ -643,8 +643,9 @@ $('bkFile').onchange = async () => {
     for (const n of photoPaths) {
       msg('bkRMsg', `Фото: ${up + bad + 1} / ${photoPaths.length}…`);
       const path = n.slice(7), ext = (path.split('.').pop() || '').toLowerCase();
-      const blob = await zip.files[n].async('blob');
-      const { error } = await sb.storage.from(BUCKET).upload(path, blob, { upsert: true, contentType: ext === 'pdf' ? 'application/pdf' : ext === 'png' ? 'image/png' : 'image/jpeg' });
+      const ct = ext === 'pdf' ? 'application/pdf' : ext === 'png' ? 'image/png' : ext === 'webp' ? 'image/webp' : 'image/jpeg';
+      const blob = new Blob([await zip.files[n].async('arraybuffer')], { type: ct });   // тип должен быть в самом файле, иначе хранилище отклоняет application/octet-stream
+      const { error } = await sb.storage.from(BUCKET).upload(path, blob, { upsert: true, contentType: ct });
       if (error) { bad++; if (!firstErr) firstErr = path + ': ' + (error.message || error.error || JSON.stringify(error)) + (error.statusCode ? ' (' + error.statusCode + ')' : ''); } else up++;
     }
     let extra = '';
