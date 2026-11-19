@@ -170,10 +170,10 @@
   <h2 style="margin:0 0 6px;font-size:18px">Копия базы</h2>
   <div id="bkMobile" class="msg info hidden">Копия делается только на компьютере: на телефоне архив с фото слишком тяжёлый.</div>
   <div id="bkMake">
-    <div class="muted" style="margin-bottom:8px">В один ZIP-файл попадают: водители, недельные расчёты, документы, сверка KSeF и фото документов за выбранный месяц (прошлые месяцы уже выгружены).</div>
+    <div class="muted" style="margin-bottom:8px">В один ZIP-файл попадают: водители, недельные расчёты, документы, сверка KSeF, данные панели (недели, планы, настройки) и фото документов за выбранный месяц (прошлые месяцы уже выгружены).</div>
     <label>Месяц для фото <input id="bkMonth" type="month"></label>
     <label style="display:block;margin-top:8px"><input id="bkPhotos" type="checkbox" checked> Включить фото документов</label>
-    <label style="display:block;margin-top:8px">Копия панели владельца за всё время (по желанию): файл <b>panel_kopiya_….json</b>, сохранённый кнопкой в панели
+    <label style="display:block;margin-top:8px">Копия старой панели (по желанию, нужна только до переезда): файл <b>panel_kopiya_….json</b>
       <input id="bkPanel" type="file" accept=".json,application/json"></label>
     <div style="margin-top:12px"><button class="btn" id="bkRun">⬇ Сделать копию</button></div>
     <div id="bkMsg" style="margin-top:8px"></div>
@@ -181,7 +181,7 @@
   <div style="margin-top:12px;text-align:right"><button class="btn ghost" id="bkClose">Закрыть</button></div>
 </dialog>
 <dialog id="rsDlg" style="max-width:560px;width:92%;border:1px solid #d5d9e0;border-radius:12px;padding:18px">
-  <h2 style="margin:0 0 6px;font-size:18px">Восстановление базы <span class="muted" style="font-size:12px;font-weight:400">(версия 19.11-3)</span></h2>
+  <h2 style="margin:0 0 6px;font-size:18px">Восстановление базы <span class="muted" style="font-size:12px;font-weight:400">(версия 19.11-4)</span></h2>
   <div class="muted" style="margin-bottom:8px">Выберите ZIP-файл копии. Данные из копии записываются в базу поверх текущих (одинаковые записи заменяются, лишние не удаляются). Перед подтверждением вы увидите дату копии и количество записей.</div>
   <input id="bkFile" type="file" accept=".zip,application/zip">
   <div id="bkRMsg" style="margin-top:8px"></div>
@@ -236,6 +236,7 @@ $('loginBtn').onclick = async () => {
   if (error) return msg('loginMsg', 'Не удалось войти: ' + esc(error.message), 'bad');
   init();
 };
+if (/[?&]embed=1/.test(location.search)) { const lo = document.getElementById('logout'); if (lo) lo.style.display = 'none'; }
 $('logout').onclick = async () => { await sb.auth.signOut(); location.reload(); };
 
 async function init() {
@@ -566,7 +567,7 @@ function monthLabel(ym) { const [y, m] = ym.split('-'); return ['январь','
 let pkgNew = [], pkgOld = [], pkgSel = '';
 
 // ---------- копия и восстановление базы ----------
-const BK_TABLES = ['drivers', 'statements', 'invoices', 'ksef_invoices', 'ksef_sync_log'];   // порядок важен: сначала водители
+const BK_TABLES = ['drivers', 'statements', 'invoices', 'ksef_invoices', 'ksef_sync_log', 'panel_docs'];   // порядок важен: сначала водители
 const isMobileDev = () => /iPhone|iPad|iPod|Android|Mobile/i.test(navigator.userAgent) || (window.matchMedia && matchMedia('(pointer:coarse)').matches && innerWidth < 900);
 $('bkBtn').onclick = () => {
   const mob = isMobileDev();
@@ -589,8 +590,8 @@ $('bkRun').onclick = async () => {
     const data = {};
     for (const t of BK_TABLES) {
       msg('bkMsg', 'Читаем таблицу «' + t + '»…');
-      const r = await pageAll(() => sb.from(t).select('*').order(t === 'ksef_invoices' ? 'ksef_number' : 'id'));
-      if (r.error) { if (t.startsWith('ksef')) { data[t] = []; continue; } throw new Error(t + ': ' + r.error.message); }
+      const r = await pageAll(() => t === 'panel_docs' ? sb.from(t).select('*').order('coll').order('id') : sb.from(t).select('*').order(t === 'ksef_invoices' ? 'ksef_number' : 'id'));
+      if (r.error) { if (t.startsWith('ksef') || t === 'panel_docs') { data[t] = []; continue; } throw new Error(t + ': ' + r.error.message); }
       data[t] = r.data;
     }
     const zip = new JSZip();

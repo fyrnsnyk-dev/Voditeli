@@ -1,0 +1,506 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Панель владельца парка</title>
+<style>
+:root{--bg:#fbfbf9;--fg:#1d2330;--mut:#5d6677;--bd:#cdd3dd;--ac:#305496;--acf:#fff;--card:#f0f2f6;--ok:#17703a;--warn:#a85500;--bad:#b3261e;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px);color-scheme:light}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#14171d;--fg:#e8ebf1;--mut:#9aa3b5;--bd:#363d4c;--ac:#7fa6e8;--acf:#10131a;--card:#1d222b;--ok:#5fcf8b;--warn:#f0a050;--bad:#ff8a80;color-scheme:dark}}
+:root[data-theme="dark"]{--bg:#14171d;--fg:#e8ebf1;--mut:#9aa3b5;--bd:#363d4c;--ac:#7fa6e8;--acf:#10131a;--card:#1d222b;--ok:#5fcf8b;--warn:#f0a050;--bad:#ff8a80;color-scheme:dark}
+html{scroll-padding-top:env(safe-area-inset-top,0px)}
+body{margin:0;background:var(--bg);color:var(--fg);font:16px/1.45 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
+html{overscroll-behavior:none}main{max-width:none;margin:0;padding:10px 8px 48px}
+h1{font-size:1.35rem;margin:0 0 10px}h2{font-size:1.05rem;margin:18px 0 6px}
+nav{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:12px}
+nav button{background:var(--card);color:var(--fg);border:1px solid var(--bd);margin:0}
+nav button.on{background:var(--ac);color:var(--acf);border-color:var(--ac)}
+label{display:block;font-weight:600;margin:10px 0 4px}
+textarea,input,select{box-sizing:border-box;font:inherit;color:var(--fg);background:var(--card);border:1px solid var(--bd);border-radius:6px;padding:7px;max-width:100%}
+textarea{width:100%;min-height:80px;font-size:.85rem}
+input[type=checkbox]{width:auto}
+button{font:inherit;font-weight:600;background:var(--ac);color:var(--acf);border:0;border-radius:6px;padding:9px 14px;margin:10px 6px 0 0;cursor:pointer}
+button.g{background:var(--card);color:var(--fg);border:1px solid var(--bd);padding:4px 9px;margin:0}
+button:focus-visible,input:focus-visible,textarea:focus-visible,select:focus-visible{outline:3px solid var(--ac);outline-offset:2px}
+.tw{overflow-x:auto;margin-top:8px}
+table{border-collapse:collapse;width:100%;font-size:.88rem}
+th,td{border-bottom:1px solid var(--bd);padding:5px 7px;text-align:left;white-space:nowrap}
+td.n,th.n{text-align:right}td input{width:80px;text-align:right}
+.ok{color:var(--ok)}.wa{color:var(--warn);font-weight:600}.bad{color:var(--bad);font-weight:600}.mut{color:var(--mut)}
+.row{display:flex;gap:10px;flex-wrap:wrap}.row>div{flex:1 1 150px}.row input,.row select{width:100%}
+.card{background:var(--card);border-radius:8px;padding:10px 12px;margin-top:10px}
+.wt{table-layout:fixed;width:100%;font-size:1em;cursor:default}.wt th,.wt td{padding:3px 2px;overflow:hidden;white-space:nowrap}.wt th{white-space:normal;font-size:.9em}.wt td.nm{white-space:normal;overflow-wrap:anywhere}.wt td input{width:100%;min-width:0;padding:2px 3px;border-radius:3px;text-align:right;cursor:text}.wt input.ov{border-color:var(--warn)}.wt input.fr{border-color:var(--ok);background:rgba(23,112,58,.16)}.wt tr.tr td{border-top:2px solid var(--bd)}.neg{color:var(--bad)}.bar{display:flex;gap:6px;align-items:center;flex-wrap:wrap;margin:8px 0}.bar input{width:220px}.bar button{margin:0}.grow{flex:1}
+#st{position:sticky;top:0;z-index:5;background:var(--bg);margin:0;padding:4px 0;min-height:1.4em}
+.hid{display:none}
+#ph{display:none}
+.wt{-webkit-user-select:none;user-select:none;touch-action:manipulation}.wt input{-webkit-user-select:text;user-select:text}
+@media print{@page{size:A4 landscape;margin:8mm}
+:root{--bg:#fff;--fg:#000;--mut:#333;--bd:#999;--card:#fff;color-scheme:light}
+body{background:#fff;color:#000;font-size:10px}
+h1,nav,#st,details,.bar,#t2,#t3,#t1>.row,#t1>p.mut,#wo+p{display:none!important}
+main{padding:0}#t1{display:block!important}
+#ph{display:block;font-size:14px;font-weight:700;margin:0 0 4px}
+#wo{font-size:9px!important}
+.wt{font-size:1em}.wt th,.wt td{border:1px solid #999;padding:2px 1px}
+.wt td input{border:0;background:transparent;color:#000;padding:0;font:inherit}
+.wt tr{break-inside:avoid}
+#wo p{display:block!important;color:#000;font-size:10px}}
+.cfg h2{margin:26px 0 6px;padding-top:10px;border-top:2px solid var(--bd)}.cfg h2:first-of-type{border-top:0;margin-top:8px}.cfg .gr{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:12px}.cfg .fld label{margin:0 0 3px;font-weight:600;font-size:.9rem}.cfg .fld input,.cfg .fld select{width:100%}.cfg .hint{color:var(--mut);font-size:.85rem;margin-top:3px}.cfg .note{background:var(--card);border-left:4px solid var(--warn);border-radius:6px;padding:8px 12px;margin:8px 0;font-size:.9rem}
+.cfg .sw{display:flex;align-items:center;gap:14px;background:var(--card);border-radius:10px;padding:12px 14px;margin:8px 0}.cfg .tg{width:54px;height:28px;border-radius:14px;background:var(--mut);position:relative;flex:none;cursor:pointer;border:0;padding:0;margin:0}.cfg .tg:after{content:"";position:absolute;left:3px;top:3px;width:22px;height:22px;border-radius:50%;background:#fff}.cfg .tg.on{background:var(--ok)}.cfg .tg.on:after{left:auto;right:3px}
+.cfg .jump{display:flex;gap:8px;flex-wrap:wrap;margin:6px 0}.cfg .jump a{background:var(--card);border:1px solid var(--bd);border-radius:999px;padding:5px 12px;color:var(--fg);text-decoration:none;font-weight:600;font-size:.9rem}
+.cfg .ex{background:var(--card);border-radius:8px;padding:8px 12px;margin-top:8px}.cfg textarea{min-height:90px}.cfg .lg{display:flex;gap:6px;flex-wrap:wrap;margin:8px 0}.cfg .lg button{margin:0;padding:5px 10px}.cfg .lg button.on{background:var(--ac);color:var(--acf)}.cfg .lg button.e{opacity:.55}
+.rvt .ok{color:var(--ok);font-weight:600}.rvt .wa{color:var(--warn);font-weight:600}
+
+#loginBox{max-width:360px;margin:60px auto;padding:20px;background:var(--card);border-radius:10px}
+#loginBox input{width:100%;margin-bottom:6px}
+#topbar{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin:0 0 6px}
+#topbar button{margin:0}
+#t6 iframe{width:100%;height:calc(100vh - 150px);min-height:480px;border:1px solid var(--bd);border-radius:8px;background:#fff}
+</style>
+</head>
+<body>
+<section id="loginBox" class="hid">
+<h2>Вход владельца</h2>
+<label for="lgE">Email</label><input id="lgE" type="email" autocomplete="username" autocapitalize="none">
+<label for="lgP">Пароль</label><input id="lgP" type="password" autocomplete="current-password">
+<button id="lgB">Войти</button><p id="lgM" class="bad"></p>
+</section>
+<main id="appMain" class="hid">
+<h1>Панель владельца парка</h1>
+<div id="topbar"><button class="g" id="tbBk">💾 Копия базы</button><button class="g" id="tbRs">♻ Восстановление базы</button><button class="g" id="tbOut">Выйти</button></div>
+<nav><button id="b1" class="on">Неделя</button><button id="b2">Долги и планы</button><button id="b3">Водители</button><button id="b4">Приглашения</button><button id="b5">Настройки</button><button id="b6">Документы</button></nav>
+<p id="st" class="mut"></p>
+<div class="row" style="margin-bottom:8px"><button class="g" id="bkS">💾 Копия панели (всё время)</button><button class="g" id="bkL">♻ Восстановить панель из копии</button><input type="file" id="bkF" accept=".json,application/json" style="display:none"><span id="bkM" class="mut"></span></div>
+
+<section id="t1">
+<div class="row"><div><label for="wk">Неделя</label><select id="wk"></select></div><button class="g" id="wp">← Раньше</button><button class="g" id="wn">Позже →</button><span class="mut">● — за эту неделю есть данные. Выбранная неделя запоминается.</span></div>
+<details><summary><b>Загрузить отчёты недели</b></summary>
+<label for="bolt">Bolt (водитель, чистый доход, прогноз по выплатам)</label><textarea id="bolt"></textarea>
+<label for="uber">Uber (таблица со страницы «Доходы»)</label><textarea id="uber"></textarea>
+<label for="fn">FreeNow (текст CSV)</label><input type="file" id="fnf"><span id="fns" class="mut"></span><textarea id="fn"></textarea>
+<label style="font-weight:400"><input type="checkbox" id="zs" checked> Пропускать строки, где обе суммы равны нулю</label>
+<button id="pr">Разобрать</button>
+<div id="pv"></div>
+</details>
+<div class="bar"><input id="adn" list="adl" placeholder="Добавить водителя в неделю (имя)" autocomplete="off"><datalist id="adl"></datalist><button id="adb">Добавить в таблицу</button><button class="g" id="cpb">Взять водителей с прошлой недели</button><button class="g" id="prb">Печать A4 (скачать файл)</button><button class="g" id="exb">Экспорт для водителей</button><span class="grow"></span><span class="mut">Размер таблицы</span><button class="g" id="z1">A−</button><button class="g" id="z2">A+</button></div>
+<h2 id="ph"></h2><div id="wo"></div>
+<p class="mut">Ячейки «Фактуры», «Комиссия», «Аренда», «Долг», «Долг ZUS», «Выплата ZUS» можно вводить с клавиатуры: стрелки, Tab и Enter переходят между ячейками. В «Комиссии» пустое значение или равное расчётному включает автоматический расчёт, 0 снимает комиссию. Если за неделю нет положительного дохода, комиссия 0 сама.</p>
+</section>
+
+<section id="t2" class="hid">
+<div class="card">
+<div class="row">
+<div><label for="fd">Водитель</label><select id="fd"></select></div>
+<div><label for="fk">Что это</label><select id="fk"><option value="op">Разовая запись</option><option value="plan">Регулярно или в рассрочку</option></select></div>
+<div><label for="fcat">Категория</label><select id="fcat"><option value="rent">Аренда</option><option value="debt">Долг</option><option value="zus">Долг ZUS</option><option value="carry">Выплата ZUS</option></select></div>
+<div><label for="ft">Название</label><input id="ft" placeholder="Ремонт, займ, аренда авто…"></div>
+</div>
+<div class="row">
+<div><label for="fa" id="fal">Сумма (zł)</label><input id="fa" inputmode="decimal"></div>
+<div class="fp2 hid"><label for="fpart">Делить на части по (zł) в неделю, только для «Месяц»</label><input id="fpart" inputmode="decimal" placeholder="пусто = без деления"></div>
+<div class="fp2 hid"><label for="ftot">Общая сумма долга (zł), пусто = без конца</label><input id="ftot" inputmode="decimal"></div>
+<div class="fo"><label for="fdir">Направление</label><select id="fdir"><option>Удержать</option><option>Добавить</option></select></div>
+<div class="fo"><label for="fw">Неделя</label><select id="fw"></select></div>
+</div>
+<div class="row hid" id="fp">
+<div><label for="ff">Периодичность</label><select id="ff"><option>Неделя</option><option>Месяц</option></select></div>
+<div><label for="fs">Дата начала</label><input type="date" id="fs"></div>
+<div><label for="fe">Дата окончания</label><input type="date" id="fe"></div>
+<div><label for="fr">Получатель</label><select id="fr"></select></div>
+<div><label for="fra">Сумма получателю за одну часть (zł)</label><input id="fra" inputmode="decimal"></div>
+</div>
+<button id="fadd">Добавить</button> <span id="fm" class="mut"></span>
+</div>
+<div id="il"></div>
+<div class="card"><b>Что значит каждое поле</b><ul class="mut" style="margin:6px 0 0;padding-left:18px"><li><b>Водитель</b>: с кого удерживаем (или кому добавляем).</li><li><b>Что это</b>: «Разовая запись» делается один раз за выбранную неделю. «Регулярно или в рассрочку» повторяется каждую неделю или месяц, пока не закончится.</li><li><b>Категория</b>: в какой столбец таблицы попадёт сумма (Аренда, Долг, Долг ZUS, Выплата ZUS).</li><li><b>Название</b>: пометка для себя, водителю не показывается.</li><li><b>Сумма (zł)</b>: у разовой записи вся сумма. У регулярной это сумма за один период: сколько удерживать за неделю или за месяц (например 500 в неделю или 1532,76 в месяц).</li><li><b>Делить на части по (zł) в неделю</b> (только при периодичности «Месяц»): сумма месяца удерживается частями по этой сумме каждую неделю, начиная с первой недели месяца, пока не наберётся вся сумма месяца. Последняя часть меньше. В следующем месяце всё повторяется само. Пример: сумма 1532,76, часть 600 даёт 600, 600, 332,76. «Общую сумму долга» в этом случае оставьте пустой. Если водителю за неделю не хватило денег, невыплаченное остаётся долгом и переносится кнопкой «Перенести долги».</li><li><b>Общая сумма долга</b> (только у регулярной): сколько водитель должен вернуть всего (например 2000). Части удерживаются, пока не наберётся эта сумма. Последняя часть может быть меньше. Если поле пустое, удержание идёт без конца, пока вы не удалите запись.</li><li><b>Направление</b> (разовая): «Удержать» вычитает из выплаты, «Добавить» прибавляет.</li><li><b>Неделя</b> (разовая): за какую неделю запись.</li><li><b>Периодичность</b>: раз в неделю или раз в месяц.</li><li><b>Дата начала</b>: с какой недели начинать. Лучше указать понедельник этой недели.</li><li><b>Дата окончания</b>: после неё удержание прекращается, даже если общая сумма не набрана. Можно оставить пустой.</li><li><b>Получатель</b> и <b>сумма получателю за одну часть</b>: если удержанное надо передать другому водителю, выберите его и укажите, сколько ему идёт с каждой части.</li><li><b>Удалить</b> (в списке выше): останавливает запись. Нажмите дважды для подтверждения.</li></ul></div>
+</section>
+
+<section id="t4" class="hid"><div id="rv"></div></section>
+<section id="t5" class="hid cfg"><div id="cf"></div></section>
+<section id="t6" class="hid"></section>
+<section id="t3" class="hid"><div class="card"><div class="row"><div><label for="nd">Новый водитель вручную</label><input id="nd" placeholder="Имя и фамилия"></div></div><button id="ndb">Добавить водителя</button> <span id="ndm" class="mut"></span></div><div id="dl"></div>
+<div class="card"><b>Что значит каждое поле</b><ul class="mut" style="margin:6px 0 0;padding-left:18px"><li><b>Водитель</b>: имя. Можно поправить, изменение сохраняется сразу.</li><li><b>Тариф</b>: от него считается комиссия парка. «Стандарт», «Фикс», «Особый» (подробности в подписи над таблицей).</li><li><b>Фикс. сумма</b>: нужна только для тарифа «Фикс», это комиссия за неделю.</li><li><b>Телефон</b>: номер для входа водителя в приложение, формат +48123456789. Без телефона водителю нельзя опубликовать неделю. У каждого водителя свой номер.</li><li><b>Остатки ZUS</b>: отметка получателя остатков ZUS. В печатной таблице у него «Выплата ZUS» выводится со знаком плюс, и в неделе без сумм его строка не печатается. Ставится одному человеку.</li><li><b>Объединить</b>: если один водитель записан дважды (разное написание имени), выберите, с кем объединить. Все данные перейдут второму, первый удалится.</li></ul></div></section>
+</main>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script>
+
+/* ===== Прослойка хранилища: панель работала на хранилище Claude (db), теперь те же вызовы идут в таблицу Supabase panel_docs.
+   Код расчётов и вкладок ниже не менялся. ===== */
+const SB_URL="https://qehwfuwpcphqixukjbtz.supabase.co",SB_KEY="sb_publishable_U8NLOMPpkToIXkQ-ddYg1A_T6iEx9yM";
+let sb=null,authOk,authReady=new Promise(r=>authOk=r);
+const PD=(()=>{
+  const store={},ls={};let loaded=false,loading=null,lastSig={};
+  const clone=o=>JSON.parse(JSON.stringify(o));
+  const isObj=v=>v&&typeof v==="object"&&!Array.isArray(v);
+  const merge=(a,b)=>{const o=isObj(a)?clone(a):{};for(const k in b){o[k]=isObj(b[k])?merge(o[k],b[k]):clone(b[k])}return o};
+  const err=e=>{const x=new Error((e&&e.message)||String(e));x.code=(e&&e.code)||"error";return x};
+  async function pull(){
+    let all=[];for(let i=0;;i+=1000){const r=await sb.from("panel_docs").select("coll,id,data").order("coll").order("id").range(i,i+999);if(r.error)throw err(r.error);all=all.concat(r.data||[]);if(!r.data||r.data.length<1000)break}
+    const ns={};all.forEach(d=>{(ns[d.coll]=ns[d.coll]||{})[d.id]=d.data});return ns}
+  const sig=c=>JSON.stringify(store[c]||{});
+  function fire(c){(ls[c]||[]).forEach(l=>l.fn())}
+  async function load(){if(loaded)return;if(!loading)loading=pull().then(ns=>{Object.keys(ns).forEach(c=>store[c]=ns[c]);loaded=true}).finally(()=>{loading=null});await loading}
+  async function refresh(){try{const ns=await pull();Object.keys(Object.assign({},store,ns)).forEach(c=>{const n=ns[c]||{};if(JSON.stringify(n)!==sig(c)){store[c]=n;fire(c)}})}catch(e){}}
+  setInterval(()=>{if(loaded&&!document.hidden)refresh()},30000);document.addEventListener("visibilitychange",()=>{if(loaded&&!document.hidden)refresh()});
+  async function put(c,id,d){const r=await sb.from("panel_docs").upsert({coll:c,id,data:d,updated_at:new Date().toISOString()});if(r.error)throw err(r.error);(store[c]=store[c]||{})[id]=clone(d);fire(c)}
+  async function del(c,id){const r=await sb.from("panel_docs").delete().eq("coll",c).eq("id",id);if(r.error)throw err(r.error);if(store[c])delete store[c][id];fire(c)}
+  const P=p=>{const i=p.indexOf("/");return[p.slice(0,i),p.slice(i+1)]};
+  const dsnap=(c,id)=>({id,exists:!!(store[c]&&store[c][id]),data:()=>clone((store[c]||{})[id]||{})});
+  const csnap=c=>({docs:Object.keys(store[c]||{}).map(id=>({id,data:()=>clone(store[c][id])}))});
+  return{
+    doc(path){const[c,id]=P(path);return{
+      async set(d){await load();await put(c,id,d)},
+      async update(patch){await load();await put(c,id,merge((store[c]||{})[id]||{},patch))},
+      async delete(){await load();await del(c,id)},
+      onSnapshot(fn,ef){const l={fn:()=>fn(dsnap(c,id))};(ls[c]=ls[c]||[]).push(l);load().then(()=>l.fn()).catch(e=>ef&&ef(err(e)));return()=>{ls[c]=ls[c].filter(x=>x!==l)}}}},
+    collection(c){return{
+      async add(d){await load();const id=(crypto.randomUUID?crypto.randomUUID().replace(/-/g,"").slice(0,20):String(Date.now())+Math.random().toString(36).slice(2,8));await put(c,id,d);return{id}},
+      onSnapshot(fn,ef){const l={fn:()=>fn(csnap(c))};(ls[c]=ls[c]||[]).push(l);load().then(()=>l.fn()).catch(e=>ef&&ef(err(e)));return()=>{ls[c]=ls[c].filter(x=>x!==l)}}}}
+  }})();
+const DLS={async save({filename,data}){const ext=(filename.split(".").pop()||"").toLowerCase(),mt=ext==="json"?"application/json":ext==="html"?"text/html":"application/octet-stream";
+  const a=document.createElement("a");a.href=URL.createObjectURL(new Blob([data],{type:mt+";charset=utf-8"}));a.download=filename;document.body.appendChild(a);a.click();setTimeout(()=>{URL.revokeObjectURL(a.href);a.remove()},1500)}};
+const claude={async use(n){if(n==="db"){await authReady;return PD}if(n==="downloads")return DLS;return null}};
+/* ----- вход владельца: тот же, что на странице документов (общая сессия) ----- */
+async function authInit(){
+  if(!window.supabase){document.body.innerHTML='<p class="bad" style="padding:20px">Нет интернета или не загрузилась библиотека. Обновите страницу.</p>';return}
+  sb=sb||window.supabase.createClient(SB_URL,SB_KEY);
+  const{data:{session}}=await sb.auth.getSession();
+  if(!session){$("loginBox").classList.remove("hid");$("appMain").classList.add("hid");return}
+  const{data:adm}=await sb.rpc("is_admin");
+  if(!adm){$("loginBox").classList.remove("hid");$("lgM").textContent="Этот пользователь не отмечен как владелец.";return}
+  $("loginBox").classList.add("hid");$("appMain").classList.remove("hid");authOk()}
+const $=id=>document.getElementById(id);
+const esc=s=>String(s).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+const norm=s=>s.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g,"").replace(/ł/g,"l").replace(/\s+/g," ").trim();
+const key=s=>{const n=norm(s).replace(/[^a-z0-9а-я]+/g,"_").replace(/^_|_$/g,"")||"x";return /^[a-z0-9_]+$/.test(n)?n:"d_"+[...n].reduce((h,c)=>(h*31+c.charCodeAt(0))>>>0,7).toString(36)};
+const r2=n=>Math.round(n*100)/100,f=n=>(n===undefined||n===null||isNaN(n))?"":n.toFixed(2).replace(".",",");
+const pn=s=>{const v=parseFloat(String(s).replace(/\u2212/g,"-").replace(/PLN|zł/gi,"").replace(/[\s\u00a0]/g,"").replace(",","."));return v};
+const CAT={rent:"Аренда",debt:"Долг",zus:"Долг ZUS",carry:"Выплата ZUS"};
+function cleanN(n){const w=n.trim().split(/\s+/),k=w.length;if(k>=4&&k%2===0&&w.slice(0,k/2).join(" ").toLowerCase()===w.slice(k/2).join(" ").toLowerCase())return w.slice(0,k/2).join(" ");if(k>=3&&w[k-1].toLowerCase()===w[k-2].toLowerCase())return w.slice(0,k-1).join(" ");return n.trim()}
+function dispName(n){return cleanN(n)}
+const PL=["bolt","uber","fn"],PN={bolt:"Bolt",uber:"Uber",fn:"FreeNow"};
+const addD=(iso,n)=>{const d=new Date(iso+"T00:00:00Z");d.setUTCDate(d.getUTCDate()+n);return d.toISOString().slice(0,10)};
+const mon=iso=>{const d=new Date(iso+"T00:00:00Z");return addD(iso,-((d.getUTCDay()+6)%7))};
+const S={dr:{},it:{},wk:{},al:{},cfg:{}};let db=null,P=null;
+function tab(n){[1,2,3,4,5].forEach(i=>{$("t"+i).classList.toggle("hid",i!==n);$("b"+i).classList.toggle("on",i===n)});if(n===2)drawI();if(n===3)drawD();if(n===4)drawR();if(n===5)drawC()}
+[1,2,3,4,5].forEach(i=>$("b"+i).onclick=()=>tab(i));
+const cur=mon(new Date().toISOString().slice(0,10));
+const dm=iso=>iso.slice(8)+"."+iso.slice(5,7);
+const wl=iso=>dm(iso)+" – "+dm(addD(iso,6))+"."+addD(iso,6).slice(0,4);
+function wkFill(id,def){let h="";for(let i=0;i<60;i++){const w=addD(cur,-7*i);h+='<option value="'+w+'">'+wl(w)+(i===0?" (текущая)":"")+'</option>'}$(id).innerHTML=h;$(id).value=def}
+wkFill("wk",addD(cur,-7));wkFill("fw",addD(cur,-7));let up=false;try{const sv=localStorage.getItem("wkSel");if(sv&&[...$("wk").options].some(o=>o.value===sv)){$("wk").value=sv;up=true}}catch(e){}
+function selW(v){if(!v||![...$("wk").options].some(o=>o.value===v))return;$("wk").value=v;up=true;try{localStorage.setItem("wkSel",v)}catch(e){}drawW(true);autoCarry()}
+$("wk").onchange=()=>selW($("wk").value);
+const wOpts=()=>[...$("wk").options].map(x=>x.value);
+$("wp").onclick=()=>{const o=wOpts();selW(o[o.indexOf($("wk").value)+1])};
+$("wn").onclick=()=>{const o=wOpts();selW(o[o.indexOf($("wk").value)-1])};
+let mwSig="";
+function markWeeks(){const sig=Object.keys(S.wk).filter(w=>S.wk[w].rows&&Object.keys(S.wk[w].rows).length).join(",");if(sig===mwSig&&$("wk").options.length&&$("wk").options[0].textContent)return;mwSig=sig;[...$("wk").options].forEach(o=>{const r=S.wk[o.value]&&S.wk[o.value].rows,has=r&&Object.keys(r).length>0;o.textContent=(has?"● ":"")+wl(o.value)+(o.value===cur?" (текущая)":"")})}
+$("fk").onchange=()=>{const p=$("fk").value==="plan";$("fp").classList.toggle("hid",!p);$("fal").textContent=p?"Сумма за период (zł): неделя или месяц":"Сумма (zł)";document.querySelectorAll(".fp2").forEach(e=>e.classList.toggle("hid",!p));document.querySelectorAll(".fo").forEach(e=>e.classList.toggle("hid",p))};
+// ---- parsing
+function tabP(t){const r=[];t.split("\n").forEach(l=>{const p=l.split("\t").map(x=>x.trim());if(p.length<3)return;const a=pn(p[p.length-2]),b=pn(p[p.length-1]);if(isNaN(a)||isNaN(b))return;r.push({name:p.slice(0,-2).join(" ").trim(),g:a,n:b})});return r}
+const AMT=/^-?[\d\s\u00a0]+(,\d+)?\s*(PLN)?$/i;
+function uberP(t){const rc=[];let c=null;t.split("\n").map(x=>x.trim()).filter(Boolean).forEach(l=>{if(AMT.test(l)){if(c)c.a.push(pn(l))}else{if(c&&!c.a.length&&l===c.name)return;c={name:l,a:[]};rc.push(c)}});return rc.filter(r=>r.a.length>=5).map(r=>({name:cleanN(r.name),g:r.a[0],n:r.a[4]}))}
+function csvL(l,d){const o=[];let c="",q=false;for(let i=0;i<l.length;i++){const h=l[i];if(h=='"'){if(q&&l[i+1]=='"'){c+='"';i++}else q=!q}else if(h==d&&!q){o.push(c);c=""}else c+=h}o.push(c);return o}
+function fnP(t){const ls=t.split(/\r?\n/).filter(x=>x.trim());if(!ls.length)return[];const d=ls[0].indexOf("\t")>=0?"\t":(ls[0].split(";").length>ls[0].split(",").length?";":",");const h=csvL(ls[0],d).map(x=>x.replace(/^\ufeff/,"").trim().toLowerCase());const a=h.indexOf("водитель"),g=h.indexOf("общий доход"),b=h.findIndex(x=>x.indexOf("баланс")===0);if(a<0||g<0||b<0)return tabP(t);return ls.slice(1).map(l=>csvL(l,d)).map(p=>({name:(p[a]||"").trim(),g:pn(p[g]||""),n:pn(p[b]||"")})).filter(r=>r.name&&!isNaN(r.g)&&!isNaN(r.n))}
+$("fnf").onchange=e=>{const fl=e.target.files[0];if(fl){const r=new FileReader();r.onload=()=>{$("fn").value=String(r.result).replace(/^\ufeff/,"");$("fns").textContent=" Загружен: "+fl.name};r.onerror=()=>{$("fns").textContent=" Не удалось прочитать файл, вставьте текст в поле ниже"};r.readAsText(fl,"utf-8")}};
+function canon(name){const k=norm(name);if(S.al[k])return S.al[k];const d=Object.values(S.dr).find(x=>norm(x.name)===k||norm(cleanN(x.name))===k);return d?d.name:null}
+$("pr").onclick=()=>{const z=$("zs").checked,rows=[];
+[["bolt",tabP($("bolt").value)],["uber",uberP($("uber").value)],["fn",fnP($("fn").value)]].forEach(([p,l])=>l.forEach(r=>{if(z&&r.g===0&&r.n===0)return;rows.push({p,name:r.name,g:r.g,n:r.n,c:canon(r.name),pick:""})}));
+P={rows};drawP()};
+function drawP(){if(!P||!P.rows.length){$("pv").innerHTML='<p class="wa">Не найдено ни одной строки. Проверьте вставленный текст.</p>';return}
+const names=Object.values(S.dr).map(d=>d.name).sort();
+let h='<div class="tw"><table><tr><th>Платформа</th><th>Имя в отчёте</th><th>Водитель</th><th class="n">С нал.</th><th class="n">На счёт</th></tr>';
+P.rows.forEach((r,i)=>{h+='<tr><td>'+PN[r.p]+'</td><td>'+esc(r.name)+'</td><td>'+(r.c?'<span class="ok">'+esc(r.c)+'</span>':'<span class="wa">новый</span> <select data-i="'+i+'"><option value="">Это уже есть в списке…</option>'+names.map(n=>'<option'+(n===r.pick?' selected':'')+'>'+esc(n)+'</option>').join("")+'</select>')+'</td><td class="n">'+f(r.g)+'</td><td class="n">'+f(r.n)+'</td></tr>'});
+h+='</table></div><p class="mut">Новые водители будут добавлены. Похожие имена программа сама не объединяет.</p><button id="sv">Сохранить в неделю '+esc(wl($("wk").value))+'</button>';
+$("pv").innerHTML=h;$("sv").onclick=saveW;
+$("pv").querySelectorAll("select").forEach(s=>s.onchange=()=>{if(s.value){P.rows[+s.dataset.i].pick=s.value}})}
+async function saveW(){const wk=$("wk").value;if(!wk)return;$("st").textContent="Сохраняю…";
+try{const rows=JSON.parse(JSON.stringify((S.wk[wk]&&S.wk[wk].rows)||{}));const al=Object.assign({},S.al);const made={};
+for(const r of P.rows){let c=r.c||r.pick||r.name;if(r.pick)al[norm(r.name)]=r.pick;const k=(()=>{const e=Object.entries(S.dr).find(([i,d])=>norm(d.name)===norm(c)||norm(cleanN(d.name))===norm(c));return e?e[0]:key(c)})();
+if(!S.dr[k]&&!made[k]){made[k]=1;await db.doc("drivers/"+k).set({name:c,tariff:"Стандарт",fixed:0})}
+rows[k]=rows[k]||{};rows[k][r.p]={g:r.g,n:r.n}}
+await db.doc("meta/al").set({map:al});await db.doc("weeks/"+wk).set({rows});
+const cn={bolt:0,uber:0,fn:0};P.rows.forEach(r=>cn[r.p]++);$("st").textContent="Сохранено: Bolt "+cn.bolt+", Uber "+cn.uber+", FreeNow "+cn.fn;P=null;$("pv").innerHTML="";["bolt","uber","fn"].forEach(i=>$(i).value="")}catch(e){$("st").textContent="Ошибка сохранения: "+(e.code||e.message)}}
+// ---- calculation
+function cnt(fr,s,D){if(D<s)return 0;if(fr==="Месяц"){const a=s.split("-").map(Number),b=D.split("-").map(Number);return (b[0]-a[0])*12+b[1]-a[1]-(b[2]<a[2]?1:0)+1}return Math.floor((new Date(D)-new Date(s))/864e5/7)+1}
+function planW(it,W){const E=+it.amount;if(!E||!it.start)return{d:0,c:0};
+/* по частям: сумма месяца E делится на части по it.part в неделю; месяц недели считается по дате выплаты (понедельник после недели), первая неделя месяца — выплата 1–7 числа */
+const PT=+it.part||0;if(PT>0&&it.freq==="Месяц"){if(it.end&&W>it.end)return{d:0,c:0};const pd=addD(W,7),sd=addD(mon(it.start),7);if(pd.slice(0,7)<sd.slice(0,7))return{d:0,c:0};const j=Math.floor((+pd.slice(8)-1)/7),d=Math.max(0,Math.min(PT,E-j*PT));return{d,c:d&&+it.toAmt?(+it.toAmt)*d/E:0}}
+const T=+it.total||0,H=T?Math.ceil(T/E):1e6,end=it.end||"9999-12-31",cap=T||1e12;
+const m=(a,b)=>a<b?a:b,Q=cnt(it.freq,it.start,m(addD(W,-1),end)),R=cnt(it.freq,it.start,m(addD(W,6),end));
+return{d:Math.min(cap,Math.min(H,R)*E)-Math.min(cap,Math.min(H,Q)*E),c:(Math.min(H,R)-Math.min(H,Q))*(+it.toAmt||0)}}
+/* остаток по плану долга (Долг, Долг ZUS) с общей суммой: сколько ещё удержится после недели W включительно. Аренда и планы без общей суммы не считаются. Только показ, в расчёт выплаты не входит. */
+function planLeft(it,W){const E=+it.amount,T=+it.total||0;if(it.kind!=="plan"||!E||!T||!it.start||(it.cat!=="debt"&&it.cat!=="zus"))return 0;const H=Math.ceil(T/E),end=it.end||"9999-12-31",e=addD(W,6),R=cnt(it.freq,it.start,e<end?e:end);return Math.max(0,r2(T-Math.min(T,Math.min(H,R)*E)))}
+function leftOf(dk,W){let t=0;Object.values(S.it).forEach(it=>{if(it.driver===dk)t+=planLeft(it,W)});return r2(t)}
+/* ---- настройки: акция и формулы. Значения по умолчанию равны прежним правилам, поэтому пока ничего не изменено, расчёт тот же. */
+const DEF={promo:{bonus:200,weeks:3,free:true,minEarn:0,linkMonths:6,from:"",to:"",pauses:[]},fee:{thr:1500,low:90,base:50,pct:5,sp:5,sa:90}};
+const TXL=[["ru","Русский"],["pl","Polski"],["en","English"],["uk","Українська"],["be","Беларуская"],["ka","ქართული"],["hi","हिन्दी"],["pa","ਪੰਜਾਬੀ"],["ur","اردو"]];
+const RD0={"ru": {"t": "Согласие на обработку данных", "b": "<p><b>Администратор данных:</b> ALEKS-GROUP Sp. z o.o., Gdańsk, ul. Jana Heweliusza 11/819, NIP 5833530463 (ALEX Group).</p><p><b>Какие данные:</b> имя, номер телефона, недельные расчёты, а также фактуры и чеки, которые вы загружаете (фото и данные с них).</p><p><b>Зачем:</b> расчёты с вами, проверка расходов на автомобиль, бухгалтерия и налоги. <b>Срок:</b> фактуры и чеки — бухгалтерские документы компании; они хранятся в компании в течение срока, установленного действующим законодательством.</p><p><b>Кому передаются:</b> бухгалтерии компании и поставщикам IT-услуг (Supabase, SMS-провайдер).</p><p><b>Ваши права (RODO):</b> доступ к данным, исправление, удаление, ограничение, возражение, жалоба в UODO. По любым вопросам обращайтесь к владельцу.</p>", "c": "Я прочитал(а) и согласен(на) на обработку моих данных на этих условиях", "k": "Продолжить", "e": "Отметьте согласие, чтобы продолжить."}, "uk": {"t": "Згода на обробку даних", "b": "<p><b>Адміністратор даних:</b> ALEKS-GROUP Sp. z o.o., Gdańsk, ul. Jana Heweliusza 11/819, NIP 5833530463 (ALEX Group).</p><p><b>Які дані:</b> ім’я, номер телефону, тижневі розрахунки, а також фактури й чеки, які ви завантажуєте (фото та дані з них).</p><p><b>Для чого:</b> розрахунки з вами, перевірка витрат на авто, бухгалтерія й податки. <b>Строк:</b> фактури й чеки — бухгалтерські документи компанії; вони зберігаються в компанії протягом строку, встановленого чинним законодавством.</p><p><b>Кому передаються:</b> бухгалтерії компанії та постачальникам IT-послуг (Supabase, SMS-провайдер).</p><p><b>Ваші права (RODO):</b> доступ до даних, виправлення, видалення, обмеження, заперечення, скарга до UODO. З будь-яких питань звертайтеся до власника.</p>", "c": "Я прочитав(ла) і погоджуюсь на обробку моїх даних на цих умовах", "k": "Продовжити", "e": "Позначте згоду, щоб продовжити."}, "pl": {"t": "Zgoda na przetwarzanie danych", "b": "<p><b>Administrator danych:</b> ALEKS-GROUP Sp. z o.o., Gdańsk, ul. Jana Heweliusza 11/819, NIP 5833530463 (ALEX Group).</p><p><b>Jakie dane:</b> imię i nazwisko, numer telefonu, rozliczenia tygodniowe oraz faktury i paragony, które przesyłasz (zdjęcia i dane z nich).</p><p><b>W jakim celu:</b> rozliczenia z Tobą, weryfikacja kosztów samochodu, księgowość i podatki. <b>Okres:</b> faktury i paragony to dokumenty księgowe spółki; są przechowywane w spółce przez okres wymagany przez obowiązujące przepisy.</p><p><b>Odbiorcy:</b> biuro rachunkowe spółki i dostawcy usług IT (Supabase, operator SMS).</p><p><b>Twoje prawa (RODO):</b> dostęp do danych, sprostowanie, usunięcie, ograniczenie, sprzeciw, skarga do UODO. W razie pytań skontaktuj się z właścicielem.</p>", "c": "Przeczytałem(-am) i zgadzam się na przetwarzanie moich danych na tych zasadach", "k": "Dalej", "e": "Zaznacz zgodę, aby kontynuować."}, "en": {"t": "Consent to data processing", "b": "<p><b>Data controller:</b> ALEKS-GROUP Sp. z o.o., Gdańsk, ul. Jana Heweliusza 11/819, NIP 5833530463 (ALEX Group).</p><p><b>Data:</b> your name, phone number, weekly statements, and the invoices and receipts you upload (photos and the data on them).</p><p><b>Purpose:</b> settlements with you, checking car expenses, accounting and taxes. <b>Retention:</b> invoices and receipts are the company’s accounting records; they are kept by the company for the period required by applicable law.</p><p><b>Recipients:</b> the company’s accountant and IT service providers (Supabase, SMS provider).</p><p><b>Your rights (GDPR):</b> access, rectification, erasure, restriction, objection, complaint to the Polish data protection authority (UODO). For any questions contact the owner.</p>", "c": "I have read this and agree to the processing of my data on these terms", "k": "Continue", "e": "Tick the box to continue."}, "ka": {"t": "თანხმობა მონაცემთა დამუშავებაზე", "b": "<p><b>მონაცემთა ადმინისტრატორი:</b> ALEKS-GROUP Sp. z o.o., Gdańsk, ul. Jana Heweliusza 11/819, NIP 5833530463 (ALEX Group).</p><p><b>რა მონაცემები:</b> სახელი, ტელეფონის ნომერი, ყოველკვირეული ანგარიშსწორებები და თქვენ მიერ ატვირთული ფაქტურები და ჩეკები (ფოტოები და მათზე არსებული მონაცემები).</p><p><b>რისთვის:</b> თქვენთან ანგარიშსწორება, ავტომობილის ხარჯების შემოწმება, ბუღალტერია და გადასახადები. <b>ვადა:</b> ფაქტურები და ჩეკები კომპანიის სააღრიცხვო დოკუმენტებია; ისინი ინახება კომპანიაში მოქმედი კანონმდებლობით დადგენილი ვადით.</p><p><b>ვის გადაეცემა:</b> კომპანიის ბუღალტერია და IT სერვისის მომწოდებლები (Supabase, SMS პროვაიდერი).</p><p><b>თქვენი უფლებები (RODO/GDPR):</b> წვდომა, შესწორება, წაშლა, შეზღუდვა, პროტესტი, საჩივარი UODO-ში. კითხვებისთვის მიმართეთ მფლობელს.</p>", "c": "წავიკითხე და ვეთანხმები ჩემი მონაცემების დამუშავებას ამ პირობებით", "k": "გაგრძელება", "e": "გასაგრძელებლად მონიშნეთ თანხმობა."}, "hi": {"t": "डेटा प्रोसेसिंग की सहमति", "b": "<p><b>डेटा नियंत्रक:</b> ALEKS-GROUP Sp. z o.o., Gdańsk, ul. Jana Heweliusza 11/819, NIP 5833530463 (ALEX Group)।</p><p><b>कौन सा डेटा:</b> आपका नाम, फ़ोन नंबर, साप्ताहिक हिसाब, और आपके अपलोड किए गए बिल/रसीदें (फ़ोटो और उन पर लिखा डेटा)।</p><p><b>उद्देश्य:</b> आपके साथ हिसाब, कार के खर्चों की जाँच, अकाउंटिंग और कर। <b>अवधि:</b> बिल और रसीदें कंपनी के लेखा-दस्तावेज़ हैं; वे कंपनी के पास लागू कानून द्वारा निर्धारित अवधि तक रखे जाते हैं।</p><p><b>किसे दिया जाता है:</b> कंपनी का अकाउंटेंट और IT सेवा प्रदाता (Supabase, SMS प्रदाता)।</p><p><b>आपके अधिकार (RODO/GDPR):</b> डेटा तक पहुँच, सुधार, हटाना, सीमित करना, आपत्ति, UODO में शिकायत। किसी भी प्रश्न के लिए मालिक से संपर्क करें।</p>", "c": "मैंने पढ़ लिया है और इन शर्तों पर अपने डेटा की प्रोसेसिंग के लिए सहमत हूँ", "k": "आगे बढ़ें", "e": "आगे बढ़ने के लिए सहमति पर टिक करें।"}, "pa": {"t": "ਡਾਟਾ ਪ੍ਰੋਸੈਸਿੰਗ ਲਈ ਸਹਿਮਤੀ", "b": "<p><b>ਡਾਟਾ ਕੰਟਰੋਲਰ:</b> ALEKS-GROUP Sp. z o.o., Gdańsk, ul. Jana Heweliusza 11/819, NIP 5833530463 (ALEX Group)।</p><p><b>ਕਿਹੜਾ ਡਾਟਾ:</b> ਤੁਹਾਡਾ ਨਾਮ, ਫ਼ੋਨ ਨੰਬਰ, ਹਫ਼ਤਾਵਾਰੀ ਹਿਸਾਬ, ਅਤੇ ਤੁਹਾਡੇ ਅੱਪਲੋਡ ਕੀਤੇ ਬਿੱਲ/ਰਸੀਦਾਂ (ਫ਼ੋਟੋ ਅਤੇ ਉਨ੍ਹਾਂ ਉੱਤੇ ਦਾ ਡਾਟਾ)।</p><p><b>ਮਕਸਦ:</b> ਤੁਹਾਡੇ ਨਾਲ ਹਿਸਾਬ, ਕਾਰ ਦੇ ਖ਼ਰਚਿਆਂ ਦੀ ਜਾਂਚ, ਅਕਾਊਂਟਿੰਗ ਅਤੇ ਟੈਕਸ। <b>ਮਿਆਦ:</b> ਬਿੱਲ ਅਤੇ ਰਸੀਦਾਂ ਕੰਪਨੀ ਦੇ ਲੇਖਾ-ਦਸਤਾਵੇਜ਼ ਹਨ; ਇਹ ਕੰਪਨੀ ਕੋਲ ਲਾਗੂ ਕਾਨੂੰਨ ਵੱਲੋਂ ਨਿਰਧਾਰਤ ਮਿਆਦ ਤੱਕ ਰੱਖੇ ਜਾਂਦੇ ਹਨ।</p><p><b>ਕਿਸ ਨੂੰ ਦਿੱਤਾ ਜਾਂਦਾ ਹੈ:</b> ਕੰਪਨੀ ਦਾ ਅਕਾਊਂਟੈਂਟ ਅਤੇ IT ਸੇਵਾ ਦੇਣ ਵਾਲੇ (Supabase, SMS ਪ੍ਰਦਾਤਾ)।</p><p><b>ਤੁਹਾਡੇ ਅਧਿਕਾਰ (RODO/GDPR):</b> ਡਾਟਾ ਤੱਕ ਪਹੁੰਚ, ਸੁਧਾਰ, ਮਿਟਾਉਣਾ, ਪਾਬੰਦੀ, ਇਤਰਾਜ਼, UODO ਕੋਲ ਸ਼ਿਕਾਇਤ। ਕਿਸੇ ਵੀ ਸਵਾਲ ਲਈ ਮਾਲਕ ਨਾਲ ਸੰਪਰਕ ਕਰੋ।</p>", "c": "ਮੈਂ ਪੜ੍ਹ ਲਿਆ ਹੈ ਅਤੇ ਇਨ੍ਹਾਂ ਸ਼ਰਤਾਂ ਉੱਤੇ ਆਪਣੇ ਡਾਟਾ ਦੀ ਪ੍ਰੋਸੈਸਿੰਗ ਲਈ ਸਹਿਮਤ ਹਾਂ", "k": "ਅੱਗੇ ਵਧੋ", "e": "ਅੱਗੇ ਵਧਣ ਲਈ ਸਹਿਮਤੀ ਉੱਤੇ ਟਿਕ ਕਰੋ।"}, "ur": {"t": "ڈیٹا پروسیسنگ کی رضامندی", "b": "<p><b>ڈیٹا کنٹرولر:</b> ALEKS-GROUP Sp. z o.o., Gdańsk, ul. Jana Heweliusza 11/819, NIP 5833530463 (ALEX Group)۔</p><p><b>کون سا ڈیٹا:</b> آپ کا نام، فون نمبر، ہفتہ وار حساب، اور آپ کے اپ لوڈ کیے گئے بل/رسیدیں (تصاویر اور ان پر درج ڈیٹا)۔</p><p><b>مقصد:</b> آپ کے ساتھ حساب، گاڑی کے اخراجات کی جانچ، اکاؤنٹنگ اور ٹیکس۔ <b>مدت:</b> بل اور رسیدیں کمپنی کے حسابی دستاویزات ہیں؛ یہ کمپنی کے پاس لاگو قانون کے مقررہ عرصے تک رکھے جاتے ہیں۔</p><p><b>کسے دیا جاتا ہے:</b> کمپنی کا اکاؤنٹنٹ اور آئی ٹی سروس فراہم کنندگان (Supabase، SMS فراہم کنندہ)۔</p><p><b>آپ کے حقوق (RODO/GDPR):</b> ڈیٹا تک رسائی، درستی، حذف، پابندی، اعتراض، UODO میں شکایت۔ کسی بھی سوال کے لیے مالک سے رابطہ کریں۔</p>", "c": "میں نے پڑھ لیا ہے اور ان شرائط پر اپنے ڈیٹا کی پروسیسنگ سے اتفاق کرتا ہوں", "k": "آگے بڑھیں", "e": "آگے بڑھنے کے لیے رضامندی پر نشان لگائیں۔"}};
+const REF0={"ru": {"t": "Приведи друга — получи 200 zł", "b": "Твой друг работает первую неделю без комиссии парка.\nБонус 200 zł придёт в выплате после третьей недели работы друга, если он продолжает работать с нами.", "f": "Бонус — только за новых водителей, которые раньше не работали с ALEX Group. Ссылка действует 6 месяцев. ALEX Group может отказать в начислении бонуса или завершить акцию.", "m": "Привет! Я работаю с ALEX Group — в приложении видно весь расчёт, выплаты каждую неделю. Первая неделя у них без комиссии парка. Вот ссылка: <ссылка>"}, "pl": {"t": "Poleć znajomego — otrzymasz 200 zł", "b": "Twój znajomy pracuje pierwszy tydzień bez prowizji floty.\nBonus 200 zł dostaniesz w wypłacie po trzecim tygodniu pracy znajomego, jeśli nadal będzie z nami jeździł.", "f": "Bonus tylko za nowych kierowców, którzy wcześniej nie pracowali z ALEX Group. Link jest ważny 6 miesięcy. ALEX Group może odmówić przyznania bonusu lub zakończyć akcję.", "m": "Cześć! Pracuję z ALEX Group — w aplikacji widać całe rozliczenie, wypłaty co tydzień. Pierwszy tydzień bez prowizji floty. Oto link: <link>"}};
+function CFG(){const c=S.cfg||{};return{promo:Object.assign({},DEF.promo,c.promo||{}),fee:Object.assign({},DEF.fee,c.fee||{}),txt:c.txt||{}}}
+/* формулы действуют с выбранной недели; более ранние недели считаются по прежним значениям (fee.old), чтобы старые таблицы не менялись */
+function feeFor(W){const f=CFG().fee;return(f.from&&W<f.from&&f.old)?Object.assign({},DEF.fee,f.old):f}
+function promoOn(){const p=CFG().promo,l=p.pauses[p.pauses.length-1];return !(l&&!l.to)}
+function promoWeekOk(W){const p=CFG().promo;if(p.from&&W<mon(p.from))return false;if(p.to&&W>mon(p.to))return false;return !p.pauses.some(x=>W>=x.from&&(!x.to||W<x.to))}
+/* положительные недели приглашённого: считаются со стартовой недели; недели без данных, с нулём или минусом пропускаются */
+function refInfo(j){const d=S.dr[j]||{},C=CFG().promo,N=+C.weeks||3,o={pos:[],n:0,w3:"",paused:false,N};if(!d.refStart)return o;
+const ws=Object.keys(S.wk).filter(w=>w>=d.refStart&&S.wk[w].rows&&S.wk[w].rows[j]).sort();let lastPos=true,seen=false;
+ws.forEach(w=>{const r=S.wk[w].rows[j];let g=0,has=false;PL.forEach(p=>{if(r[p]){g+=r[p].g;has=true}});if(!has)return;seen=true;lastPos=g>(+C.minEarn||0);if(lastPos){o.pos.push(w);if(o.pos.length===N&&!o.w3)o.w3=w}});
+o.n=Math.min(o.pos.length,N);o.paused=!o.w3&&seen&&!lastPos;return o}
+function sugStart(j){const ws=Object.keys(S.wk).filter(w=>S.wk[w].rows&&S.wk[w].rows[j]).sort();for(const w of ws){let g=0;PL.forEach(p=>{if(S.wk[w].rows[j][p])g+=S.wk[w].rows[j][p].g});if(g>0)return w}return""}
+function refBonus(dk,W){const C=CFG().promo;let t=0;Object.entries(S.dr).forEach(([j,d])=>{if(d.invitedBy!==dk||!d.refStart||d.bonusCancel)return;const I=refInfo(j);if(I.w3===W&&promoWeekOk(W))t+=+C.bonus||0});return r2(t)}
+function calc(dk,W,wr){const d=S.dr[dk]||{name:dk,tariff:"Стандарт",fixed:0},r=wr[dk]||{};let g=0,gp=0,n=0;
+PL.forEach(p=>{if(r[p]){g+=r[p].g;gp+=Math.max(0,r[p].g);n+=r[p].n}});const inv=+r.inv||0,inc=gp-inv;
+const FC=feeFor(W),free=!!(d.refStart&&d.refStart===W&&CFG().promo.free);let fa=0;if(gp>0&&!free)fa=d.tariff==="Фикс"?+d.fixed||0:d.tariff==="Особый"?(g-n)*(FC.sp/100)+(+FC.sa):(inc<FC.thr?+FC.low:(+FC.base)+inc*(FC.pct/100));
+const ov=r.fee!==undefined&&r.fee!==null&&r.fee!=="",fee=ov?+r.fee:fa;
+const B={rent:0,debt:0,zus:0,carry:0};Object.values(S.it).forEach(it=>{const c=B[it.cat]!==undefined?it.cat:"debt";if(it.kind==="op"){if(it.driver===dk&&it.week===W)B[c]+=(it.dir==="Удержать"?-1:1)*(+it.amount)}else{const p=planW(it,W);if(it.driver===dk)B[c]-=p.d;if(it.to===dk)B[c]+=p.c}});
+const bn=refBonus(dk,W);B.debt+=bn;const A=Object.assign({},B);B.debt+=+r.k||0;B.zus+=+r.l||0;B.carry+=+r.m||0;B.rent+=+r.a||0;const tot=n-fee+B.rent+B.debt+B.zus+B.carry;
+const R={name:d.name,g,n,inv,inc,fee,fa,ov,B,A,tot,free,bn,debt:Math.max(0,-tot)};const wz=Math.max(0,-B.carry)+shortAl(R).m;R.wz=wz>0.004?wz:0;
+/* Итого к выплате: остаток водителю плюс удержанная «Выплата ZUS» (её тоже переводит владелец). Если дохода не хватило, показывается покрытая часть. */
+R.out=tot>=0?tot:(R.wz>0?R.wz:tot);R.pay=tot>=0?tot:R.wz;return R}
+let holdUntil=0;let lastAdded="";const pins={};let curW="",curKeys=[],cells={},dirtyW=false,pend=0,chain=Promise.resolve();
+const inp=(i,c,k,fl)=>'<td class="n"><input class="ce" data-r="'+i+'" data-c="'+c+'" data-k="'+esc(k)+'" data-f="'+fl+'" inputmode="'+(c>=2?"text":"decimal")+'" autocomplete="off"></td>';
+const th=(a,b)=>'<th class="n">'+a+(b?'<br>'+b:'')+'</th>';
+function setIn(el,v){if(el&&el!==document.activeElement)el.value=v}
+function drawW(force){const W=$("wk").value;if(!W)return;
+const ae=document.activeElement;if(!force&&ae&&ae.classList&&ae.classList.contains("ce")&&$("wo").contains(ae)){dirtyW=true;return}
+dirtyW=false;curW=W;$("ph").textContent="Выплаты водителям, неделя "+wl(W);const wr=(S.wk[W]&&S.wk[W].rows)||{};const ks=new Set(Object.keys(wr));(pins[W]||new Set()).forEach(k=>ks.add(k));
+Object.entries(S.dr).forEach(([k,d])=>{if(d.refStart===W)ks.add(k);if(refBonus(k,W))ks.add(k)});
+Object.values(S.it).forEach(it=>{if(it.kind==="plan"){if(planW(it,W).d)ks.add(it.driver);if(it.to&&planW(it,W).c)ks.add(it.to)}else if(it.week===W)ks.add(it.driver)});
+const L=[...ks].map(k=>({k,name:S.dr[k]?S.dr[k].name:k})).sort((a,b)=>dispName(a.name).localeCompare(dispName(b.name)));
+$("adl").innerHTML=Object.values(S.dr).map(d=>'<option value="'+esc(dispName(d.name))+'">').join("");
+curKeys=L.map(x=>x.k);cells={};
+if(!L.length){$("wo").innerHTML='<p class="mut">За эту неделю данных нет. Загрузите отчёты выше или добавьте водителя вручную.</p>';return}
+let h='<table class="wt"><colgroup><col style="width:11%">'+'<col style="width:5.9%">'.repeat(15)+'</colgroup><tr><th>Водитель</th>'+["Bolt","Uber","FreeNow"].map(p=>th(p,"с нал.")+th(p,"на счёт")).join("")+th("Фактуры")+th("Комиссия")+th("Доход")+th("Аренда")+th("Долг")+th("Долг","ZUS")+th("Выплата","ZUS")+th("Итого")+th("Долг","дальше")+'</tr>';
+L.forEach((x,i)=>{h+='<tr data-row="'+esc(x.k)+'"><td class="nm" title="'+esc(x.name)+'">'+esc(dispName(x.name))+'</td>'+[0,1,2].map(j=>'<td class="n g'+j+'"></td><td class="n n'+j+'"></td>').join("")+inp(i,0,x.k,"inv")+inp(i,1,x.k,"fee")+'<td class="n inc"></td>'+inp(i,2,x.k,"a")+inp(i,3,x.k,"k")+inp(i,4,x.k,"l")+inp(i,5,x.k,"m")+'<td class="n tot"></td><td class="n debt"></td></tr>'});
+h+='<tr class="tr"><td><b>Итого</b></td>'+["g0","n0","g1","n1","g2","n2","inv","fee","inc","R","K","L","M","tot","debt"].map(t=>'<td class="n"><b data-t="'+t+'"></b></td>').join("")+'</tr></table><p class="mut">К выплате (сумма положительных итогов): <b id="pay"></b> zł. Отрицательный итог остаётся долгом водителя и сам переносится на следующую неделю в тот же столбец. Порядок удержаний: Долг, Аренда, Долг ZUS, Выплата ZUS.</p><p id="zl"></p>';
+$("wo").innerHTML=h;
+$("wo").querySelectorAll("tr[data-row]").forEach(tr=>{const q=s=>tr.querySelector(s);cells[tr.dataset.row]={g0:q(".g0"),n0:q(".n0"),g1:q(".g1"),n1:q(".n1"),g2:q(".g2"),n2:q(".n2"),inv:q('[data-f="inv"]'),fee:q('[data-f="fee"]'),R:q('[data-f="a"]'),K:q('[data-f="k"]'),L:q('[data-f="l"]'),M:q('[data-f="m"]'),inc:q(".inc"),tot:q(".tot"),debt:q(".debt")}});
+paint();if(lastAdded&&cells[lastAdded]){const tr=cells[lastAdded].inc.parentNode;tr.style.background="rgba(255,200,0,.35)";try{tr.scrollIntoView({block:"center"})}catch(e){}lastAdded=""}}
+function paint(){const W=curW,wr=(S.wk[W]&&S.wk[W].rows)||{},T={};const add=(k,v)=>{T[k]=(T[k]||0)+v};let pay=0,zt=0;const Z=[];
+for(const k of curKeys){const c=cells[k];if(!c)continue;const x=calc(k,W,wr),r=wr[k]||{};
+PL.forEach((p,i)=>{const v=r[p];c["g"+i].textContent=v?f(v.g):"";c["n"+i].textContent=v?f(v.n):"";if(v){add("g"+i,v.g);add("n"+i,v.n)}});
+c.inc.textContent=f(x.inc);c.tot.textContent=f(x.out);c.tot.classList.toggle("neg",x.out<0);const lf=leftOf(k,W),dd=r2(x.debt+lf);c.debt.textContent=dd?f(-dd):"";c.debt.classList.toggle("bad",!!x.debt);c.debt.classList.toggle("mut",!x.debt&&!!lf);c.debt.title=dd?"Не хватило на этой неделе: "+f(x.debt)+"; остаток по плану долга: "+f(lf):"";
+setIn(c.inv,x.inv?f(x.inv):"");setIn(c.fee,f(x.fee));c.fee.dataset.auto=x.fa;c.fee.classList.toggle("ov",x.ov);c.fee.classList.toggle("fr",!!x.free);c.fee.title=x.free?"Первая неделя без комиссии (акция «Пригласи друга»)":"";c.K.title=x.bn?"В том числе бонус за приглашение +"+f(x.bn)+" zł":"";
+[["R","rent"],["K","debt"],["L","zus"],["M","carry"]].forEach(([n,kk])=>{setIn(c[n],x.B[kk]?f(r2(x.B[kk])):"");c[n].dataset.a=x.A[kk]});
+add("inv",x.inv);add("fee",x.fee);add("inc",x.inc);add("R",x.B.rent);add("K",x.B.debt);add("L",x.B.zus);add("M",x.B.carry);add("tot",x.out);add("debt",-(x.debt+lf));pay+=x.pay;if(x.wz>0){zt+=x.wz;Z.push([dispName(S.dr[k]?S.dr[k].name:k),x.wz])}}
+$("wo").querySelectorAll("[data-t]").forEach(e=>{e.textContent=f(r2(T[e.dataset.t]||0))});if($("pay"))$("pay").textContent=f(r2(pay));if($("zl"))$("zl").innerHTML=zt>0?'В ZUS за неделю (удержано по «Выплата ZUS»): <b>'+f(r2(zt))+'</b> zł. '+Z.map(z=>esc(z[0])+' '+f(r2(z[1]))).join(", "):''}
+$("prb").onclick=()=>{if(!curKeys.length){$("st").textContent="Нет таблицы для печати";return}
+const W=curW||$("wk").value,wr=(S.wk[W]&&S.wk[W].rows)||{},fz=n=>f(r2(n)),ct=n=>Math.abs(n)>=0.005?fz(n):"";
+const HD=["Kierowca","Bolt|got.","Bolt|na konto","Uber|got.","Uber|na konto","FreeNow|got.","FreeNow|na konto","Faktury","Prowizja","Dochód","Rent","Borg","Borg ZUS","Następ. tyg.|Borg ZUS","Wypłata ZUS","Do przelewu|ZUS","Razem","Kierowca","Borg"];
+const sinkK=Object.keys(S.dr).find(k=>S.dr[k].zusSink)||Object.keys(S.dr).find(k=>/fumaniuk/i.test(S.dr[k].name))||"";
+const data=[],T=new Array(19).fill(0);let drv=0,zus=0;
+curKeys.map(k=>({k,x:calc(k,W,wr)})).sort((a,b)=>dispName(a.x.name).localeCompare(dispName(b.x.name))).forEach(({k,x})=>{
+const r=wr[k]||{},B=x.B,al=x.tot<0?shortAl(x):{l:0},sink=k===sinkK,row=new Array(19).fill(""),val=new Array(19).fill(null);
+row[0]=row[17]=dispName(x.name);
+PL.forEach((p,j)=>{const v=r[p];if(v){row[1+2*j]=fz(v.g);row[2+2*j]=fz(v.n);val[1+2*j]=v.g;val[2+2*j]=v.n}});
+let ncl=-al.l,z=-B.carry,kz=x.wz;if(sink){kz=z;ncl=0}
+if(sink&&z<=0.004)return;
+row[7]=ct(x.inv);val[7]=x.inv;row[8]=fz(x.fee);val[8]=x.fee;row[9]=fz(x.inc);val[9]=x.inc;
+row[10]=ct(B.rent);val[10]=B.rent;row[11]=ct(B.debt);val[11]=B.debt;row[12]=ct(B.zus);val[12]=B.zus;
+if(ncl>0.004){row[13]="−"+fz(ncl);val[13]=-ncl}
+if(sink){if(z>0.004){row[14]="+"+fz(z);val[14]=z}}else{row[14]=ct(B.carry);val[14]=B.carry}
+if(kz>0.004){row[15]="+"+fz(kz);val[15]=kz}else if(z>0.004)row[15]="0,00";
+if(!sink){row[16]=fz(x.tot);val[16]=x.tot;if(x.tot<-0.004){row[18]=fz(x.tot);val[18]=x.tot}}
+val.forEach((v,i)=>{if(v!==null)T[i]+=v});drv+=sink?0:Math.max(0,x.tot);zus+=sink?Math.max(0,z):x.wz;data.push(row)});
+if(!data.length){$("st").textContent="Нет данных для печати";return}
+const nz=[];for(let i=0;i<19;i++)if(i===0||i===17||data.some(r=>r[i]))nz.push(i);
+const nm=nz.filter(i=>i===0||i===17).length,w=((98-7.2*nm)/(nz.length-nm)).toFixed(2);
+const cell=c=>'<td'+(/^[-−]/.test(c)?' class="neg"':'')+'>'+c+'</td>';
+let tb='<colgroup>'+nz.map(i=>'<col style="width:'+((i===0||i===17)?7.2:w)+'%">').join("")+'</colgroup><tr>'+nz.map(i=>'<th>'+HD[i].replace("|","<br>")+'</th>').join("")+'</tr>';
+data.forEach(row=>{tb+='<tr>'+nz.map(i=>(i===0||i===17)?'<td class="nm"><b>'+esc(row[i])+'</b></td>':cell(row[i])).join("")+'</tr>'});
+tb+='<tr class="tr">'+nz.map(i=>i===0?'<td><b>Razem</b></td>':i===17?'<td></td>':i===15?'<td><b>+'+fz(T[i])+'</b></td>':i===13?'<td><b>'+(T[i]?"−"+fz(-T[i]):"")+'</b></td>':'<td><b>'+fz(T[i])+'</b></td>').join("")+'</tr>';
+const H='<!doctype html><html lang="pl"><head><meta charset="utf-8"><title>Wypłaty, tydzień '+wl(W)+'</title><style>@page{size:A4 landscape;margin:8mm}body{font:8.5px Arial,sans-serif;color:#000;margin:0}h2{font-size:14px;margin:0 0 6px}table{border-collapse:collapse;width:100%;table-layout:fixed}th,td{border:1px solid #888;padding:2px 1px;text-align:right;overflow:hidden;white-space:nowrap}th{white-space:normal;background:#eee}td.nm,th:first-child{text-align:left;white-space:normal;overflow-wrap:anywhere}.neg{color:#b00}tr{break-inside:avoid}tr.tr td{background:#f3f3f3}p{font-size:11px}</style></head><body><h2>Wypłaty dla kierowców, tydzień '+wl(W)+'</h2><table>'+tb+'</table><p>Do przelewu kierowcom: <b>'+fz(drv)+'</b> zł. Do przelewu do ZUS: <b>'+fz(zus)+'</b> zł.</p><p>„Następ. tyg. Borg ZUS” i niepokryta „Wypłata ZUS” przechodzą na następny tydzień.</p><script>onload=function(){setTimeout(function(){print()},400)}<\/script></body></html>';
+(async()=>{try{const dl=await claude.use("downloads");if(!dl){$("st").textContent="Сохранение файла здесь недоступно";return}await dl.save({filename:"vyplaty_"+curW+".html",data:H});$("st").textContent="Файл vyplaty_"+curW+".html сохранён. Откройте его: окно печати появится само (A4 альбомная). Если не появилось, нажмите Ctrl+P."}catch(e){$("st").textContent=e&&e.code==="declined"?"Сохранение отменено":"Не удалось сохранить файл: "+((e&&(e.message||e.code))||e)}})()};
+/* Порядок удержаний: Долг, Аренда, Долг ZUS, Выплата ZUS. Если дохода не хватает, непокрытая часть ложится с конца: сначала на Выплату ZUS, потом на Долг ZUS, Аренду и Долг. */
+function shortAl(x){let D=x.tot<0?-x.tot:0;const al={a:0,k:0,l:0,m:0};[["carry","m"],["zus","l"],["rent","a"],["debt","k"]].forEach(([c,f])=>{const b=x.B[c];if(D>0&&b<0){const t=Math.min(D,-b);al[f]=-t;D-=t}});if(D>0)al.k-=D;return al}
+$("exb").onclick=async()=>{const W=curW||$("wk").value,wr=(S.wk[W]&&S.wk[W].rows)||{},out=[];let np=0;
+curKeys.forEach(k=>{const x=calc(k,W,wr),r=wr[k]||{},d=S.dr[k]||{};const pr=p=>r[p]?[r2(r[p].g),r2(r[p].n)]:[0,0];
+out.push({name:dispName(d.name||k),phone:d.phone||"",data:{w:wl(W),bolt:pr("bolt"),uber:pr("uber"),fn:pr("fn"),inv:r2(x.inv),g:r2(x.g),n:r2(x.n),inc:r2(x.inc),fee:r2(x.fee),rent:r2(x.B.rent),debt:r2(x.B.debt),zus:r2(x.B.zus),carry:r2(x.B.carry),tot:r2(x.tot),wz:r2(x.wz),std:(d.tariff||"Стандарт")==="Стандарт"&&!x.ov&&x.fee>0}});if(!d.phone)np++});
+if(!out.length){$("st").textContent="В этой неделе нет водителей";return}
+try{const dl=await claude.use("downloads");if(!dl){$("st").textContent="Сохранение файла здесь недоступно";return}
+await dl.save({filename:"nedelya_"+W+".json",data:JSON.stringify({week:W,drivers:out})});
+$("st").textContent="Файл недели сохранён: водителей "+out.length+(np?", без телефона "+np+" (они не опубликуются, заполните телефон на вкладке «Водители»)":"")+". Загрузите его на странице администратора."}catch(e){$("st").textContent=e&&e.code==="declined"?"Сохранение отменено":"Не удалось сохранить файл: "+((e&&(e.message||e.code))||e)}};
+const known={},dirtyK={};
+function saveQ(W,k){pend++;const dk=dirtyK[W]=dirtyK[W]||new Set();[].concat(k||[]).forEach(x=>dk.add(x));$("st").textContent="Сохраняю…";chain=chain.then(async()=>{try{const ks=[...(dirtyK[W]||[])];dirtyK[W]=new Set();const rows=(S.wk[W]&&S.wk[W].rows)||{};
+if(known[W]){if(ks.length){const patch={};ks.forEach(x=>{patch[x]=JSON.parse(JSON.stringify(rows[x]||{}))});await db.doc("weeks/"+W).update({rows:patch})}}else{await db.doc("weeks/"+W).set({rows:JSON.parse(JSON.stringify(rows))});known[W]=1}
+$("st").textContent="Сохранено"}catch(e){$("st").textContent="Ошибка сохранения: "+(e.code||e.message||e)}finally{pend--;holdUntil=Date.now()+3000}})}
+function prevWeek(W){const ks=Object.keys(S.wk).filter(w=>w<W&&S.wk[w].rows&&Object.keys(S.wk[w].rows).length).sort();return ks[ks.length-1]||""}
+$("cpb").onclick=()=>{const W=curW||$("wk").value,P0=prevWeek(W);if(!P0){$("st").textContent="Раньше этой недели данных нет";return}
+const pr=S.wk[P0].rows,doc=S.wk[W]=S.wk[W]||{rows:{}};doc.rows=doc.rows||{};const add=[];
+Object.keys(pr).forEach(k=>{const r=pr[k]||{};const act=PL.some(p=>r[p]&&(r[p].g||r[p].n))||calc(k,P0,pr).tot<0;if(act&&!doc.rows[k]){doc.rows[k]={inv:0};add.push(k)}});
+if(!add.length){$("st").textContent="Все водители с недели "+wl(P0)+" уже в таблице";return}
+saveQ(W,add);drawW(true);$("st").textContent="Добавлено водителей: "+add.length+" (из недели "+wl(P0)+")"};
+/* Автоперенос: когда открыта последняя рабочая неделя, непокрытые суммы прошлой недели сами встают в те же столбцы (Долг, Аренда, Долг ZUS, Выплата ZUS). Повторный запуск ничего не дублирует: прежняя подстановка заменяется новой. */
+function autoCarry(){const W=$("wk").value;if(!db||!W||pend>0||W>cur)return;
+const ks=Object.keys(S.wk).filter(w=>S.wk[w].rows&&Object.keys(S.wk[w].rows).length);if(ks.some(w=>w>W))return;
+const P0=prevWeek(W);if(!P0||P0<addD(W,-14))return;
+const pr=S.wk[P0].rows,doc=S.wk[W]=S.wk[W]||{rows:{}};doc.rows=doc.rows||{};const ch=[],F=["a","k","l","m"];
+Object.keys(pr).forEach(k=>{const x=calc(k,P0,pr),al=x.tot<0?shortAl(x):{a:0,k:0,l:0,m:0},r0=doc.rows[k],old=r0&&r0.cf===P0?(r0.cfa||{a:0,k:0,l:0,m:0}):null;
+const same=old?F.every(f=>Math.abs((old[f]||0)-al[f])<0.005):!F.some(f=>Math.abs(al[f])>0.004);if(same)return;
+const r=doc.rows[k]=doc.rows[k]||{inv:0};if(old)F.forEach(f=>{r[f]=r2((+r[f]||0)-(old[f]||0))});F.forEach(f=>{r[f]=r2((+r[f]||0)+al[f])});r.cfa={a:al.a,k:al.k,l:al.l,m:al.m};r.cf=P0;ch.push(k)});
+if(ch.length){saveQ(W,ch);drawW(true);$("st").textContent="Остаток с прошлой недели перенесён автоматически: водителей "+ch.length}}
+$("wo").addEventListener("change",e=>{const i=e.target;if(!i.classList||!i.classList.contains("ce"))return;const W=curW,k=i.dataset.k,fl=i.dataset.f;
+const doc=S.wk[W]=S.wk[W]||{rows:{}};doc.rows=doc.rows||{};const r=doc.rows[k]=doc.rows[k]||{};if(doc.rows[k]!==r||S.wk[W].rows[k]!==r){$("st").textContent="Не удалось изменить данные недели (только чтение)";return}const raw=i.value.trim(),v=raw?pn(raw):NaN;
+if(fl==="inv")r.inv=isNaN(v)?0:v;else if(fl==="fee"){const a=+i.dataset.auto||0;if(isNaN(v)||r2(v)===r2(a))r.fee=null;else r[fl]=v}else r[fl]=isNaN(v)?0:r2(v-(+i.dataset.a||0));
+saveQ(W,k);paint()});
+$("wo").addEventListener("keydown",e=>{const t=e.target;if(!t.classList||!t.classList.contains("ce"))return;let dr=0,dc=0;const k=e.key;
+if(k==="Enter")dr=e.shiftKey?-1:1;else if(k==="ArrowDown")dr=1;else if(k==="ArrowUp")dr=-1;else if(k==="ArrowLeft"&&t.selectionStart===0)dc=-1;else if(k==="ArrowRight"&&t.selectionEnd===t.value.length)dc=1;else return;
+e.preventDefault();const n=$("wo").querySelector('.ce[data-r="'+(+t.dataset.r+dr)+'"][data-c="'+(+t.dataset.c+dc)+'"]');if(n)n.focus();else if(k==="Enter")t.blur()});
+$("wo").addEventListener("focusin",e=>{const t=e.target;if(t.classList&&t.classList.contains("ce"))setTimeout(()=>{try{t.select()}catch(x){}},0)});
+$("wo").addEventListener("focusout",()=>{setTimeout(()=>{const a=document.activeElement;if(dirtyW&&!(a&&a.classList&&a.classList.contains("ce")&&$("wo").contains(a)))drawW()},60)});
+let fs=0;try{fs=+localStorage.getItem("fs")||0}catch(e){}if(!fs)fs=Math.max(9,Math.min(15,Math.round(innerWidth/105)));
+function setFs(v){fs=Math.max(8,Math.min(22,v));$("wo").style.fontSize=fs+"px";try{localStorage.setItem("fs",fs)}catch(e){}}
+setFs(fs);$("z1").onclick=()=>setFs(fs-1);$("z2").onclick=()=>setFs(fs+1);
+async function addDriver(name,toWeek){name=cleanN(String(name).trim());if(!name)return null;const e=Object.entries(S.dr).find(([i,d])=>norm(cleanN(d.name))===norm(name));let k;
+if(e)k=e[0];else{k=key(name);S.dr[k]={name,tariff:"Стандарт",fixed:0};try{await db.doc("drivers/"+k).set({name,tariff:"Стандарт",fixed:0})}catch(x){const m="Ошибка: "+(x.code||x.message||x);$("st").textContent=m;$("ndm").textContent=m;$("adn").placeholder=m;return null}}
+if(toWeek){const W=$("wk").value,doc=S.wk[W]=S.wk[W]||{rows:{}};doc.rows=doc.rows||{};if(!doc.rows[k])doc.rows[k]={inv:0};(pins[W]=pins[W]||new Set()).add(k);lastAdded=k;saveQ(W,k);drawW(true)}return k}
+$("adb").onclick=async()=>{const k=await addDriver($("adn").value,true);if(k){$("adn").value="";$("adn").placeholder="Добавлен: "+dispName(S.dr[k].name);$("st").textContent="Водитель добавлен в таблицу недели (выделен жёлтым)"}else if(!$("adn").value.trim())$("adn").placeholder="Введите имя и нажмите кнопку"};
+$("ndb").onclick=async()=>{if(!db){$("ndm").textContent="Хранилище не подключено";return}if(!$("nd").value.trim()){$("ndm").textContent="Введите имя";return}$("ndm").textContent="Добавляю…";const had=Object.values(S.dr).some(d=>norm(cleanN(d.name))===norm(cleanN($("nd").value)));const k=await addDriver($("nd").value,false);if(k){$("ndm").textContent=(had?"Такой водитель уже есть в списке: ":"Добавлен: ")+dispName(S.dr[k].name);$("nd").value="";drawD()}};
+// ---- items
+function drawI(){const ds=Object.entries(S.dr).sort((a,b)=>a[1].name.localeCompare(b[1].name));
+const o='<option value="">—</option>'+ds.map(([k,d])=>'<option value="'+k+'">'+esc(d.name)+'</option>').join("");
+const v=$("fd").value,vr=$("fr").value;$("fd").innerHTML=o;$("fr").innerHTML=o;$("fd").value=v;$("fr").value=vr;
+const its=Object.entries(S.it).sort((a,b)=>(a[1].kind+a[1].driver).localeCompare(b[1].kind+b[1].driver));
+const doneIt=([id,it])=>it.kind==="plan"&&(it.cat==="debt"||it.cat==="zus")&&+it.total>0&&+it.amount>0&&it.start<=addD(cur,6)&&planLeft(it,addD(cur,-7))===0;
+let showDone=false;try{showDone=localStorage.getItem("showDone")==="1"}catch(e){}
+const nDone=its.filter(doneIt).length;let h='<h2>Записи и планы</h2>';
+if(nDone)h+='<p class="mut">Погашенных долгов: '+nDone+'. Они остаются в списке и не мешают: расчёт прошлых недель опирается на них, поэтому удалять их не нужно (удаление изменило бы старые недели). <label style="display:inline;font-weight:400"><input type="checkbox" id="sdn"'+(showDone?" checked":"")+'> показывать погашенные</label></p>';
+if(!its.length)h+='<p class="mut">Пока ничего нет.</p>';else{h+='<div class="tw"><table><tr><th>Водитель</th><th>Название</th><th>Условия</th><th></th></tr>';
+its.forEach(([id,it])=>{const dn1=doneIt([id,it]);if(dn1&&!showDone)return;const lf1=planLeft(it,addD(cur,-7));const dn=S.dr[it.driver]?S.dr[it.driver].name:it.driver;let c=it.kind==="op"?it.dir+" "+f(+it.amount)+" zł, неделя "+wl(it.week):f(+it.amount)+" zł / "+it.freq.toLowerCase()+", с "+it.start+(it.end?" по "+it.end:"")+(+it.part?", по "+f(+it.part)+" в неделю":"")+(+it.total?", всего "+f(+it.total):(+it.part?"":", без конца"))+(it.to&&S.dr[it.to]?", получатель "+S.dr[it.to].name+" "+f(+it.toAmt):"")+(dn1?". ✔ Долг погашен":lf1>0?". Осталось по плану: "+f(lf1)+" zł":"");
+h+='<tr><td>'+esc(dn)+'</td><td>'+esc((CAT[it.cat]||"Долг")+": "+(it.title||""))+'</td><td>'+esc(c)+'</td><td><button class="g" data-del="'+id+'">Удалить</button></td></tr>'});h+='</table></div>'}
+$("il").innerHTML=h;if($("sdn"))$("sdn").onchange=e=>{try{localStorage.setItem("showDone",e.target.checked?"1":"0")}catch(x){}drawI()};$("il").querySelectorAll("[data-del]").forEach(b=>b.onclick=()=>{if(b.dataset.arm){db.doc("items/"+b.dataset.del).delete()}else{b.dataset.arm=1;b.textContent="Точно удалить?"}})}
+$("fadd").onclick=async()=>{const k=$("fk").value,amt=pn($("fa").value),d=$("fd").value;if(!d||!(amt>0)){$("fm").textContent="Выберите водителя и введите сумму";return}
+const it={kind:k,driver:d,cat:$("fcat").value,title:$("ft").value.trim(),amount:amt};
+if(k==="op"){if(!$("fw").value){$("fm").textContent="Укажите неделю";return}it.dir=$("fdir").value;it.week=mon($("fw").value)}
+else{if(!$("fs").value){$("fm").textContent="Укажите дату начала";return}it.freq=$("ff").value;it.start=$("fs").value;it.total=pn($("ftot").value)||0;it.part=$("ff").value==="Месяц"?(pn($("fpart").value)||0):0;it.end=$("fe").value||"";it.to=$("fr").value||"";it.toAmt=it.to?(pn($("fra").value)||0):0}
+try{await db.collection("items").add(it);$("fm").textContent="Добавлено";["ft","fa","ftot","fra","fpart"].forEach(i=>$(i).value="")}catch(e){$("fm").textContent="Ошибка: "+(e.code||e.message)}};
+// ---- drivers
+let M=null;async function mergeD(from,to){if(false&&!confirm("Объединить «"+S.dr[from].name+"» с «"+S.dr[to].name+"»? Все данные перейдут к второму водителю. Если у обоих есть данные одной платформы за неделю, останутся данные второго."))return;
+try{for(const [wk,doc] of Object.entries(S.wk)){const rows=JSON.parse(JSON.stringify(doc.rows||{})),a=rows[from];if(!a)continue;const b=rows[to]=rows[to]||{};PL.forEach(p=>{if(a[p]&&!b[p])b[p]=a[p]});["inv","a","k","l","m"].forEach(x=>{if(a[x])b[x]=(+b[x]||0)+(+a[x])});delete rows[from];await db.doc("weeks/"+wk).set({rows})}
+for(const [id,it] of Object.entries(S.it)){const u={};if(it.driver===from)u.driver=to;if(it.to===from)u.to=to;if(Object.keys(u).length)await db.doc("items/"+id).update(u)}
+const al=Object.assign({},S.al);al[norm(S.dr[from].name)]=S.dr[to].name;await db.doc("meta/al").set({map:al});await db.doc("drivers/"+from).delete();$("st").textContent="Водители объединены"}catch(e){$("st").textContent="Ошибка: "+(e.code||e.message)}}
+function refCells(k,d,ds){const sg=sugStart(k),wk=Object.keys(S.wk).filter(w=>S.wk[w].rows&&Object.keys(S.wk[w].rows).length);if(d.refStart&&!wk.includes(d.refStart))wk.push(d.refStart);wk.sort().reverse();
+const inv='<select data-inv="'+k+'"><option value="">—</option>'+ds.filter(([k2])=>k2!==k).map(([k2,d2])=>'<option value="'+k2+'"'+(d.invitedBy===k2?' selected':'')+'>'+esc(dispName(d2.name))+'</option>').join("")+'</select>';
+const st='<select data-rs="'+k+'"><option value="">—'+(sg&&d.invitedBy&&!d.refStart?' (подсказка: '+dm(sg)+')':'')+'</option>'+wk.map(w=>'<option value="'+w+'"'+(d.refStart===w?' selected':'')+'>'+dm(w)+' – '+dm(addD(w,6))+(w===sg?' ★':'')+'</option>').join("")+'</select>';
+return '<td>'+inv+'</td><td>'+st+'</td>'}
+function drawD(){const ds=Object.entries(S.dr).sort((a,b)=>a[1].name.localeCompare(b[1].name));
+let h=(M&&S.dr[M.from]&&S.dr[M.to]?'<div class="card"><b>Объединить «'+esc(dispName(S.dr[M.from].name))+'» с «'+esc(dispName(S.dr[M.to].name))+'»?</b><br><span class="mut">Все данные первого перейдут ко второму, первый будет удалён. Если у обоих есть данные одной платформы за неделю, останутся данные второго.</span><br><button id="mgo">Объединить</button><button id="mgc" class="g">Отмена</button></div>':'')+'<p class="mut">Тариф «Стандарт»: 90 zł при доходе ниже 1500 zł, иначе 50 zł + 5 %. «Фикс»: своя сумма. «Особый»: 5 % от наличных + 90 zł.</p>';
+if(!ds.length)h+='<p class="mut">Водителей пока нет. Они появятся после загрузки первых отчётов.</p>';else{h+='<div class="tw"><table><tr><th>Водитель</th><th>Тариф</th><th class="n">Фикс. сумма</th><th>Телефон</th><th>Остатки ZUS</th><th>Приглашён водителем</th><th>Стартовая неделя акции</th><th>Объединить</th></tr>';
+ds.forEach(([k,d])=>{h+='<tr><td><input data-n="'+k+'" value="'+esc(d.name)+'" style="width:190px;text-align:left"></td><td><select data-t="'+k+'">'+["Стандарт","Фикс","Особый"].map(t=>'<option'+(t===d.tariff?" selected":"")+'>'+t+'</option>').join("")+'</select></td><td class="n"><input data-x="'+k+'" value="'+(d.fixed?f(+d.fixed):"")+'" inputmode="decimal"></td><td><input data-p="'+k+'" value="'+esc(d.phone||"")+'" placeholder="+48 …" inputmode="tel" style="width:140px;text-align:left"></td><td><input type="checkbox" data-sink="'+k+'"'+(d.zusSink?" checked":"")+' style="width:auto"></td>'+refCells(k,d,ds)+'<td><select data-mg="'+k+'"><option value="">Объединить с…</option>'+ds.filter(([k2])=>k2!==k).map(([k2,d2])=>'<option value="'+k2+'">'+esc(dispName(d2.name))+'</option>').join("")+'</select></td></tr>'});h+='</table></div>'}
+$("dl").innerHTML=h;if($("mgo")){$("mgo").onclick=async()=>{const m=M;M=null;await mergeD(m.from,m.to)};$("mgc").onclick=()=>{M=null;drawD()}}
+$("dl").querySelectorAll("[data-n]").forEach(i=>i.onchange=()=>{const v=i.value.trim();if(v)db.doc("drivers/"+i.dataset.n).update({name:v})});
+$("dl").querySelectorAll("[data-t]").forEach(s=>s.onchange=()=>db.doc("drivers/"+s.dataset.t).update({tariff:s.value}));
+$("dl").querySelectorAll("[data-x]").forEach(i=>i.onchange=()=>db.doc("drivers/"+i.dataset.x).update({fixed:pn(i.value)||0}));$("dl").querySelectorAll("[data-p]").forEach(i=>i.onchange=()=>{let v=i.value.replace(/[^\d+]/g,"");if(v.startsWith("00"))v="+"+v.slice(2);else if(/^\d{9}$/.test(v))v="+48"+v;if(v&&!/^\+\d{9,15}$/.test(v)){$("st").textContent="Номер не похож на телефон: "+i.value+". Формат: +48123456789";return}const dup=Object.entries(S.dr).find(([k,d])=>k!==i.dataset.p&&v&&d.phone===v);if(dup){$("st").textContent="Этот номер уже указан у водителя "+dispName(dup[1].name);return}i.value=v;db.doc("drivers/"+i.dataset.p).update({phone:v}).then(()=>{$("st").textContent="Телефон сохранён"}).catch(e=>{$("st").textContent="Ошибка: "+(e.code||e.message)})});
+$("dl").querySelectorAll("[data-sink]").forEach(i=>i.onchange=async()=>{try{for(const [k,d] of Object.entries(S.dr)){if(k!==i.dataset.sink&&d.zusSink)await db.doc("drivers/"+k).update({zusSink:false})}await db.doc("drivers/"+i.dataset.sink).update({zusSink:i.checked});$("st").textContent=i.checked?"Остатки «Выплаты ZUS» будут добавляться этому водителю":"Получатель остатков ZUS снят"}catch(e){$("st").textContent="Ошибка: "+(e.code||e.message)}});
+$("dl").querySelectorAll("[data-inv]").forEach(x=>x.onchange=()=>db.doc("drivers/"+x.dataset.inv).update({invitedBy:x.value}).then(()=>{$("st").textContent="Сохранено"}).catch(e=>{$("st").textContent="Ошибка: "+(e.code||e.message)}));
+$("dl").querySelectorAll("[data-rs]").forEach(x=>x.onchange=()=>db.doc("drivers/"+x.dataset.rs).update({refStart:x.value}).then(()=>{$("st").textContent="Стартовая неделя сохранена"}).catch(e=>{$("st").textContent="Ошибка: "+(e.code||e.message)}));
+$("dl").querySelectorAll("[data-mg]").forEach(s=>s.onchange=()=>{if(s.value){M={from:s.dataset.mg,to:s.value};drawD()}})}
+/* ---- вкладка «Приглашения» */
+function refStatus(j){const d=S.dr[j],C=CFG().promo,I=refInfo(j);let st,cl="";
+if(!d.refStart)return{I,st:"Стартовая неделя не выбрана",cl:"wa"};
+if(d.bonusCancel)return{I,st:"Бонус отменён",cl:"mut"};
+if(I.w3){if(promoWeekOk(I.w3))return{I,st:"Бонус +"+f(+C.bonus)+" zł в неделе "+dm(I.w3)+" (выплата "+dm(addD(I.w3,7))+")",cl:"ok"};return{I,st:"Акция завершена",cl:"mut"}}
+if(I.paused)return{I,st:"Пауза · неделя "+(I.n+1>I.N?I.N:I.n)+" из "+I.N,cl:"wa"};
+if(!I.n)return{I,st:"Ждёт первую неделю с заработком",cl:"mut"};
+return{I,st:"Работает · неделя "+I.n+" из "+I.N,cl:""}}
+function drawR(){const C=CFG().promo,on=promoOn();
+const L=Object.entries(S.dr).filter(([k,d])=>d.invitedBy||d.refStart).sort((a,b)=>dispName(a[1].name).localeCompare(dispName(b[1].name)));
+let h='<div class="card"><b>Акция «Пригласи друга»: '+(on?'<span class="ok">включена</span>':'<span class="bad">завершена</span>')+'</b><br><span class="mut">Бонус '+f(+C.bonus)+' zł, положительных недель нужно: '+(+C.weeks||3)+', первая неделя без комиссии: '+(C.free?"да":"нет")+'. Условия меняются на вкладке «Настройки».</span></div>';
+if(!L.length)h+='<p class="mut">Пока никого нет. На вкладке «Водители» у новичка выберите, кто его пригласил, и стартовую неделю. Здесь появится счётчик недель и бонус.</p>';
+else{h+='<div class="tw"><table class="rvt"><tr><th>Приглашённый</th><th>Приглашающий</th><th>Стартовая неделя</th><th class="n">Недели</th><th>Статус</th><th></th></tr>';
+L.forEach(([k,d])=>{const x=refStatus(k),sg=sugStart(k),inv=S.dr[d.invitedBy];
+h+='<tr><td>'+esc(dispName(d.name))+'</td><td>'+(inv?esc(dispName(inv.name)):'<span class="wa">не выбран</span>')+'</td><td>'+(d.refStart?dm(d.refStart)+' – '+dm(addD(d.refStart,6)):'—')+'</td><td class="n">'+x.I.n+' из '+x.I.N+'</td><td class="'+x.cl+'">'+esc(x.st)+'</td><td>'+(!d.refStart&&sg?'<button class="g" data-take="'+k+'">Старт: '+dm(sg)+'</button> ':'')+(d.refStart&&d.invitedBy?'<button class="g" data-bc="'+k+'">'+(d.bonusCancel?'Вернуть бонус':'Отменить бонус')+'</button>':'')+'</td></tr>'});
+h+='</table></div><p class="mut">Бонус сам ставится приглашающему в столбец «Долг» недельной таблицы в неделе, где набралась последняя положительная неделя друга; выплачивается в ближайший понедельник. Отмена убирает его из таблицы.</p>'}
+$("rv").innerHTML=h;
+$("rv").querySelectorAll("[data-take]").forEach(b=>b.onclick=()=>db.doc("drivers/"+b.dataset.take).update({refStart:sugStart(b.dataset.take)}));
+$("rv").querySelectorAll("[data-bc]").forEach(b=>b.onclick=()=>db.doc("drivers/"+b.dataset.bc).update({bonusCancel:!S.dr[b.dataset.bc].bonusCancel}))}
+
+/* ---- вкладка «Настройки» */
+let txK="rodo",txL="ru",offAsk=false,rstAsk=false,exI=2000,exC=300;
+const FLD={rodo:[["t","Заголовок",1],["b","Текст согласия (можно HTML: &lt;p&gt;, &lt;b&gt;)",9],["c","Подпись галочки",2],["k","Кнопка",1],["e","Сообщение, если галочка не отмечена",2]],ref:[["t","Заголовок экрана",1],["b","Основной текст",4],["f","Мелкий шрифт внизу",3],["m","Сообщение другу (&lt;ссылка&gt; заменится на личную ссылку водителя)",3]]};
+function getTxt(k,l){const st=CFG().txt[k]&&CFG().txt[k][l];if(st)return{v:st,src:"edit"};const d=(k==="rodo"?RD0:REF0)[l];return d?{v:d,src:"def"}:{v:{},src:"none"}}
+function setCfg(fn,msg){const c=CFG();fn(c);S.cfg={promo:c.promo,fee:c.fee,txt:c.txt};saveCfg(msg);drawW(true)}
+async function saveCfg(msg){if(!db)return;try{await db.doc("meta/cfg").set(JSON.parse(JSON.stringify(S.cfg)));$("st").textContent=msg||"Настройки сохранены"}catch(e){$("st").textContent="Ошибка сохранения: "+(e.code||e.message||e)}}
+const nf=(lb,g,k,hint)=>'<div class="fld"><label>'+lb+'</label><input class="num" data-g="'+g+'" data-k="'+k+'" inputmode="decimal" value="'+String(CFG()[g][k]).replace(".",",")+'"><div class="hint">'+hint+'</div></div>';
+function drawC(){const C=CFG(),P=C.promo,F=C.fee,on=promoOn(),sy=window.scrollY;
+const wopts=['<option value="">— сразу, ко всем неделям —</option>'].concat(Object.keys(S.wk).concat([cur]).filter((w,i,a)=>a.indexOf(w)===i).sort().reverse().map(w=>'<option value="'+w+'"'+(F.from===w?' selected':'')+'>'+dm(w)+' – '+dm(addD(w,6))+'</option>')).join("");
+const std=exI<F.thr?+F.low:(+F.base)+exI*(F.pct/100),sp=exC*(F.sp/100)+(+F.sa);
+let h='<div class="jump"><a href="#cf1">Акция</a><a href="#cf2">Формулы расчёта</a><a href="#cf3">Тексты</a></div>';
+h+='<h2 id="cf1">1. Акция «Пригласи друга»</h2><div class="sw"><button class="tg'+(on?' on':'')+'" id="tgp" aria-label="Акция"></button><div><b>Акция: '+(on?'включена':'завершена')+'</b><div class="hint">'+(offAsk?'<span class="bad">Завершить акцию? Новые бонусы за недели с этой даты не начисляются, уже начисленные и бесплатные недели остаются. Нажмите переключатель ещё раз для подтверждения.</span>':on?'Нажмите, чтобы завершить (спросим подтверждение). Можно включить снова.':'Нажмите, чтобы включить снова. Бонусы за период паузы не начисляются.')+'</div></div></div>';
+h+='<div class="gr">'+nf("Бонус приглашающему (zł)","promo","bonus","Сейчас 200")+nf("Положительных недель до бонуса","promo","weeks","Сейчас 3, не обязательно подряд")+nf("Минимальный заработок недели (zł)","promo","minEarn","Неделя считается, если заработок больше этой суммы. 0 = больше нуля")+nf("Срок личной ссылки (месяцев)","promo","linkMonths","Сейчас 6. Начнёт работать в приложении после соединения")+
+'<div class="fld"><label>Первая неделя без комиссии</label><select data-sg="promo" data-k="free"><option value="1"'+(P.free?' selected':'')+'>Да</option><option value="0"'+(!P.free?' selected':'')+'>Нет</option></select><div class="hint">Комиссия 0 в стартовой неделе водителя</div></div>'+
+'<div class="fld"><label>Акция действует с</label><input type="date" data-g="promo" data-k="from" value="'+(P.from||"")+'"><div class="hint">Пусто = без начала</div></div><div class="fld"><label>Акция действует по</label><input type="date" data-g="promo" data-k="to" value="'+(P.to||"")+'"><div class="hint">Пусто = без конца. Бонус считается по неделе, где набралась последняя положительная неделя друга</div></div></div>';
+if(P.pauses.length)h+='<div class="hint" style="margin-top:8px">Периоды паузы: '+P.pauses.map(x=>dm(x.from)+' – '+(x.to?dm(x.to):'сейчас')).join('; ')+'</div>';
+h+='<div class="note">Если изменить сумму бонуса или число недель, это затронет и бонусы в прошлых неделях, которые ещё считаются автоматически. Уже выгруженные файлы и распечатки не меняются.</div>';
+h+='<h2 id="cf2">2. Формулы расчёта комиссии</h2><div class="fld" style="max-width:420px"><label>Новые формулы действуют с недели</label><select data-fsel="1">'+wopts+'</select><div class="hint">Более ранние недели считаются по прежним значениям, их таблицы не изменятся'+(F.from&&F.old?'. Сейчас: с '+dm(F.from):'')+'</div></div>';
+h+='<b style="display:block;margin-top:12px">Тариф «Стандарт»</b><div class="gr">'+nf("Порог дохода (zł)","fee","thr","Ниже порога фиксированная комиссия. Сейчас 1500")+nf("Комиссия ниже порога (zł)","fee","low","Сейчас 90")+nf("Базовая часть (zł)","fee","base","Сейчас 50")+nf("Процент от дохода (%)","fee","pct","Сейчас 5")+'</div>';
+h+='<b style="display:block;margin-top:12px">Тариф «Особый»</b><div class="gr">'+nf("Процент от (наличные − на счёт) (%)","fee","sp","Сейчас 5")+nf("Плюс фиксированно (zł)","fee","sa","Сейчас 90")+'</div><div class="hint">Тариф «Фикс» задаётся у каждого водителя на вкладке «Водители».</div>';
+h+='<div class="ex"><b>Проверка:</b> доход <input class="exi" id="ex1" value="'+String(exI).replace(".",",")+'" style="width:90px"> zł → «Стандарт»: <b id="r1">'+f(r2(std))+'</b> zł. Наличные − на счёт <input class="exi" id="ex2" value="'+String(exC).replace(".",",")+'" style="width:90px"> zł → «Особый»: <b id="r2">'+f(r2(sp))+'</b> zł.</div>';
+h+='<div class="note">Порядок удержаний (Долг, Аренда, Долг ZUS, Выплата ZUS), перенос непокрытой суммы и правило «без положительного дохода комиссии нет» здесь не меняются.</div><button class="g" id="rstF">'+(rstAsk?'Точно сбросить на прежние значения?':'Вернуть формулы к исходным')+'</button>';
+h+='<h2 id="cf3">3. Тексты</h2><div class="hint">Выберите, какой текст править, и язык.</div><div class="row" style="margin-top:6px"><div><label>Какой текст</label><select id="txk"><option value="rodo"'+(txK==="rodo"?' selected':'')+'>Согласие на обработку данных (RODO)</option><option value="ref"'+(txK==="ref"?' selected':'')+'>Акция «Пригласи друга» (экран водителя)</option></select></div></div>';
+h+='<div class="lg">'+TXL.map(([l,n])=>{const g=getTxt(txK,l);return '<button class="'+(l===txL?'on':'')+(g.src==="none"?' e':'')+'" data-l="'+l+'" title="'+(g.src==="edit"?'изменён вами':g.src==="def"?'исходный текст':'текста нет, будет польский')+'">'+n+(g.src==="edit"?' ✎':g.src==="none"?' ∅':'')+'</button>'}).join("")+'</div>';
+const cur0=getTxt(txK,txL);
+h+=FLD[txK].map(([k,lb,rw])=>'<label>'+lb+'</label><textarea rows="'+rw+'" data-tf="'+k+'" dir="'+(txL==="ur"?'rtl':'auto')+'">'+esc((cur0.v&&cur0.v[k])||"")+'</textarea>').join("");
+if(txK==="rodo")h+='<div class="note">Если изменить текст согласия, водителям нужно подтвердить его заново. Это делается повышением версии согласия в приложении при соединении. Менять текст RODO стоит после юридической проверки.</div>';
+if(cur0.src==="none")h+='<div class="note">Для этого языка текста нет. В приложении будет показан польский (или английский для RODO), пока вы не впишете перевод.</div>';
+h+='<div class="row" style="margin-top:6px"><div><button id="txS">Сохранить текст</button><button class="g" id="txR">Вернуть исходный</button><button class="g" id="txD">Скачать файл всех текстов</button></div></div><div class="hint">Пока тексты хранятся в панели. В приложение водителя они попадают при соединении (через файл на странице администратора).</div>';
+$("cf").innerHTML=h;window.scrollTo(0,sy);
+$("tgp").onclick=()=>{if(on&&!offAsk){offAsk=true;drawC();return}offAsk=false;setCfg(c=>{const l=c.promo.pauses[c.promo.pauses.length-1];if(on)c.promo.pauses=c.promo.pauses.concat([{from:cur,to:""}]);else if(l)c.promo.pauses=c.promo.pauses.slice(0,-1).concat([{from:l.from,to:cur}])},on?"Акция завершена":"Акция включена");drawC()};
+$("cf").querySelectorAll("input.num,input[type=date]").forEach(i=>i.onchange=()=>{const g=i.dataset.g,k=i.dataset.k;if(i.type==="date"){setCfg(c=>{c[g][k]=i.value});return}const v=pn(i.value);if(isNaN(v)||v<0){drawC();return}
+setCfg(c=>{if(g==="fee"){if(!c.fee.old)c.fee.old=Object.fromEntries(Object.keys(DEF.fee).map(x=>[x,c.fee[x]]));if(!c.fee.from)c.fee.from=cur}c[g][k]=v});drawC()});
+$("cf").querySelectorAll("[data-sg]").forEach(i=>i.onchange=()=>setCfg(c=>{c.promo.free=i.value==="1"}));
+$("cf").querySelectorAll("[data-fsel]").forEach(i=>i.onchange=()=>{setCfg(c=>{if(!c.fee.old)c.fee.old=Object.fromEntries(Object.keys(DEF.fee).map(x=>[x,c.fee[x]]));c.fee.from=i.value});drawC()});
+const ex=()=>{exI=pn($("ex1").value)||0;exC=pn($("ex2").value)||0;const F2=CFG().fee;$("r1").textContent=f(r2(exI<F2.thr?+F2.low:(+F2.base)+exI*(F2.pct/100)));$("r2").textContent=f(r2(exC*(F2.sp/100)+(+F2.sa)))};$("ex1").oninput=ex;$("ex2").oninput=ex;
+$("rstF").onclick=()=>{if(!rstAsk){rstAsk=true;drawC();return}rstAsk=false;setCfg(c=>{c.fee=Object.assign({},DEF.fee)},"Формулы возвращены к исходным");drawC()};
+$("txk").onchange=()=>{txK=$("txk").value;drawC()};
+$("cf").querySelectorAll("[data-l]").forEach(b=>b.onclick=()=>{txL=b.dataset.l;drawC()});
+$("txS").onclick=()=>{const v={};$("cf").querySelectorAll("[data-tf]").forEach(t=>v[t.dataset.tf]=t.value);setCfg(c=>{c.txt[txK]=c.txt[txK]||{};c.txt[txK][txL]=v},"Текст сохранён: "+txL.toUpperCase());drawC()};
+$("txR").onclick=()=>{setCfg(c=>{if(c.txt[txK])delete c.txt[txK][txL]},"Возвращён исходный текст");drawC()};
+$("txD").onclick=async()=>{const out={};["rodo","ref"].forEach(k=>{out[k]={};TXL.forEach(([l])=>{const g=getTxt(k,l);if(g.src!=="none")out[k][l]=g.v})});try{const dl=await claude.use("downloads");await dl.save({filename:"teksty_"+new Date().toISOString().slice(0,10)+".json",data:JSON.stringify(out)});$("st").textContent="Файл текстов сохранён"}catch(e){$("st").textContent=e&&e.code==="declined"?"Сохранение отменено":"Не удалось сохранить файл"}}}
+function draw0(){if(!up){const ks=Object.keys(S.wk).sort(),l=ks[ks.length-1];if(l&&$("wk").value!==l){if(![...$("wk").options].some(o=>o.value===l)){const o=document.createElement("option");o.value=l;o.textContent=wl(l);$("wk").appendChild(o)}$("wk").value=l}if(l)up=true}markWeeks();drawW();autoCarry();if(!$("t2").classList.contains("hid"))drawI();if(!$("t3").classList.contains("hid"))drawD();if(!$("t4").classList.contains("hid"))drawR();if(!$("t5").classList.contains("hid")&&!$("cf").contains(document.activeElement))drawC();if(P)drawP()}
+/* несколько обновлений подряд (запись в базу вызывает их пачкой) сливаются в одну отрисовку */
+let drawT=0;const draw=()=>{clearTimeout(drawT);drawT=setTimeout(draw0,150)};
+window.onerror=m=>{$("st").textContent="Ошибка страницы: "+m};
+
+$("bkS").onclick=async()=>{const m=$("bkM");try{const dl=await claude.use("downloads");if(!dl){m.textContent="Сохранение файла здесь недоступно";return}
+const out={app:"alex-panel",v:1,created:new Date().toISOString(),drivers:S.dr||{},items:S.it||{},weeks:S.wk||{},al:S.al||{},cfg:S.cfg||{}};
+await dl.save({filename:"panel_kopiya_"+new Date().toISOString().slice(0,10)+".json",data:JSON.stringify(out)});
+m.textContent="Копия сохранена: водителей "+Object.keys(out.drivers).length+", записей "+Object.keys(out.items).length+", недель "+Object.keys(out.weeks).length+". Её можно добавить в общий архив на странице документов."}catch(e){m.textContent=e&&e.code==="declined"?"Сохранение отменено":"Не удалось сохранить: "+((e&&(e.message||e.code))||e)}};
+$("bkL").onclick=()=>$("bkF").click();
+$("bkF").onchange=async()=>{const f=$("bkF").files[0];$("bkF").value="";if(!f||!db)return;const m=$("bkM");let o;
+try{o=JSON.parse(await f.text());if(o.app!=="alex-panel")throw 0}catch(e){m.textContent="Это не файл копии панели.";return}
+const nd=Object.keys(o.drivers||{}).length,ni=Object.keys(o.items||{}).length,nw=Object.keys(o.weeks||{}).length;
+if(!confirm("Копия от "+new Date(o.created).toLocaleString("ru-RU")+"\nВодителей: "+nd+", записей: "+ni+", недель: "+nw+"\n\nЗаписать в панель поверх текущих данных? Одинаковые записи будут заменены, лишние не удалятся."))return;
+try{let n=0;const tot=nd+ni+nw+2;const put=async(path,d)=>{await db.doc(path).set(d);n++;if(n%10===0)m.textContent="Записано "+n+" из "+tot+"…"};
+holdUntil=Date.now()+60000;
+for(const k in o.drivers)await put("drivers/"+k,o.drivers[k]);
+for(const k in o.items)await put("items/"+k,o.items[k]);
+for(const k in o.weeks)await put("weeks/"+k,o.weeks[k]);
+await put("meta/al",{map:o.al||{}});await put("meta/cfg",o.cfg||{});
+holdUntil=0;m.textContent="Готово: записано "+n+" документов."}catch(e){holdUntil=0;m.textContent="Ошибка записи: "+(e.code||e.message||e)}};
+
+/* вкладка «Документы»: страница документов во встроенном окне, вход общий */
+const _tab=tab;
+tab=function(n){$("t6").classList.add("hid");$("b6").classList.remove("on");_tab(n)};
+function openDocs(after){[1,2,3,4,5].forEach(i=>{$("t"+i).classList.add("hid");$("b"+i).classList.remove("on")});
+  if(!$("t6").firstChild){const f=document.createElement("iframe");f.id="docf";f.src="dokumenty.html?embed=1";f.onload=()=>{if(after)after(f)};$("t6").appendChild(f);after=after}
+  else if(after)after($("docf"));
+  $("t6").classList.remove("hid");$("b6").classList.add("on")}
+$("b6").onclick=()=>openDocs();
+const inDocs=id=>openDocs(f=>{const t=setInterval(()=>{try{const e=f.contentDocument.getElementById(id);if(e&&!e.closest(".hidden")){clearInterval(t);e.click()}}catch(x){clearInterval(t)}},300);setTimeout(()=>clearInterval(t),15000)});
+$("lgB").onclick=async()=>{$("lgB").disabled=true;$("lgM").textContent="";const{error}=await sb.auth.signInWithPassword({email:$("lgE").value.trim().toLowerCase(),password:$("lgP").value});$("lgB").disabled=false;if(error){$("lgM").textContent="Не удалось войти: "+error.message;return}authInit()};
+$("tbOut").onclick=async()=>{await sb.auth.signOut();location.reload()};
+$("tbBk").onclick=()=>inDocs("bkBtn");$("tbRs").onclick=()=>inDocs("rsBtn");
+authInit();
+(async()=>{try{db=await claude.use("db")}catch(e){$("st").textContent="Хранилище не подключено: "+(e.message||e);return}
+if(!db){$("st").textContent="Хранилище недоступно: откройте страницу из своего аккаунта Claude.";return}
+const sub=(c,t)=>db.collection(c).onSnapshot(s=>{if(t==="wk"&&(pend>0||Date.now()<holdUntil))return;S[t]={};s.docs.forEach(d=>S[t][d.id]=JSON.parse(JSON.stringify(d.data())));if(t==="wk"){for(const x in known)delete known[x];Object.keys(S.wk).forEach(x=>known[x]=1)}draw()},e=>{$("st").textContent="Ошибка чтения: "+e.code});
+$("st").textContent="Хранилище подключено";sub("drivers","dr");sub("items","it");sub("weeks","wk");
+db.doc("meta/al").onSnapshot(s=>{S.al=(s.exists&&s.data().map)||{};draw()},()=>{});
+db.doc("meta/cfg").onSnapshot(s=>{S.cfg=(s.exists&&s.data())||{};draw()},()=>{});
+})();
+</script>
+</body>
+</html>
