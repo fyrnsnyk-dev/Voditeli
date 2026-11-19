@@ -639,13 +639,13 @@ $('bkFile').onchange = async () => {
         if (error) throw new Error(t + ': ' + error.message + (/admin_restore/.test(error.message) ? ' — сначала запустите supabase_shag10_kopiya.sql' : ''));
       }
     }
-    let up = 0, bad = 0;
+    let up = 0, bad = 0, firstErr = '';
     for (const n of photoPaths) {
       msg('bkRMsg', `Фото: ${up + bad + 1} / ${photoPaths.length}…`);
       const path = n.slice(7), ext = (path.split('.').pop() || '').toLowerCase();
       const blob = await zip.files[n].async('blob');
       const { error } = await sb.storage.from(BUCKET).upload(path, blob, { upsert: true, contentType: ext === 'pdf' ? 'application/pdf' : ext === 'png' ? 'image/png' : 'image/jpeg' });
-      if (error) bad++; else up++;
+      if (error) { bad++; if (!firstErr) firstErr = path + ': ' + (error.message || error.error || JSON.stringify(error)) + (error.statusCode ? ' (' + error.statusCode + ')' : ''); } else up++;
     }
     let extra = '';
     if (zip.file('panel.json')) {
@@ -653,7 +653,7 @@ $('bkFile').onchange = async () => {
       const a = document.createElement('a'); a.href = URL.createObjectURL(pb); a.download = 'panel_kopiya_iz_arhiva.json'; a.click();
       extra = ' Файл копии панели скачан (panel_kopiya_iz_arhiva.json): загрузите его в панели кнопкой «Восстановить панель из копии».';
     }
-    msg('bkRMsg', `Готово. Таблицы записаны, фото ${up}` + (bad ? `, <b>не записалось ${bad}</b>` : '') + '.' + extra, bad ? 'bad' : 'ok');
+    msg('bkRMsg', `Готово. Таблицы записаны, фото ${up}` + (bad ? `, <b>не записалось ${bad}</b>. Первая ошибка: ${esc(firstErr)}` : '') + '.' + extra, bad ? 'bad' : 'ok');
     load();
   } catch (e) { msg('bkRMsg', 'Ошибка: ' + esc(e.message || e), 'bad'); }
   $('bkFile').disabled = false; $('bkFile').value = '';
