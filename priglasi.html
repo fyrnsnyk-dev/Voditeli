@@ -73,15 +73,15 @@ function promoText(cfg,link){const P=Object.assign({bonus:200,weeks:3},(cfg&&cfg
  return{t:pick("t","rt"),b:pick("b","rb"),f:pick("f","rf"),m:pick("m","rm")}}
 const nl=s=>esc(s).replace(/\n/g,"<br>");
 
-let sb=null,cfg=null,code="",rows=[],link="";
+let sb=null,cfg=null,code="",rows=[],link="",msg="";
 function stat(r){if(r.status==="cancelled")return t("stC");if(r.status==="needs_review")return t("stR");if(r.bonus_paid||(+r.weeks_done>=+r.weeks_need&&r.weeks_need>0))return t("stB",{bonus:r.bonus||(cfg.promo&&cfg.promo.bonus)||200});if(+r.weeks_done>0)return t("stW",{n:r.weeks_done,need:r.weeks_need});return t("stI")}
 function render(){document.documentElement.dir=lg==="ur"?"rtl":"ltr";$("bk").textContent="‹ "+t("back");
  if(!cfg)return;const P=promoText(cfg,link);$("tt").textContent=P.t;$("bd").innerHTML=nl(P.b);$("ft").textContent=P.f;$("yl").textContent=t("yl");$("lk").textContent=link;
  $("cp").textContent=t("copy");$("sh").textContent=t("share");$("fr").textContent=t("fr");
- const msg=P.m.indexOf(link)>=0?P.m:P.m+" "+link;$("wa").href="https://wa.me/?text="+encodeURIComponent(msg);$("sm").href="sms:?&body="+encodeURIComponent(msg);$("tg").href="https://t.me/share/url?url="+encodeURIComponent(link)+"&text="+encodeURIComponent(P.m.split(link).join("").trim());
+ msg=P.m.indexOf(link)>=0?P.m:P.m+" "+link;$("wa").href="https://wa.me/?text="+encodeURIComponent(msg);$("sm").href="sms:?&body="+encodeURIComponent(msg);$("tg").href="https://t.me/share/url?url="+encodeURIComponent(link)+"&text="+encodeURIComponent(P.m.split(link).join("").trim());
  $("ls").innerHTML=rows.length?rows.map(r=>'<div class="li"><b>'+esc(r.invitee_name)+'</b><span>'+esc(stat(r))+'</span></div>').join(""):'<p class="mut">'+esc(t("none"))+'</p>';
- $("cp").onclick=async()=>{try{await navigator.clipboard.writeText(link)}catch(e){const i=document.createElement("input");i.value=link;document.body.appendChild(i);i.select();document.execCommand("copy");i.remove()}$("cp").textContent=t("copied");setTimeout(()=>$("cp").textContent=t("copy"),1500)};
- $("sh").onclick=async()=>{try{if(navigator.share){await navigator.share({title:P.t,text:P.m.split(link).join("").trim(),url:link})}else{$("cp").click()}}catch(e){}}}
+ $("cp").onclick=async()=>{try{await navigator.clipboard.writeText(msg)}catch(e){const i=document.createElement("input");i.value=msg;document.body.appendChild(i);i.select();document.execCommand("copy");i.remove()}$("cp").textContent=t("copied");setTimeout(()=>$("cp").textContent=t("copy"),1500)};
+ $("sh").onclick=async()=>{try{if(navigator.share){await navigator.share({text:msg})}else{$("cp").click()}}catch(e){}}}
 (async()=>{setLang(lg);fillLang();$("bk").textContent="‹ "+t("back");
  if(!window.supabase){$("st").textContent=t("err");return}
  sb=window.supabase.createClient(SU,SK);
