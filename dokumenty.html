@@ -400,7 +400,7 @@ function card(r) {
   const sim = similar(r);
   if (sim.length) tags.push(`<span class="tag bad">Похожий документ: ${sim.map(o => esc(driverName(o.drivers)) + ' ' + esc(o.invoice_date)).join('; ')}</span>`);
   const st = { pending: '<span class="tag warn">на проверке</span>', accepted: '<span class="tag ok">принят</span>', rejected: '<span class="tag bad">отклонён</span>' }[r.status] || '';
-  const dAt = r.status === 'accepted' ? (r.accepted_at ? `<span class="amt" style="color:var(--ok)" title="Дата и время принятия (Варшава)">принят ${fmtDT(r.accepted_at)}</span>` : '<span class="muted">дата принятия не записана</span>') : r.status === 'rejected' && r.rejected_at ? `<span class="amt" title="Дата и время отклонения (Варшава)">отклонён ${fmtDT(r.rejected_at)}</span>` : '';
+  const dAt = r.status === 'accepted' ? (r.accepted_at ? `<span class="amt" style="color:var(--ok)" title="Дата и время принятия (Варшава)">принят ${fmtDT(r.accepted_at)}</span>` : '<span class="muted">дата принятия не записана</span>') : r.status === 'rejected' && r.rejected_at ? `<span class="amt" style="color:var(--bad)" title="Дата и время отклонения (Варшава)">отклонён ${fmtDT(r.rejected_at)}</span>` : '';
   const rej = r.status === 'rejected' && r.reject_reason ? `<div class="muted">Причина: ${esc(REASON_RU[r.reject_reason] || r.reject_reason)}</div>` : '';
   const actions = r.status === 'pending' ? `
       <input class="amtEdit" type="text" inputmode="decimal" value="${money(r.gross_amount)}" title="Сумму можно исправить перед приёмом">
