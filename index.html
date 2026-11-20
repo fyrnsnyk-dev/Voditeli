@@ -122,7 +122,7 @@ body{margin:0}
 
   <main id="app" class="stack" hidden>
     <div class="top"><div class="av" id="av"></div><div class="t"><span class="mut small" id="hi"></span><b id="who"></b></div><button class="ghost" id="out" data-i="logout"></button></div>
-    <div class="tabs"><button id="tS" aria-pressed="true" data-i="tabStat"></button><button id="tI" aria-pressed="false" data-i="tabInv"></button></div>
+    <div class="tabs"><button id="tS" aria-pressed="true" data-i="tabStat"></button><button id="tI" aria-pressed="false" data-i="tabInv"></button><button id="tR" aria-pressed="false" data-i="tabRef"></button></div>
     <div id="content" class="stack">
       <div class="wk"><button class="arrow" id="prev"></button><div class="mid"><b id="wl"></b><span class="mut small" id="pub"></span></div><button class="arrow" id="next"></button></div>
       <div class="hero" id="hero"></div>
@@ -193,6 +193,9 @@ const SU="https://qehwfuwpcphqixukjbtz.supabase.co",SK="sb_publishable_U8NLOMPpk
 const VER="v14";
 window.addEventListener("error",e=>{const m=document.getElementById("msg");if(m)m.textContent="JS error "+VER+": "+(e.message||"")});
 if(typeof supabase==="undefined"){document.addEventListener("DOMContentLoaded",()=>{const m=document.getElementById("msg");if(m)m.textContent="Library not loaded ("+VER+"): cdn.jsdelivr.net blocked or offline"})}
+/* вкладка «Пригласить друга» (страница priglasi.html) */
+const TR={ru:"Пригласить",uk:"Запросити",be:"Запрасіць",pl:"Zaproś",en:"Invite",ka:"მოწვევა",hi:"दोस्त बुलाएँ",pa:"ਸੱਦਾ",ur:"مدعو کریں"};
+for(const k in TR)if(L[k])L[k].tabRef=TR[k];
 const SB=supabase.createClient(SU,SK);
 const $=id=>document.getElementById(id);
 const fm=n=>new Intl.NumberFormat("pl-PL",{minimumFractionDigits:2,maximumFractionDigits:2}).format(Math.round((+n||0)*100)/100);
@@ -238,7 +241,7 @@ $("full").innerHTML='<table><tr><th></th><th>zł</th></tr>'+R(T("gross"),fm(c.g)
 
 let tab="s";
 function setTab(t){tab=t;$("tS").setAttribute("aria-pressed",t==="s");$("tI").setAttribute("aria-pressed",t==="i");draw()}
-$("tS").onclick=()=>setTab("s");$("tI").onclick=()=>{location.href="faktury.html"};
+$("tS").onclick=()=>setTab("s");$("tI").onclick=()=>{location.href="faktury.html"};$("tR").onclick=()=>{location.href="priglasi.html"};
 const nowM=()=>{const d=new Date();return d.getFullYear()+"-"+p2(d.getMonth()+1)};
 $("im").value=nowM();
 const imsg=(t,bad)=>{$("imsg").textContent=t||"";$("imsg").className="small msgb "+(bad?"neg":"pos")};

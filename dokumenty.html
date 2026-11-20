@@ -4,9 +4,14 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Панель владельца — документы</title>
+<script>if(/[?&](embed=1|theme=dark)/.test(location.search))document.documentElement.classList.add('dark')</script>
 <style>
   :root { --bg:#f4f5f7; --card:#fff; --text:#1d2129; --muted:#6b7280; --accent:#1f6feb;
           --ok:#1a7f37; --warn:#b26b00; --bad:#c62828; --line:#e3e6ea; --info:#eef2f7; }
+  :root.dark { --bg:#0e1117; --card:#171c26; --text:#e6e9ef; --muted:#99a3b6; --accent:#7fa6e8;
+          --ok:#5fcf8b; --warn:#f0a050; --bad:#ff8a80; --line:#2a3140; --info:#1d2432; color-scheme:dark; }
+  :root.dark input, :root.dark select, :root.dark textarea { background:#0e1117; color:var(--text); border-color:var(--line); }
+  :root.dark dialog { background:var(--card); color:var(--text); border-color:var(--line)!important; }
   * { box-sizing:border-box; }
   body { margin:0; background:var(--bg); color:var(--text); font:15px/1.4 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif; }
   header { position:sticky; top:0; z-index:5; background:var(--card); border-bottom:1px solid var(--line); padding:10px 16px; }
@@ -181,7 +186,7 @@
   <div style="margin-top:12px;text-align:right"><button class="btn ghost" id="bkClose">Закрыть</button></div>
 </dialog>
 <dialog id="rsDlg" style="max-width:560px;width:92%;border:1px solid #d5d9e0;border-radius:12px;padding:18px">
-  <h2 style="margin:0 0 6px;font-size:18px">Восстановление базы <span class="muted" style="font-size:12px;font-weight:400">(версия 19.11-4)</span></h2>
+  <h2 style="margin:0 0 6px;font-size:18px">Восстановление базы <span class="muted" style="font-size:12px;font-weight:400">(версия 20.11-1)</span></h2>
   <div class="muted" style="margin-bottom:8px">Выберите ZIP-файл копии. Данные из копии записываются в базу поверх текущих (одинаковые записи заменяются, лишние не удаляются). Перед подтверждением вы увидите дату копии и количество записей.</div>
   <input id="bkFile" type="file" accept=".zip,application/zip">
   <div id="bkRMsg" style="margin-top:8px"></div>
@@ -236,6 +241,7 @@ $('loginBtn').onclick = async () => {
   if (error) return msg('loginMsg', 'Не удалось войти: ' + esc(error.message), 'bad');
   init();
 };
+if (/[?&](embed=1|theme=dark)/.test(location.search)) document.documentElement.classList.add('dark');
 if (/[?&]embed=1/.test(location.search)) { const lo = document.getElementById('logout'); if (lo) lo.style.display = 'none'; }
 $('logout').onclick = async () => { await sb.auth.signOut(); location.reload(); };
 
@@ -567,7 +573,7 @@ function monthLabel(ym) { const [y, m] = ym.split('-'); return ['январь','
 let pkgNew = [], pkgOld = [], pkgSel = '';
 
 // ---------- копия и восстановление базы ----------
-const BK_TABLES = ['drivers', 'statements', 'invoices', 'ksef_invoices', 'ksef_sync_log', 'panel_docs'];   // порядок важен: сначала водители
+const BK_TABLES = ['drivers', 'statements', 'invoices', 'ksef_invoices', 'ksef_sync_log', 'panel_docs', 'referrals'];   // порядок важен: сначала водители
 const isMobileDev = () => /iPhone|iPad|iPod|Android|Mobile/i.test(navigator.userAgent) || (window.matchMedia && matchMedia('(pointer:coarse)').matches && innerWidth < 900);
 $('bkBtn').onclick = () => {
   const mob = isMobileDev();
@@ -591,7 +597,7 @@ $('bkRun').onclick = async () => {
     for (const t of BK_TABLES) {
       msg('bkMsg', 'Читаем таблицу «' + t + '»…');
       const r = await pageAll(() => t === 'panel_docs' ? sb.from(t).select('*').order('coll').order('id') : sb.from(t).select('*').order(t === 'ksef_invoices' ? 'ksef_number' : 'id'));
-      if (r.error) { if (t.startsWith('ksef') || t === 'panel_docs') { data[t] = []; continue; } throw new Error(t + ': ' + r.error.message); }
+      if (r.error) { if (t.startsWith('ksef') || t === 'panel_docs' || t === 'referrals') { data[t] = []; continue; } throw new Error(t + ': ' + r.error.message); }
       data[t] = r.data;
     }
     const zip = new JSZip();

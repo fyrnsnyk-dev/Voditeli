@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="ru">
+<html lang="ru" data-theme="dark">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
@@ -51,6 +51,15 @@ main{padding:0}#t1{display:block!important}
 .cfg .ex{background:var(--card);border-radius:8px;padding:8px 12px;margin-top:8px}.cfg textarea{min-height:90px}.cfg .lg{display:flex;gap:6px;flex-wrap:wrap;margin:8px 0}.cfg .lg button{margin:0;padding:5px 10px}.cfg .lg button.on{background:var(--ac);color:var(--acf)}.cfg .lg button.e{opacity:.55}
 .rvt .ok{color:var(--ok);font-weight:600}.rvt .wa{color:var(--warn);font-weight:600}
 
+:root{--bg:#0e1117;--fg:#e6e9ef;--mut:#99a3b6;--bd:#2a3140;--ac:#7fa6e8;--acf:#0e1117;--card:#171c26;--ok:#5fcf8b;--warn:#f0a050;--bad:#ff8a80;color-scheme:dark}
+nav{gap:2px;border-bottom:1px solid var(--bd);margin-bottom:14px;overflow-x:auto;flex-wrap:nowrap}
+nav button{background:transparent;color:var(--mut);border:0;border-bottom:3px solid transparent;border-radius:8px 8px 0 0;padding:10px 16px;margin:0;white-space:nowrap}
+nav button:hover{color:var(--fg);background:var(--card)}
+nav button.on{background:var(--card);color:var(--fg);border-bottom-color:var(--ac)}
+#tools{margin-top:34px;border:1px dashed var(--bd);background:transparent}
+#tools .row{margin:6px 0}
+@media print{#tools{display:none!important}}
+
 #loginBox{max-width:360px;margin:60px auto;padding:20px;background:var(--card);border-radius:10px}
 #loginBox input{width:100%;margin-bottom:6px}
 #topbar{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin:0 0 6px}
@@ -67,10 +76,9 @@ main{padding:0}#t1{display:block!important}
 </section>
 <main id="appMain" class="hid">
 <h1>Панель владельца парка</h1>
-<div id="topbar"><button class="g" id="tbBk">💾 Копия базы</button><button class="g" id="tbRs">♻ Восстановление базы</button><button class="g" id="tbOut">Выйти</button></div>
+
 <nav><button id="b1" class="on">Неделя</button><button id="b2">Долги и планы</button><button id="b3">Водители</button><button id="b4">Приглашения</button><button id="b5">Настройки</button><button id="b6">Документы</button></nav>
 <p id="st" class="mut"></p>
-<div class="row" style="margin-bottom:8px"><button class="g" id="bkS">💾 Копия панели (всё время)</button><button class="g" id="bkL">♻ Восстановить панель из копии</button><input type="file" id="bkF" accept=".json,application/json" style="display:none"><span id="bkM" class="mut"></span></div>
 
 <section id="t1">
 <div class="row"><div><label for="wk">Неделя</label><select id="wk"></select></div><button class="g" id="wp">← Раньше</button><button class="g" id="wn">Позже →</button><span class="mut">● — за эту неделю есть данные. Выбранная неделя запоминается.</span></div>
@@ -120,6 +128,8 @@ main{padding:0}#t1{display:block!important}
 <section id="t6" class="hid"></section>
 <section id="t3" class="hid"><div class="card"><div class="row"><div><label for="nd">Новый водитель вручную</label><input id="nd" placeholder="Имя и фамилия"></div></div><button id="ndb">Добавить водителя</button> <span id="ndm" class="mut"></span></div><div id="dl"></div>
 <div class="card"><b>Что значит каждое поле</b><ul class="mut" style="margin:6px 0 0;padding-left:18px"><li><b>Водитель</b>: имя. Можно поправить, изменение сохраняется сразу.</li><li><b>Тариф</b>: от него считается комиссия парка. «Стандарт», «Фикс», «Особый» (подробности в подписи над таблицей).</li><li><b>Фикс. сумма</b>: нужна только для тарифа «Фикс», это комиссия за неделю.</li><li><b>Телефон</b>: номер для входа водителя в приложение, формат +48123456789. Без телефона водителю нельзя опубликовать неделю. У каждого водителя свой номер.</li><li><b>Остатки ZUS</b>: отметка получателя остатков ZUS. В печатной таблице у него «Выплата ZUS» выводится со знаком плюс, и в неделе без сумм его строка не печатается. Ставится одному человеку.</li><li><b>Объединить</b>: если один водитель записан дважды (разное написание имени), выберите, с кем объединить. Все данные перейдут второму, первый удалится.</li></ul></div></section>
+<div id="tools" class="card"><b>Служебное</b> <span class="mut">(временные кнопки, потом будут убраны)</span><div class="row"><button class="g" id="tbBk">💾 Копия базы</button><button class="g" id="tbRs">♻ Восстановление базы</button><button class="g" id="tbOut">Выйти</button></div><div class="row"><button class="g" id="bkS">💾 Копия панели (всё время)</button><button class="g" id="bkL">♻ Восстановить панель из копии</button><input type="file" id="bkF" accept=".json,application/json" style="display:none"><span id="bkM" class="mut"></span></div>
+</div>
 </main>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script>
@@ -405,7 +415,7 @@ if(I.w3){if(promoWeekOk(I.w3))return{I,st:"Бонус +"+f(+C.bonus)+" zł в н
 if(I.paused)return{I,st:"Пауза · неделя "+(I.n+1>I.N?I.N:I.n)+" из "+I.N,cl:"wa"};
 if(!I.n)return{I,st:"Ждёт первую неделю с заработком",cl:"mut"};
 return{I,st:"Работает · неделя "+I.n+" из "+I.N,cl:""}}
-function drawR(){const C=CFG().promo,on=promoOn();
+function drawR0(){const C=CFG().promo,on=promoOn();
 const L=Object.entries(S.dr).filter(([k,d])=>d.invitedBy||d.refStart).sort((a,b)=>dispName(a[1].name).localeCompare(dispName(b[1].name)));
 let h='<div class="card"><b>Акция «Пригласи друга»: '+(on?'<span class="ok">включена</span>':'<span class="bad">завершена</span>')+'</b><br><span class="mut">Бонус '+f(+C.bonus)+' zł, положительных недель нужно: '+(+C.weeks||3)+', первая неделя без комиссии: '+(C.free?"да":"нет")+'. Условия меняются на вкладке «Настройки».</span></div>';
 if(!L.length)h+='<p class="mut">Пока никого нет. На вкладке «Водители» у новичка выберите, кто его пригласил, и стартовую неделю. Здесь появится счётчик недель и бонус.</p>';
@@ -480,6 +490,75 @@ for(const k in o.items)await put("items/"+k,o.items[k]);
 for(const k in o.weeks)await put("weeks/"+k,o.weeks[k]);
 await put("meta/al",{map:o.al||{}});await put("meta/cfg",o.cfg||{});
 holdUntil=0;m.textContent="Готово: записано "+n+" документов."}catch(e){holdUntil=0;m.textContent="Ошибка записи: "+(e.code||e.message||e)}};
+/* ===== Приглашения по ссылке: автозапись из Supabase (таблица referrals), статусы, ручная правка ===== */
+let REFS=[],REFD={},refAt=0,refBusy=false,cnAsk="";
+const ph9=s=>String(s||"").replace(/\D/g,"").slice(-9);
+async function loadRefs(force){if(!sb)return;if(!force&&Date.now()-refAt<20000)return;
+ const [a,b]=await Promise.all([sb.from("referrals").select("*").order("created_at",{ascending:false}),sb.from("drivers").select("id,name,phone")]);
+ if(a.error||b.error)throw(a.error||b.error);REFS=a.data||[];REFD={};(b.data||[]).forEach(d=>REFD[d.id]=d);refAt=Date.now()}
+const pkByPhone=p=>{const q=ph9(p);if(!q)return"";return Object.keys(S.dr).find(k=>ph9(S.dr[k].phone)===q)||""};
+const pkOfRef=r=>Object.keys(S.dr).find(k=>S.dr[k].refId===r.id)||pkByPhone(r.phone);
+const pkOfInv=r=>{const d=REFD[r.inviter_id];return d?pkByPhone(d.phone):""};
+const monOf=iso=>mon(String(iso).slice(0,10));
+/* первая неделя с доходом начиная с недели приглашения (для ручного «Засчитать» уже работавшего водителя) */
+function sugFrom(pk,from){const ws=Object.keys(S.wk).filter(w=>w>=from&&S.wk[w].rows&&S.wk[w].rows[pk]).sort();for(const w of ws){let g=0;PL.forEach(p=>{if(S.wk[w].rows[pk][p])g+=S.wk[w].rows[pk][p].g});if(g>0)return w}return""}
+async function updRef(id,patch){const r=await sb.from("referrals").update(patch).eq("id",id);if(r.error)throw r.error}
+async function syncRefs(){if(refBusy||!sb||!db)return;refBusy=true;
+ try{await loadRefs(true);
+  for(const r of REFS){if(r.status!=="invited")continue;const pk=pkOfRef(r),ik=pkOfInv(r);if(!pk||!ik)continue;const d=S.dr[pk];
+   if(d.invitedBy||d.refStart){await (d.invitedBy===ik?updRef(r.id,{status:"accepted",note:null}):updRef(r.id,{status:"needs_review",note:"У водителя уже указан другой пригласивший."}));continue}
+   const sg=sugStart(pk);if(!sg)continue;
+   if(sg<monOf(r.created_at)){await updRef(r.id,{status:"needs_review",note:"Водитель работал раньше приглашения (первая неделя с доходом: "+dm(sg)+")."});continue}
+   await db.doc("drivers/"+pk).update({invitedBy:ik,refStart:sg,refId:r.id});await updRef(r.id,{status:"accepted",note:null})}
+  const C=CFG().promo;
+  for(const r of REFS.filter(x=>x.status==="accepted"||x.status==="invited")){const pk=pkOfRef(r);if(!pk||!S.dr[pk]||!S.dr[pk].refStart)continue;
+   const I=refInfo(pk),p={weeks_done:I.n,weeks_need:I.N,bonus:+C.bonus||0,bonus_paid:!!I.w3&&!S.dr[pk].bonusCancel};
+   if(Object.keys(p).some(k=>String(r[k])!==String(p[k])))await updRef(r.id,p)}
+  await loadRefs(true)}catch(e){}finally{refBusy=false}}
+function refSt(r){const pk=pkOfRef(r);
+ if(r.status==="cancelled")return['<span class="mut">Отменено</span>',pk];
+ if(r.status==="needs_review")return['<span class="wa">Нужно решение: '+esc(r.note||"")+'</span>',pk];
+ if(!pk)return['<span class="wa">Водитель ещё не найден в панели</span> <span class="mut">(телефон +'+ph9(r.phone)+' не указан ни у одного водителя панели)</span>',pk];
+ const d=S.dr[pk];if(r.status==="accepted"&&d.refStart){const I=refInfo(pk);return[I.w3?'<span class="ok">Бонус: набрано '+I.N+' из '+I.N+', неделя '+dm(I.w3)+(d.bonusCancel?' (бонус отменён)':'')+'</span>':'<span class="ok">Работает: '+I.n+' из '+I.N+' недель</span>',pk]}
+ return['Ждём первую неделю с доходом',pk]}
+function fillRef(box){if(!box)return;
+ const pks=Object.entries(S.dr).sort((a,b)=>dispName(a[1].name).localeCompare(dispName(b[1].name)));
+ const opt=sel=>'<option value="">—</option>'+pks.map(([k,d])=>'<option value="'+esc(k)+'"'+(k===sel?" selected":"")+'>'+esc(dispName(d.name))+'</option>').join("");
+ const act=REFS.filter(r=>r.status!=="cancelled"),can=REFS.filter(r=>r.status==="cancelled");
+ let h='<div class="card"><b>Приглашения по ссылке</b><br><span class="mut">Друг регистрируется по ссылке водителя, и приглашение появляется здесь само. Стартовая неделя ставится автоматически по первой неделе с доходом. Телефон водителя в панели (вкладка «Водители») должен совпадать с номером, который друг ввёл при регистрации. Вход в приложение по SMS открывается, когда вы нажмёте «Подключить к приложению» (или опубликуете водителю неделю).</span></div>';
+ if(!REFS.length)h+='<p class="mut">Приглашений по ссылке пока нет.</p>';
+ else{h+='<div class="tw"><table class="rvt"><tr><th>Приглашённый</th><th>Пригласил</th><th>Дата</th><th>Статус</th><th></th></tr>';
+  act.concat(can).forEach(r=>{const[st,pk]=refSt(r),inv=REFD[r.inviter_id],ik=pkOfInv(r);
+   const conn=Object.values(REFD).some(d=>ph9(d.phone)===ph9(r.phone));
+   h+='<tr><td>'+esc(r.invitee_name)+'<br><span class="mut">'+esc(r.phone)+'</span></td><td>'+(inv?esc(inv.name):'—')+(inv&&!ik&&r.status!=="cancelled"?'<br><span class="wa">не найден в панели</span>':'')+'</td><td>'+esc(String(r.created_at).slice(8,10)+"."+String(r.created_at).slice(5,7))+'</td><td>'+st+(conn&&r.status!=="cancelled"?' <span class="mut">· подключён к приложению</span>':'')+'</td><td>';
+   if(r.status!=="cancelled"){
+    if(!pk)h+='<select data-lk="'+esc(r.id)+'">'+opt("")+'</select> <button class="g" data-lkb="'+esc(r.id)+'">Привязать</button> ';
+    if(r.status==="needs_review"&&pk&&ik)h+='<button class="g" data-acc="'+esc(r.id)+'">Засчитать</button> ';
+    if(!conn)h+='<button class="g" data-conn="'+esc(r.id)+'">Подключить к приложению</button> ';
+    h+='<button class="g" data-cn="'+esc(r.id)+'">'+(cnAsk===r.id?"Нажмите ещё раз":"Отменить")+'</button>'}
+   h+='</td></tr>'});
+  h+='</table></div>'}
+ h+='<div class="card" style="margin-top:12px"><b>Добавить приглашение вручную</b> <span class="mut">(друг пришёл без ссылки)</span><div class="row"><div><label>Приглашённый</label><select id="mi">'+opt("")+'</select></div><div><label>Кто пригласил</label><select id="mn">'+opt("")+'</select></div></div><button id="mb">Записать</button> <span class="mut">Стартовая неделя — первая неделя с доходом; можно поправить кнопкой ниже.</span></div><h2>Приглашённые водители в расчёте</h2>';
+ box.innerHTML=h;
+ const say=m=>{$("st").textContent=m};
+ box.querySelectorAll("[data-lkb]").forEach(b=>b.onclick=async()=>{const id=b.dataset.lkb,k=box.querySelector('[data-lk="'+id+'"]').value,r=REFS.find(x=>x.id===id);if(!k||!r)return;
+  try{const p={refId:id};if(!S.dr[k].phone)p.phone=r.phone;await db.doc("drivers/"+k).update(p);say("Привязано");await syncRefs();fillRef(box)}catch(e){say("Ошибка: "+(e.message||e))}});
+ box.querySelectorAll("[data-acc]").forEach(b=>b.onclick=async()=>{const r=REFS.find(x=>x.id===b.dataset.acc),pk=pkOfRef(r),ik=pkOfInv(r),sg=sugFrom(pk,monOf(r.created_at));
+  if(!sg){say("У этого водителя нет недели с доходом после приглашения");return}
+  try{await db.doc("drivers/"+pk).update({invitedBy:ik,refStart:sg,refId:r.id});await updRef(r.id,{status:"accepted",note:null});say("Засчитано, старт "+dm(sg));await syncRefs();fillRef(box)}catch(e){say("Ошибка: "+(e.message||e))}});
+ box.querySelectorAll("[data-conn]").forEach(b=>b.onclick=async()=>{const r=REFS.find(x=>x.id===b.dataset.conn);if(!r)return;
+  try{const x=await sb.from("drivers").insert({name:r.invitee_name,phone:r.phone});if(x.error)throw x.error;say("Подключён: теперь он может войти в приложение по SMS");await loadRefs(true);fillRef(box)}catch(e){say("Ошибка: "+(e.message||e))}});
+ box.querySelectorAll("[data-cn]").forEach(b=>b.onclick=async()=>{const id=b.dataset.cn;if(cnAsk!==id){cnAsk=id;fillRef(box);return}cnAsk="";const r=REFS.find(x=>x.id===id),pk=pkOfRef(r);
+  try{await updRef(id,{status:"cancelled"});if(pk&&S.dr[pk]&&S.dr[pk].refId===id)await db.doc("drivers/"+pk).update({invitedBy:"",refStart:"",refId:""});say("Приглашение отменено");await loadRefs(true);fillRef(box)}catch(e){say("Ошибка: "+(e.message||e))}});
+ const mb=box.querySelector("#mb");if(mb)mb.onclick=async()=>{const a=box.querySelector("#mi").value,i=box.querySelector("#mn").value;
+  if(!a||!i||a===i){say("Выберите двух разных водителей");return}
+  try{await db.doc("drivers/"+a).update({invitedBy:i,refStart:sugStart(a)||""});say("Записано"+(sugStart(a)?"":": у водителя ещё нет недели с доходом, старт поставьте позже"));drawR()}catch(e){say("Ошибка: "+(e.message||e))}}}
+const drawR1=drawR0;
+drawR=function(){drawR1();const box=document.createElement("div");box.id="rv2";$("rv").prepend(box);fillRef(box);
+ loadRefs().then(()=>fillRef(document.getElementById("rv2"))).catch(()=>{});
+ syncRefs().then(()=>{const b=document.getElementById("rv2");if(b&&!$("t4").classList.contains("hid"))fillRef(b)})};
+setInterval(()=>{if(!document.hidden&&db)syncRefs().then(()=>{const b=document.getElementById("rv2");if(b&&!$("t4").classList.contains("hid"))fillRef(b)})},60000);
+setTimeout(()=>{if(db)syncRefs()},4000);
 
 /* вкладка «Документы»: страница документов во встроенном окне, вход общий */
 const _tab=tab;
