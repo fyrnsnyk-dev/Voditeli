@@ -510,11 +510,13 @@ async function syncRefs(){if(refBusy||!sb||!db)return;refBusy=true;
    const sg=sugStart(pk);if(!sg)continue;
    if(sg<monOf(r.created_at)){await updRef(r.id,{status:"needs_review",note:"Водитель работал раньше приглашения (первая неделя с доходом: "+dm(sg)+")."});continue}
    await db.doc("drivers/"+pk).update({invitedBy:ik,refStart:sg,refId:r.id});await updRef(r.id,{status:"accepted",note:null})}
+  for(const r of REFS){if(r.status==='cancelled')continue;const n=nmOf(r);if(n&&n!==r.invitee_name)await updRef(r.id,{invitee_name:n})}
   const C=CFG().promo;
   for(const r of REFS.filter(x=>x.status==="accepted"||x.status==="invited")){const pk=pkOfRef(r);if(!pk||!S.dr[pk]||!S.dr[pk].refStart)continue;
    const I=refInfo(pk),p={weeks_done:I.n,weeks_need:I.N,bonus:+C.bonus||0,bonus_paid:!!I.w3&&!S.dr[pk].bonusCancel};
    if(Object.keys(p).some(k=>String(r[k])!==String(p[k])))await updRef(r.id,p)}
   await loadRefs(true)}catch(e){}finally{refBusy=false}}
+const nmOf=r=>{const k=pkOfRef(r);return k&&S.dr[k]&&dispName(S.dr[k].name)||r.invitee_name};
 function refSt(r){const pk=pkOfRef(r);
  if(r.status==="cancelled")return['<span class="mut">Отменено</span>',pk];
  if(r.status==="needs_review")return['<span class="wa">Нужно решение: '+esc(r.note||"")+'</span>',pk];
@@ -530,7 +532,7 @@ function fillRef(box){if(!box)return;
  else{h+='<div class="tw"><table class="rvt"><tr><th>Приглашённый</th><th>Пригласил</th><th>Дата</th><th>Статус</th><th></th></tr>';
   act.concat(can).forEach(r=>{const[st,pk]=refSt(r),inv=REFD[r.inviter_id],ik=pkOfInv(r);
    const conn=Object.values(REFD).some(d=>ph9(d.phone)===ph9(r.phone));
-   h+='<tr><td>'+esc(r.invitee_name)+'<br><span class="mut">'+esc(r.phone)+'</span></td><td>'+(inv?esc(inv.name):'—')+(inv&&!ik&&r.status!=="cancelled"?'<br><span class="wa">не найден в панели</span>':'')+'</td><td>'+esc(String(r.created_at).slice(8,10)+"."+String(r.created_at).slice(5,7))+'</td><td>'+st+(conn&&r.status!=="cancelled"?' <span class="mut">· подключён к приложению</span>':'')+'</td><td>';
+   h+='<tr><td>'+esc(nmOf(r))+'<br><span class="mut">'+esc(r.phone)+'</span></td><td>'+(inv?esc(ik?dispName(S.dr[ik].name):inv.name):'—')+(inv&&!ik&&r.status!=="cancelled"?'<br><span class="wa">не найден в панели</span>':'')+'</td><td>'+esc(String(r.created_at).slice(8,10)+"."+String(r.created_at).slice(5,7))+'</td><td>'+st+(conn&&r.status!=="cancelled"?' <span class="mut">· подключён к приложению</span>':'')+'</td><td>';
    if(r.status!=="cancelled"){
     if(!pk)h+='<select data-lk="'+esc(r.id)+'">'+opt("")+'</select> <button class="g" data-lkb="'+esc(r.id)+'">Привязать</button> ';
     if(r.status==="needs_review"&&pk&&ik)h+='<button class="g" data-acc="'+esc(r.id)+'">Засчитать</button> ';
