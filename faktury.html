@@ -1592,12 +1592,14 @@ function normLetters(t) {
     .replace(/Ń/g, 'N').replace(/Ó/g, 'O').replace(/Ś/g, 'S').replace(/[ŹŻ]/g, 'Z').replace(/[^A-Z]/g, '');
 }
 function shopIn(list, sellerName, ocrText) {
+  // название продавца известно из реестра VAT (NIP проверен) — по тексту чека ищем только точное совпадение, без «похожих» слов: шум OCR давал ложные блокировки
+  const strict = !!(sellerName && String(sellerName).trim());
   const n = normLetters(sellerName), o = normLetters(ocrText);
   for (const [key, label] of list) {
     if (n.includes(key)) return label;
     // по тексту чека — только если это слово есть в шапке (первые ~300 букв), чтобы не ловить рекламу
     const head = o.slice(0, 300);
-    if (key.length >= 6 ? nearIn(head, key, 1) : head.includes(key)) return label;
+    if (key.length >= 6 && !strict ? nearIn(head, key, 1) : head.includes(key)) return label;
   }
   return null;
 }
