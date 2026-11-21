@@ -555,6 +555,9 @@ function fillRef(box){if(!box)return;
   try{await db.doc("drivers/"+a).update({invitedBy:i,refStart:sugStart(a)||""});say("Записано"+(sugStart(a)?"":": у водителя ещё нет недели с доходом, старт поставьте позже"));drawR()}catch(e){say("Ошибка: "+(e.message||e))}}}
 const drawR1=drawR0;
 drawR=function(){drawR1();const box=document.createElement("div");box.id="rv2";$("rv").prepend(box);fillRef(box);
+ const lk=document.createElement("div");lk.className="card";const AL=new URL("./",location.href).href;
+ lk.innerHTML='<b>Ссылка на приложение для водителей</b><div class="mut" style="word-break:break-all;margin:6px 0">'+AL+'</div><button class="g" id="alcp" type="button">Скопировать ссылку</button>';
+ $("rv").prepend(lk);lk.querySelector("#alcp").onclick=async()=>{try{await navigator.clipboard.writeText(AL)}catch(e){const i=document.createElement("input");i.value=AL;document.body.appendChild(i);i.select();document.execCommand("copy");i.remove()}const b=lk.querySelector("#alcp");b.textContent="Скопировано";setTimeout(()=>b.textContent="Скопировать ссылку",1500)};
  loadRefs().then(()=>fillRef(document.getElementById("rv2"))).catch(()=>{});
  syncRefs().then(()=>{const b=document.getElementById("rv2");if(b&&!$("t4").classList.contains("hid"))fillRef(b)})};
 setInterval(()=>{if(!document.hidden&&db)syncRefs().then(()=>{const b=document.getElementById("rv2");if(b&&!$("t4").classList.contains("hid"))fillRef(b)})},60000);
