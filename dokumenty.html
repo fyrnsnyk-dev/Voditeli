@@ -131,6 +131,7 @@
   </header>
   <main>
     <div id="topMsg"></div>
+    <div id="ksefLine" style="margin-bottom:6px;font-size:13px"></div>
     <div id="sumLine" style="margin-bottom:8px;font-size:15px"></div>
     <div class="row" style="margin-bottom:10px"><span id="listInfo" class="muted"></span><span id="listSum" class="sum"></span></div>
     <div id="list"></div>
@@ -299,6 +300,27 @@ function fillWeekF() {
   for (let i = 0; i < 30; i++) { const w = addDays(now, -7 * i); h += `<option value="${w}">${w.slice(8)}.${w.slice(5, 7)} – ${addDays(w, 6).slice(8)}.${addDays(w, 6).slice(5, 7)}${i === 0 ? ' (текущая)' : ''}</option>`; }
   sel.innerHTML = h; sel.value = cur;
 }
+
+async function ksefStatus() {   // строка «последняя сверка с KSeF»: только чтение ksef_sync_log
+  const el = $('ksefLine'); if (!el) return;
+  try {
+    const [a, b] = await Promise.all([
+      sb.from('ksef_sync_log').select('ran_at,status,message').eq('status', 'ok').order('ran_at', { ascending: false }).limit(1),
+      sb.from('ksef_sync_log').select('ran_at,status,message').order('ran_at', { ascending: false }).limit(1)]);
+    if (a.error || b.error) { el.innerHTML = ''; return; }
+    const ok = (a.data || [])[0], last = (b.data || [])[0];
+    const fmt = t => new Date(t).toLocaleString('ru-RU', { timeZone: 'Europe/Warsaw', day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' });
+    const days = ok ? (Date.now() - new Date(ok.ran_at)) / 864e5 : null;
+    const stale = days === null || days >= 3, err = last && last.status !== 'ok';
+    let h = ok ? `Документы сверены с KSeF: ${fmt(ok.ran_at)}` : 'Сверки с KSeF ещё не было';
+    if (stale && ok) h += ` (${Math.floor(days)} дн. назад)`;
+    if (err) h += `<br>Ошибка последнего запуска (${fmt(last.ran_at)}): ${esc(last.message || '')}`;
+    el.innerHTML = h;
+    el.style.color = (stale || err) ? '#d32f2f' : '';
+    el.style.fontWeight = (stale || err) ? '600' : '';
+    el.className = (stale || err) ? '' : 'muted';
+  } catch (e) { el.innerHTML = ''; }
+}
 async function load() {
   msg('topMsg', 'Загружаем…');
   const m = $('month').value;
@@ -321,6 +343,7 @@ async function load() {
   }
   msg('topMsg', '');
   render();
+  ksefStatus();
 }
 
 // ---------- вкладки и список ----------
