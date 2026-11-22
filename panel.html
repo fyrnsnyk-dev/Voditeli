@@ -353,7 +353,7 @@ const r=doc.rows[k]=doc.rows[k]||{inv:0};if(old)F.forEach(f=>{r[f]=r2((+r[f]||0)
 if(ch.length){saveQ(W,ch);drawW(true);$("st").textContent="Остаток с прошлой недели перенесён автоматически: водителей "+ch.length}}
 $("wo").addEventListener("change",e=>{const i=e.target;if(!i.classList||!i.classList.contains("ce"))return;const W=curW,k=i.dataset.k,fl=i.dataset.f;
 const doc=S.wk[W]=S.wk[W]||{rows:{}};doc.rows=doc.rows||{};const r=doc.rows[k]=doc.rows[k]||{};if(doc.rows[k]!==r||S.wk[W].rows[k]!==r){$("st").textContent="Не удалось изменить данные недели (только чтение)";return}const raw=i.value.trim(),v=raw?pn(raw):NaN;
-if(fl==="inv")r.inv=isNaN(v)?0:v;else if(fl==="fee"){const a=+i.dataset.auto||0;if(isNaN(v)||r2(v)===r2(a))r.fee=null;else r[fl]=v}else r[fl]=isNaN(v)?0:r2(v-(+i.dataset.a||0));
+if(fl==="inv"){r.inv=isNaN(v)?0:v;if(r.invA!=null)r.invM=(r2(r.inv)===r2(r.invA))?0:1}else if(fl==="fee"){const a=+i.dataset.auto||0;if(isNaN(v)||r2(v)===r2(a))r.fee=null;else r[fl]=v}else r[fl]=isNaN(v)?0:r2(v-(+i.dataset.a||0));
 saveQ(W,k);paint()});
 $("wo").addEventListener("keydown",e=>{const t=e.target;if(!t.classList||!t.classList.contains("ce"))return;let dr=0,dc=0;const k=e.key;
 if(k==="Enter")dr=e.shiftKey?-1:1;else if(k==="ArrowDown")dr=1;else if(k==="ArrowUp")dr=-1;else if(k==="ArrowLeft"&&t.selectionStart===0)dc=-1;else if(k==="ArrowRight"&&t.selectionEnd===t.value.length)dc=1;else return;
@@ -564,6 +564,63 @@ drawR=function(){drawR1();const box=document.createElement("div");box.id="rv2";$
  syncRefs().then(()=>{const b=document.getElementById("rv2");if(b&&!$("t4").classList.contains("hid"))fillRef(b)})};
 setInterval(()=>{if(!document.hidden&&db)syncRefs().then(()=>{const b=document.getElementById("rv2");if(b&&!$("t4").classList.contains("hid"))fillRef(b)})},60000);
 setTimeout(()=>{if(db)syncRefs()},4000);
+/* ===== Фактуры из приложения → колонка «Фактуры» в недельной таблице =====
+   Принятые документы (invoices.status='accepted') по дате принятия (Польша), неделя пн–вс; до 10:00 в понедельник ещё прошлая неделя —
+   те же правила, что в «Итогах недели» (dokumenty.html). Заполняются текущая и прошлая расчётные недели; ручная цифра главнее. */
+let INVA={cur:"",prev:"",sum:{},unk:[],pend:0,at:0,ok:false},invBusy=false;
+const invAddD=(y,n)=>{const d=new Date(y+"T12:00:00Z");d.setUTCDate(d.getUTCDate()+n);return d.toISOString().slice(0,10)};
+function invWeekOf(ts){const L=new Date(ts).toLocaleString("sv-SE",{timeZone:"Europe/Warsaw"}),d=L.slice(0,10),hh=+L.slice(11,13);
+ const wd=(new Date(d+"T12:00:00Z").getUTCDay()+6)%7,base=(wd===0&&hh<10)?invAddD(d,-1):d;return invAddD(base,-((new Date(base+"T12:00:00Z").getUTCDay()+6)%7))}
+const nrmN=s=>String(s||"").toLowerCase().replace(/[^a-zа-яёіїєґąćęłńóśźż\s]/gi," ").split(/\s+/).filter(Boolean).sort().join(" ");
+function pkOfDrv(d){if(!d)return"";let k=d.phone?pkByPhone(d.phone):"";if(k)return k;const n=nrmN(d.name);if(!n)return"";const m=Object.keys(S.dr).filter(x=>nrmN(dispName(S.dr[x].name))===n);return m.length===1?m[0]:""}
+async function syncInv(){if(invBusy||!sb||!db||!S||!S.dr)return;invBusy=true;
+ try{const now=new Date().toISOString(),cur=invWeekOf(now),prev=invAddD(cur,-7);
+  const lo=invAddD(prev,-2)+"T00:00:00Z",hi=invAddD(cur,10)+"T00:00:00Z";
+  const a=await sb.from("invoices").select("id,driver_id,gross_amount,accepted_at,uploaded_at,drivers(id,name,phone)").eq("status","accepted").gte("accepted_at",lo).lt("accepted_at",hi).order("id").limit(5000);
+  const p=await sb.from("invoices").select("id",{count:"exact",head:true}).eq("status","pending");
+  if(a.error)throw a.error;
+  const sum={},unk={};
+  for(const r of a.data||[]){const w=invWeekOf(r.accepted_at||r.uploaded_at);if(w!==cur&&w!==prev)continue;
+   const pk=pkOfDrv(r.drivers),amt=+r.gross_amount||0;
+   if(!pk){const u=unk[w+"|"+r.driver_id]=unk[w+"|"+r.driver_id]||{w,name:(r.drivers&&r.drivers.name)||"?",sum:0};u.sum+=amt;continue}
+   (sum[w]=sum[w]||{})[pk]=((sum[w]||{})[pk]||0)+amt}
+  INVA={cur,prev,sum,unk:Object.values(unk),pend:p.count||0,at:Date.now(),ok:true};
+  const typing=document.activeElement&&document.activeElement.classList&&document.activeElement.classList.contains("ce");
+  if(typing){invBusy=false;return}
+  let ch=0;const touched={};
+  for(const w of [prev,cur]){const doc=S.wk[w];if(!doc||!doc.rows)continue;
+   for(const pk of Object.keys(doc.rows)){const r=doc.rows[pk],v=r2((sum[w]||{})[pk]||0),fin=w===prev;let ch0=false;
+    if(fin&&r.invF)continue;                                   // прошлая неделя уже зафиксирована — автозаполнение её не трогает
+    if(r.invA==null&&(+r.inv||0)!==0){if(v){r.invA=v;r.invM=(r2(+r.inv)===v)?0:1;ch0=true}}   // число уже стояло до автозаполнения — ручной ввод, не перезаписываем
+    else if(r.invM){if(r.invA!==v){r.invA=v;ch0=true}}                                         // вручную — не трогаем, обновляем только подсказку
+    else if(!(!v&&r.invA==null)&&!(r2(+r.inv||0)===v&&r.invA===v)){r.inv=v;r.invA=v;ch0=true}
+    if(fin&&(r.invA!=null)&&!r.invF){r.invF=1;ch0=true}       // после 10:00 в понедельник: итоговая сумма подтянута один раз и зафиксирована
+    if(ch0){(touched[w]=touched[w]||[]).push(pk);ch++}}}
+  for(const w in touched)saveQ(w,touched[w]);
+  if(ch&&curW)paint();
+  invMarks()}
+ catch(e){INVA.ok=false;INVA.err=String(e.message||e)}finally{invBusy=false}}
+function invMarks(){const W=curW,box=$("wo");if(!box)return;let info=document.getElementById("invInfo");
+ if(!info){info=document.createElement("div");info.id="invInfo";info.className="mut";info.style.cssText="margin:6px 0;font-size:.85rem";box.parentNode.insertBefore(info,box)}
+ const wr=(S.wk[W]&&S.wk[W].rows)||{};
+ for(const k of curKeys){const c=cells[k];if(!c||!c.inv)continue;const r=wr[k]||{},td=c.inv.parentNode;let b=td.querySelector(".ia");
+  const auto=r.invA!=null&&!r.invM,man=!!r.invM&&r.invA!=null&&r2(+r.inv||0)!==r2(r.invA||0);
+  if(!b){b=document.createElement("button");b.type="button";b.className="ia";b.style.cssText="border:0;background:none;padding:0 2px;cursor:pointer;font-size:.7rem;color:var(--mut,#888);display:block;line-height:1";td.appendChild(b)}
+  if(auto){b.textContent="авто";b.title="Подставлено из принятых фактур приложения. Можно изменить руками.";b.dataset.k="";b.style.display="block"}
+  else if(man){b.textContent="↺ "+f(r.invA);b.title="Вручную. В принятых фактурах приложения: "+f(r.invA)+" zł. Нажмите, чтобы вернуть эту сумму";b.dataset.k=k;b.style.display="block"}
+  else b.style.display="none"}
+ const inWin=W===INVA.cur||W===INVA.prev;
+ if(!INVA.ok&&INVA.err){info.innerHTML=inWin?'Фактуры из приложения: не удалось получить ('+esc(INVA.err)+')':'';return}
+ if(!inWin||!INVA.at){info.innerHTML="";return}
+ if(W===INVA.prev){info.innerHTML='Неделя закрыта: суммы из приложения зафиксированы после 10:00 в понедельник. Править можно только вручную.';return}
+ const frz=W===INVA.prev?' · <span class="mut">неделя закрыта: суммы из приложения зафиксированы, правьте только вручную</span>':'';
+ const s=INVA.sum[W]||{},n=Object.keys(s).length,t=r2(Object.values(s).reduce((x,y)=>x+y,0)),unk=INVA.unk.filter(u=>u.w===W);
+ info.innerHTML='Фактуры из приложения за эту неделю: водителей '+n+', принято на <b>'+f(t)+'</b> zł'+(INVA.pend?' · <span class="wa">ждут вашего решения: '+INVA.pend+'</span>':'')+(unk.length?' · <span class="wa">не найдены в таблице: '+unk.map(u=>esc(dispName(u.name))+' '+f(r2(u.sum))).join(", ")+'</span>':'')+frz}
+document.addEventListener("click",async e=>{const b=e.target.closest&&e.target.closest(".ia");if(!b||!b.dataset.k)return;const W=curW,k=b.dataset.k,r=S.wk[W]&&S.wk[W].rows&&S.wk[W].rows[k];if(!r)return;
+ r.invM=0;r.inv=r2(r.invA||0);saveQ(W,k);paint();invMarks()});
+const paint0=paint;paint=function(){paint0();try{invMarks()}catch(e){}};
+setInterval(()=>{if(!document.hidden&&db)syncInv()},60000);
+setTimeout(()=>{if(db)syncInv()},5000);
 
 /* вкладка «Документы»: страница документов во встроенном окне, вход общий */
 const _tab=tab;
