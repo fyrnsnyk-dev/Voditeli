@@ -85,7 +85,7 @@ nav button.on{background:var(--card);color:var(--fg);border-bottom-color:var(--a
 <details><summary><b>Загрузить отчёты недели</b></summary>
 <label for="bolt">Bolt (водитель, чистый доход, прогноз по выплатам)</label><textarea id="bolt"></textarea>
 <label for="uber">Uber (таблица со страницы «Доходы»)</label><textarea id="uber"></textarea>
-<label for="fn">FreeNow (текст CSV)</label><input type="file" id="fnf"><span id="fns" class="mut"></span><textarea id="fn"></textarea>
+<label for="fn">FreeNow (вставьте текст из портала или выберите CSV-файл)</label><input type="file" id="fnf"><span id="fns" class="mut"></span><textarea id="fn"></textarea>
 <label style="font-weight:400"><input type="checkbox" id="zs" checked> Пропускать строки, где обе суммы равны нулю</label>
 <button id="pr">Разобрать</button>
 <div id="pv"></div>
@@ -191,7 +191,7 @@ function dispName(n){return cleanN(n)}
 const PL=["bolt","uber","fn"],PN={bolt:"Bolt",uber:"Uber",fn:"FreeNow"};
 const addD=(iso,n)=>{const d=new Date(iso+"T00:00:00Z");d.setUTCDate(d.getUTCDate()+n);return d.toISOString().slice(0,10)};
 const mon=iso=>{const d=new Date(iso+"T00:00:00Z");return addD(iso,-((d.getUTCDay()+6)%7))};
-const S={dr:{},it:{},wk:{},al:{},cfg:{}};let db=null,P=null;
+const S={dr:{},it:{},wk:{},al:{},cfg:{},wm:{}};const LD={};let db=null,P=null;
 function tab(n){[1,2,3,4,5].forEach(i=>{$("t"+i).classList.toggle("hid",i!==n);$("b"+i).classList.toggle("on",i===n)});if(n===2)drawI();if(n===3)drawD();if(n===4)drawR();if(n===5)drawC()}
 [1,2,3,4,5].forEach(i=>$("b"+i).onclick=()=>tab(i));
 const cur=mon(new Date().toISOString().slice(0,10));
@@ -212,7 +212,8 @@ function tabP(t){const r=[];t.split("\n").forEach(l=>{const p=l.split("\t").map(
 const AMT=/^-?[\d\s\u00a0]+(,\d+)?\s*(PLN)?$/i;
 function uberP(t){const rc=[];let c=null;t.split("\n").map(x=>x.trim()).filter(Boolean).forEach(l=>{if(AMT.test(l)){if(c)c.a.push(pn(l))}else{if(c&&!c.a.length&&l===c.name)return;c={name:l,a:[]};rc.push(c)}});return rc.filter(r=>r.a.length>=5).map(r=>({name:cleanN(r.name),g:r.a[0],n:r.a[4]}))}
 function csvL(l,d){const o=[];let c="",q=false;for(let i=0;i<l.length;i++){const h=l[i];if(h=='"'){if(q&&l[i+1]=='"'){c+='"';i++}else q=!q}else if(h==d&&!q){o.push(c);c=""}else c+=h}o.push(c);return o}
-function fnP(t){const ls=t.split(/\r?\n/).filter(x=>x.trim());if(!ls.length)return[];const d=ls[0].indexOf("\t")>=0?"\t":(ls[0].split(";").length>ls[0].split(",").length?";":",");const h=csvL(ls[0],d).map(x=>x.replace(/^\ufeff/,"").trim().toLowerCase());const a=h.indexOf("водитель"),g=h.indexOf("общий доход"),b=h.findIndex(x=>x.indexOf("баланс")===0);if(a<0||g<0||b<0)return tabP(t);return ls.slice(1).map(l=>csvL(l,d)).map(p=>({name:(p[a]||"").trim(),g:pn(p[g]||""),n:pn(p[b]||"")})).filter(r=>r.name&&!isNaN(r.g)&&!isNaN(r.n))}
+function fnPortal(t){const rc=[];let c=null;t.replace(/\[([^\]]+)\]\([^)]*\)/g,"$1").split(/[\r\n\t]+/).map(x=>x.trim()).filter(Boolean).forEach(l=>{if(AMT.test(l)){if(c)c.a.push(pn(l))}else{if(c&&!c.a.length&&l===c.name)return;c={name:l,a:[]};rc.push(c)}});return rc.filter(r=>r.a.length>=2&&r.a.every(x=>!isNaN(x))).map(r=>({name:cleanN(r.name),g:r.a[r.a.length-2],n:r.a[r.a.length-1]}))}
+function fnP(t){const ls=t.split(/\r?\n/).filter(x=>x.trim());if(!ls.length)return[];const d=ls[0].indexOf("\t")>=0?"\t":(ls[0].split(";").length>ls[0].split(",").length?";":",");const h=csvL(ls[0],d).map(x=>x.replace(/^\ufeff/,"").trim().toLowerCase());const a=h.indexOf("водитель"),g=h.indexOf("общий доход"),b=h.findIndex(x=>x.indexOf("баланс")===0);if(a<0||g<0||b<0){const pr=fnPortal(t);return pr.length?pr:tabP(t)}return ls.slice(1).map(l=>csvL(l,d)).map(p=>({name:(p[a]||"").trim(),g:pn(p[g]||""),n:pn(p[b]||"")})).filter(r=>r.name&&!isNaN(r.g)&&!isNaN(r.n))}
 $("fnf").onchange=e=>{const fl=e.target.files[0];if(fl){const r=new FileReader();r.onload=()=>{$("fn").value=String(r.result).replace(/^\ufeff/,"");$("fns").textContent=" Загружен: "+fl.name};r.onerror=()=>{$("fns").textContent=" Не удалось прочитать файл, вставьте текст в поле ниже"};r.readAsText(fl,"utf-8")}};
 function canon(name){const k=norm(name);if(S.al[k])return S.al[k];const d=Object.values(S.dr).find(x=>norm(x.name)===k||norm(cleanN(x.name))===k);return d?d.name:null}
 $("pr").onclick=()=>{const z=$("zs").checked,rows=[];
@@ -225,7 +226,7 @@ P.rows.forEach((r,i)=>{h+='<tr><td>'+PN[r.p]+'</td><td>'+esc(r.name)+'</td><td>'
 h+='</table></div><p class="mut">Новые водители будут добавлены. Похожие имена программа сама не объединяет.</p><button id="sv">Сохранить в неделю '+esc(wl($("wk").value))+'</button>';
 $("pv").innerHTML=h;$("sv").onclick=saveW;
 $("pv").querySelectorAll("select").forEach(s=>s.onchange=()=>{if(s.value){P.rows[+s.dataset.i].pick=s.value}})}
-async function saveW(){const wk=$("wk").value;if(!wk)return;$("st").textContent="Сохраняю…";
+async function saveW(){const wk=$("wk").value;if(!wk)return;if(fzOn(wk)){$("st").textContent="Неделя зафиксирована. Откройте её над таблицей, чтобы загрузить данные.";return}$("st").textContent="Сохраняю…";
 try{const rows=JSON.parse(JSON.stringify((S.wk[wk]&&S.wk[wk].rows)||{}));const al=Object.assign({},S.al);const made={};
 for(const r of P.rows){let c=r.c||r.pick||r.name;if(r.pick)al[norm(r.name)]=r.pick;const k=(()=>{const e=Object.entries(S.dr).find(([i,d])=>norm(d.name)===norm(c)||norm(cleanN(d.name))===norm(c));return e?e[0]:key(c)})();
 if(!S.dr[k]&&!made[k]){made[k]=1;await db.doc("drivers/"+k).set({name:c,tariff:"Стандарт",fixed:0})}
@@ -260,7 +261,7 @@ ws.forEach(w=>{const r=S.wk[w].rows[j];let g=0,has=false;PL.forEach(p=>{if(r[p])
 o.n=Math.min(o.pos.length,N);o.paused=!o.w3&&seen&&!lastPos;return o}
 function sugStart(j){const ws=Object.keys(S.wk).filter(w=>S.wk[w].rows&&S.wk[w].rows[j]).sort();for(const w of ws){let g=0;PL.forEach(p=>{if(S.wk[w].rows[j][p])g+=S.wk[w].rows[j][p].g});if(g>0)return w}return""}
 function refBonus(dk,W){const C=CFG().promo;let t=0;Object.entries(S.dr).forEach(([j,d])=>{if(d.invitedBy!==dk||!d.refStart||d.bonusCancel)return;const I=refInfo(j);if(I.w3===W&&promoWeekOk(W))t+=+C.bonus||0});return r2(t)}
-function calc(dk,W,wr){const d=S.dr[dk]||{name:dk,tariff:"Стандарт",fixed:0},r=wr[dk]||{};let g=0,gp=0,n=0;
+function calc(dk,W,wr){const FZ=S.wm&&S.wm[W]&&S.wm[W].fz&&S.wm[W].fz[dk];if(FZ)return JSON.parse(JSON.stringify(FZ));const d=S.dr[dk]||{name:dk,tariff:"Стандарт",fixed:0},r=wr[dk]||{};let g=0,gp=0,n=0;
 PL.forEach(p=>{if(r[p]){g+=r[p].g;gp+=Math.max(0,r[p].g);n+=r[p].n}});const inv=+r.inv||0,inc=gp-inv;
 const FC=feeFor(W),free=!!(d.refStart&&d.refStart===W&&CFG().promo.free);let fa=0;if(gp>0&&!free)fa=d.tariff==="Фикс"?+d.fixed||0:d.tariff==="Особый"?(g-n)*(FC.sp/100)+(+FC.sa):(inc<FC.thr?+FC.low:(+FC.base)+inc*(FC.pct/100));
 const ov=r.fee!==undefined&&r.fee!==null&&r.fee!=="",fee=ov?+r.fee:fa;
@@ -331,13 +332,13 @@ out.push({name:dispName(d.name||k),phone:d.phone||"",data:{w:wl(W),bolt:pr("bolt
 if(!out.length){$("st").textContent="В этой неделе нет водителей";return}
 try{const dl=await claude.use("downloads");if(!dl){$("st").textContent="Сохранение файла здесь недоступно";return}
 await dl.save({filename:"nedelya_"+W+".json",data:JSON.stringify({week:W,drivers:out})});
-$("st").textContent="Файл недели сохранён: водителей "+out.length+(np?", без телефона "+np+" (они не опубликуются, заполните телефон на вкладке «Водители»)":"")+". Загрузите его на странице администратора."}catch(e){$("st").textContent=e&&e.code==="declined"?"Сохранение отменено":"Не удалось сохранить файл: "+((e&&(e.message||e.code))||e)}};
+try{const sS={};curKeys.forEach(k=>{const x=calc(k,W,wr);sS[k]={out:r2(x.out),tot:r2(x.tot)}});const o=Object.assign({},wmGet(W),{sent:sS,sentAt:new Date().toISOString()});db.doc("wkmeta/"+W).set(o);S.wm[W]=JSON.parse(JSON.stringify(o))}catch(e){}$("st").textContent="Файл недели сохранён: водителей "+out.length+(np?", без телефона "+np+" (они не опубликуются, заполните телефон на вкладке «Водители»)":"")+". Загрузите его на странице администратора."}catch(e){$("st").textContent=e&&e.code==="declined"?"Сохранение отменено":"Не удалось сохранить файл: "+((e&&(e.message||e.code))||e)}};
 const known={},dirtyK={};
 function saveQ(W,k){pend++;const dk=dirtyK[W]=dirtyK[W]||new Set();[].concat(k||[]).forEach(x=>dk.add(x));$("st").textContent="Сохраняю…";chain=chain.then(async()=>{try{const ks=[...(dirtyK[W]||[])];dirtyK[W]=new Set();const rows=(S.wk[W]&&S.wk[W].rows)||{};
 if(known[W]){if(ks.length){const patch={};ks.forEach(x=>{patch[x]=JSON.parse(JSON.stringify(rows[x]||{}))});await db.doc("weeks/"+W).update({rows:patch})}}else{await db.doc("weeks/"+W).set({rows:JSON.parse(JSON.stringify(rows))});known[W]=1}
 $("st").textContent="Сохранено"}catch(e){$("st").textContent="Ошибка сохранения: "+(e.code||e.message||e)}finally{pend--;holdUntil=Date.now()+3000}})}
 function prevWeek(W){const ks=Object.keys(S.wk).filter(w=>w<W&&S.wk[w].rows&&Object.keys(S.wk[w].rows).length).sort();return ks[ks.length-1]||""}
-$("cpb").onclick=()=>{const W=curW||$("wk").value,P0=prevWeek(W);if(!P0){$("st").textContent="Раньше этой недели данных нет";return}
+$("cpb").onclick=()=>{const W=curW||$("wk").value,P0=prevWeek(W);if(fzOn(W)){$("st").textContent="Неделя зафиксирована";return}if(!P0){$("st").textContent="Раньше этой недели данных нет";return}
 const pr=S.wk[P0].rows,doc=S.wk[W]=S.wk[W]||{rows:{}};doc.rows=doc.rows||{};const add=[];
 Object.keys(pr).forEach(k=>{const r=pr[k]||{};const act=PL.some(p=>r[p]&&(r[p].g||r[p].n))||calc(k,P0,pr).tot<0;if(act&&!doc.rows[k]){doc.rows[k]={inv:0};add.push(k)}});
 if(!add.length){$("st").textContent="Все водители с недели "+wl(P0)+" уже в таблице";return}
@@ -366,7 +367,7 @@ setFs(fs);$("z1").onclick=()=>setFs(fs-1);$("z2").onclick=()=>setFs(fs+1);
 async function addDriver(name,toWeek){name=cleanN(String(name).trim());if(!name)return null;const e=Object.entries(S.dr).find(([i,d])=>norm(cleanN(d.name))===norm(name));let k;
 if(e)k=e[0];else{k=key(name);S.dr[k]={name,tariff:"Стандарт",fixed:0};try{await db.doc("drivers/"+k).set({name,tariff:"Стандарт",fixed:0})}catch(x){const m="Ошибка: "+(x.code||x.message||x);$("st").textContent=m;$("ndm").textContent=m;$("adn").placeholder=m;return null}}
 if(toWeek){const W=$("wk").value,doc=S.wk[W]=S.wk[W]||{rows:{}};doc.rows=doc.rows||{};if(!doc.rows[k])doc.rows[k]={inv:0};(pins[W]=pins[W]||new Set()).add(k);lastAdded=k;saveQ(W,k);drawW(true)}return k}
-$("adb").onclick=async()=>{const k=await addDriver($("adn").value,true);if(k){$("adn").value="";$("adn").placeholder="Добавлен: "+dispName(S.dr[k].name);$("st").textContent="Водитель добавлен в таблицу недели (выделен жёлтым)"}else if(!$("adn").value.trim())$("adn").placeholder="Введите имя и нажмите кнопку"};
+$("adb").onclick=async()=>{if(fzOn(curW||$("wk").value)){$("st").textContent="Неделя зафиксирована";return}const k=await addDriver($("adn").value,true);if(k){$("adn").value="";$("adn").placeholder="Добавлен: "+dispName(S.dr[k].name);$("st").textContent="Водитель добавлен в таблицу недели (выделен жёлтым)"}else if(!$("adn").value.trim())$("adn").placeholder="Введите имя и нажмите кнопку"};
 $("ndb").onclick=async()=>{if(!db){$("ndm").textContent="Хранилище не подключено";return}if(!$("nd").value.trim()){$("ndm").textContent="Введите имя";return}$("ndm").textContent="Добавляю…";const had=Object.values(S.dr).some(d=>norm(cleanN(d.name))===norm(cleanN($("nd").value)));const k=await addDriver($("nd").value,false);if(k){$("ndm").textContent=(had?"Такой водитель уже есть в списке: ":"Добавлен: ")+dispName(S.dr[k].name);$("nd").value="";drawD()}};
 // ---- items
 function drawI(){const ds=Object.entries(S.dr).sort((a,b)=>a[1].name.localeCompare(b[1].name));
@@ -475,7 +476,7 @@ let drawT=0;const draw=()=>{clearTimeout(drawT);drawT=setTimeout(draw0,150)};
 window.onerror=m=>{$("st").textContent="Ошибка страницы: "+m};
 
 $("bkS").onclick=async()=>{const m=$("bkM");try{const dl=await claude.use("downloads");if(!dl){m.textContent="Сохранение файла здесь недоступно";return}
-const out={app:"alex-panel",v:1,created:new Date().toISOString(),drivers:S.dr||{},items:S.it||{},weeks:S.wk||{},al:S.al||{},cfg:S.cfg||{}};
+const out={app:"alex-panel",v:1,created:new Date().toISOString(),drivers:S.dr||{},items:S.it||{},weeks:S.wk||{},wm:S.wm||{},al:S.al||{},cfg:S.cfg||{}};
 await dl.save({filename:"panel_kopiya_"+new Date().toISOString().slice(0,10)+".json",data:JSON.stringify(out)});
 m.textContent="Копия сохранена: водителей "+Object.keys(out.drivers).length+", записей "+Object.keys(out.items).length+", недель "+Object.keys(out.weeks).length+". Её можно добавить в общий архив на странице документов."}catch(e){m.textContent=e&&e.code==="declined"?"Сохранение отменено":"Не удалось сохранить: "+((e&&(e.message||e.code))||e)}};
 $("bkL").onclick=()=>$("bkF").click();
@@ -487,7 +488,7 @@ try{let n=0;const tot=nd+ni+nw+2;const put=async(path,d)=>{await db.doc(path).se
 holdUntil=Date.now()+60000;
 for(const k in o.drivers)await put("drivers/"+k,o.drivers[k]);
 for(const k in o.items)await put("items/"+k,o.items[k]);
-for(const k in o.weeks)await put("weeks/"+k,o.weeks[k]);
+for(const k in o.weeks)await put("weeks/"+k,o.weeks[k]);for(const k in (o.wm||{}))await put("wkmeta/"+k,o.wm[k]);
 await put("meta/al",{map:o.al||{}});await put("meta/cfg",o.cfg||{});
 holdUntil=0;m.textContent="Готово: записано "+n+" документов."}catch(e){holdUntil=0;m.textContent="Ошибка записи: "+(e.code||e.message||e)}};
 /* ===== Приглашения по ссылке: автозапись из Supabase (таблица referrals), статусы, ручная правка ===== */
@@ -605,15 +606,16 @@ function invMarks(){const W=curW,box=$("wo");if(!box)return;let info=document.ge
  const wr=(S.wk[W]&&S.wk[W].rows)||{};
  for(const k of curKeys){const c=cells[k];if(!c||!c.inv)continue;const r=wr[k]||{},td=c.inv.parentNode;let b=td.querySelector(".ia");
   const auto=r.invA!=null&&!r.invM,man=!!r.invM&&r.invA!=null&&r2(+r.inv||0)!==r2(r.invA||0);
-  if(!b){b=document.createElement("button");b.type="button";b.className="ia";b.style.cssText="border:0;background:none;padding:0 2px;cursor:pointer;font-size:.7rem;color:var(--mut,#888);display:block;line-height:1";td.appendChild(b)}
-  if(auto){b.textContent="авто";b.title="Подставлено из принятых фактур приложения. Можно изменить руками.";b.dataset.k="";b.style.display="block"}
-  else if(man){b.textContent="↺ "+f(r.invA);b.title="Вручную. В принятых фактурах приложения: "+f(r.invA)+" zł. Нажмите, чтобы вернуть эту сумму";b.dataset.k=k;b.style.display="block"}
+  td.style.position="relative";
+  if(!b){b=document.createElement("button");b.type="button";b.className="ia";b.style.cssText="position:absolute;top:0;right:1px;border:0;background:none;padding:0;margin:0;cursor:pointer;font-size:.6rem;font-weight:700;color:var(--mut,#888);line-height:1";td.appendChild(b)}
+  if(auto){b.textContent="а";b.title="Подставлено автоматически из принятых фактур приложения. Можно изменить руками.";b.dataset.k="";b.style.display="block"}
+  else if(man){b.textContent="↺";b.title="Вручную. В принятых фактурах приложения: "+f(r.invA)+" zł. Нажмите, чтобы вернуть эту сумму";b.dataset.k=k;b.style.display="block"}
   else b.style.display="none"}
  const inWin=W===INVA.cur||W===INVA.prev;
  if(!INVA.ok&&INVA.err){info.innerHTML=inWin?'Фактуры из приложения: не удалось получить ('+esc(INVA.err)+')':'';return}
  if(!inWin||!INVA.at){info.innerHTML="";return}
- if(W===INVA.prev){info.innerHTML='Неделя закрыта: суммы из приложения зафиксированы после 10:00 в понедельник. Править можно только вручную.';return}
- const frz=W===INVA.prev?' · <span class="mut">неделя закрыта: суммы из приложения зафиксированы, правьте только вручную</span>':'';
+ if(W===INVA.prev){info.innerHTML='Столбец «Фактуры» за эту неделю закрыт: суммы из приложения зафиксированы после 10:00 в понедельник, править можно только вручную. Загрузка отчётов и остальные данные не ограничены.';return}
+ const frz=W===INVA.prev?' · <span class="mut">столбец «Фактуры» закрыт: суммы из приложения зафиксированы, правьте только вручную</span>':'';
  const s=INVA.sum[W]||{},n=Object.keys(s).length,t=r2(Object.values(s).reduce((x,y)=>x+y,0)),unk=INVA.unk.filter(u=>u.w===W);
  info.innerHTML='Фактуры из приложения за эту неделю: водителей '+n+', принято на <b>'+f(t)+'</b> zł'+(INVA.pend?' · <span class="wa">ждут вашего решения: '+INVA.pend+'</span>':'')+(unk.length?' · <span class="wa">не найдены в таблице: '+unk.map(u=>esc(dispName(u.name))+' '+f(r2(u.sum))).join(", ")+'</span>':'')+frz}
 document.addEventListener("click",async e=>{const b=e.target.closest&&e.target.closest(".ia");if(!b||!b.dataset.k)return;const W=curW,k=b.dataset.k,r=S.wk[W]&&S.wk[W].rows&&S.wk[W].rows[k];if(!r)return;
@@ -621,12 +623,48 @@ document.addEventListener("click",async e=>{const b=e.target.closest&&e.target.c
 const paint0=paint;paint=function(){paint0();try{invMarks()}catch(e){}};
 setInterval(()=>{if(!document.hidden&&db)syncInv()},60000);
 setTimeout(()=>{if(db)syncInv()},5000);
+/* ===== Фиксация выплаченных недель =====
+   Расчёт недели хранится в wkmeta/<неделя>.fz (готовый результат calc по каждому водителю). Зафиксированная неделя больше не пересчитывается от планов, тарифов и настроек.
+   Окно для исправлений: неделя W автоматически фиксируется в понедельник 10:00 (Варшава) через неделю после выплаты, то есть когда W < прошлая расчётная неделя.
+   wkmeta/<неделя>.sent — суммы, отправленные водителям при «Экспорт для водителей»: по ним показывается, что изменилось после отправки. */
+const wmGet=W=>(S.wm&&S.wm[W])||{};
+const fzOn=W=>!!wmGet(W).fz;
+const fzCur=()=>invWeekOf(new Date().toISOString());
+function fzKeys(W){const wr=(S.wk[W]&&S.wk[W].rows)||{},ks=new Set(Object.keys(wr));
+ Object.entries(S.dr).forEach(([k,d])=>{if(d.refStart===W||refBonus(k,W))ks.add(k)});
+ Object.values(S.it).forEach(it=>{if(it.kind==="plan"){if(planW(it,W).d)ks.add(it.driver);if(it.to&&planW(it,W).c)ks.add(it.to)}else if(it.week===W)ks.add(it.driver)});return[...ks]}
+async function fzFreeze(W){if(fzOn(W))return;const wr=(S.wk[W]&&S.wk[W].rows)||{},fz={};
+ fzKeys(W).forEach(k=>{fz[k]=JSON.parse(JSON.stringify(calc(k,W,wr)))});
+ const o=Object.assign({},wmGet(W),{fz,fzAt:new Date().toISOString()});delete o.opened;
+ await db.doc("wkmeta/"+W).set(o);S.wm[W]=JSON.parse(JSON.stringify(o))}
+let fzBusy=false;
+async function fzAuto(){if(fzBusy||!db||pend>0)return;if(!["dr","it","wk","wm","al","cfg"].every(t=>LD[t]))return;fzBusy=true;
+ try{const prev=addD(fzCur(),-7);let n=0;
+  for(const W of Object.keys(S.wk).sort()){const rr=S.wk[W]&&S.wk[W].rows;if(!rr||!Object.keys(rr).length)continue;if(W>=prev||fzOn(W)||wmGet(W).opened)continue;await fzFreeze(W);n++}
+  if(n){$("st").textContent="Выплаченные недели зафиксированы: "+n;draw()}}
+ catch(e){$("st").textContent="Не удалось зафиксировать недели: "+(e.code||e.message||e)}finally{fzBusy=false}}
+function wmMarks(){const W=curW,box=$("wo");if(!box||!W)return;
+ let bar=document.getElementById("wmBar");if(!bar){bar=document.createElement("div");bar.id="wmBar";bar.style.cssText="margin:6px 0;font-size:.85rem";box.parentNode.insertBefore(bar,box)}
+ const m=wmGet(W),fz=fzOn(W),cw=fzCur(),prev=addD(cw,-7),fmt=t=>new Date(t).toLocaleString("ru-RU",{timeZone:"Europe/Warsaw",day:"2-digit",month:"2-digit",hour:"2-digit",minute:"2-digit"});
+ let h="";
+ if(fz){h+='🔒 <b>Неделя зафиксирована</b> ('+fmt(m.fzAt)+'): расчёт не пересчитывается от изменений планов, тарифов и настроек. <button type="button" class="g" id="wmOpen">Открыть неделю</button>';
+  box.querySelectorAll("input.ce").forEach(i=>{i.disabled=true})}
+ else if(W<cw){h+=(W>=prev&&!m.opened?'Неделя открыта для исправлений до понедельника '+dm(addD(W,14))+', 10:00 (потом зафиксируется сама). ':'Неделя открыта вручную. Зафиксируйте её снова после правки. ')+'<button type="button" class="g" id="wmFz">Зафиксировать сейчас</button>'}
+ if(m.sent){const wr=(S.wk[W]&&S.wk[W].rows)||{},ch=[];Object.keys(m.sent).forEach(k=>{if(!curKeys.includes(k)&&!S.dr[k])return;const x=calc(k,W,wr),was=m.sent[k].out,d=r2(x.out-was);if(Math.abs(d)>0.004)ch.push(esc(dispName((S.dr[k]&&S.dr[k].name)||k))+': отправлено '+f(was)+', сейчас '+f(x.out)+' (разница '+(d>0?"+":"")+f(d)+')')});
+  curKeys.forEach(k=>{if(!m.sent[k]){const x=calc(k,W,wr);if(Math.abs(x.out)>0.004)ch.push(esc(dispName((S.dr[k]&&S.dr[k].name)||k))+': не было в отправке, сейчас '+f(x.out))}});
+  h+=(h?'<br>':'')+(ch.length?'<span class="wa">⚠ После отправки водителям ('+fmt(m.sentAt)+') изменилось:<br>'+ch.join("<br>")+'<br>Выгрузите неделю заново и загрузите в admin.html.</span>':'<span class="mut">Отправлено водителям '+fmt(m.sentAt)+': изменений после отправки нет.</span>')}
+ bar.innerHTML=h;
+ const o=document.getElementById("wmOpen"),z=document.getElementById("wmFz");
+ if(o)o.onclick=async()=>{if(!confirm("Это изменит уже выплаченный расчёт. Открыть неделю для правки?"))return;try{const q=Object.assign({},wmGet(W));delete q.fz;delete q.fzAt;q.opened=1;await db.doc("wkmeta/"+W).set(q);S.wm[W]=JSON.parse(JSON.stringify(q));drawW(true)}catch(e){$("st").textContent="Ошибка: "+(e.code||e.message)}};
+ if(z)z.onclick=async()=>{try{await fzFreeze(W);drawW(true)}catch(e){$("st").textContent="Ошибка: "+(e.code||e.message)}}}
+const paint1=paint;paint=function(){paint1();try{wmMarks()}catch(e){}};
+setInterval(()=>{if(!document.hidden)fzAuto()},300000);setTimeout(fzAuto,4000);setTimeout(fzAuto,15000);
 
 /* вкладка «Документы»: страница документов во встроенном окне, вход общий */
 const _tab=tab;
 tab=function(n){$("t6").classList.add("hid");$("b6").classList.remove("on");_tab(n)};
 function openDocs(after){[1,2,3,4,5].forEach(i=>{$("t"+i).classList.add("hid");$("b"+i).classList.remove("on")});
-  if(!$("t6").firstChild){const f=document.createElement("iframe");f.id="docf";f.src="dokumenty.html?embed=1";f.onload=()=>{if(after)after(f)};$("t6").appendChild(f);after=after}
+  if(!$("t6").firstChild){const f=document.createElement("iframe");f.id="docf";f.src="dokumenty.html?embed=1&v="+Date.now();f.onload=()=>{if(after)after(f)};$("t6").appendChild(f);after=after}
   else if(after)after($("docf"));
   $("t6").classList.remove("hid");$("b6").classList.add("on")}
 $("b6").onclick=()=>openDocs();
@@ -637,10 +675,10 @@ $("tbBk").onclick=()=>inDocs("bkBtn");$("tbRs").onclick=()=>inDocs("rsBtn");
 authInit();
 (async()=>{try{db=await claude.use("db")}catch(e){$("st").textContent="Хранилище не подключено: "+(e.message||e);return}
 if(!db){$("st").textContent="Хранилище недоступно: откройте страницу из своего аккаунта Claude.";return}
-const sub=(c,t)=>db.collection(c).onSnapshot(s=>{if(t==="wk"&&(pend>0||Date.now()<holdUntil))return;S[t]={};s.docs.forEach(d=>S[t][d.id]=JSON.parse(JSON.stringify(d.data())));if(t==="wk"){for(const x in known)delete known[x];Object.keys(S.wk).forEach(x=>known[x]=1)}draw()},e=>{$("st").textContent="Ошибка чтения: "+e.code});
-$("st").textContent="Хранилище подключено";sub("drivers","dr");sub("items","it");sub("weeks","wk");
-db.doc("meta/al").onSnapshot(s=>{S.al=(s.exists&&s.data().map)||{};draw()},()=>{});
-db.doc("meta/cfg").onSnapshot(s=>{S.cfg=(s.exists&&s.data())||{};draw()},()=>{});
+const sub=(c,t)=>db.collection(c).onSnapshot(s=>{LD[t]=1;if(t==="wk"&&(pend>0||Date.now()<holdUntil))return;S[t]={};s.docs.forEach(d=>S[t][d.id]=JSON.parse(JSON.stringify(d.data())));if(t==="wk"){for(const x in known)delete known[x];Object.keys(S.wk).forEach(x=>known[x]=1)}draw()},e=>{$("st").textContent="Ошибка чтения: "+e.code});
+$("st").textContent="Хранилище подключено";sub("drivers","dr");sub("items","it");sub("weeks","wk");sub("wkmeta","wm");
+db.doc("meta/al").onSnapshot(s=>{LD.al=1;S.al=(s.exists&&s.data().map)||{};draw()},()=>{});
+db.doc("meta/cfg").onSnapshot(s=>{LD.cfg=1;S.cfg=(s.exists&&s.data())||{};draw()},()=>{});
 })();
 </script>
 </body>
