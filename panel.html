@@ -317,9 +317,9 @@ if(!sink){row[16]=fz(x.tot);val[16]=x.tot;if(x.tot<-0.004){row[18]=fz(x.tot);val
 val.forEach((v,i)=>{if(v!==null)T[i]+=v});drv+=sink?0:Math.max(0,x.tot);zus+=sink?Math.max(0,z):x.wz;data.push(row)});
 if(!data.length){$("st").textContent="Нет данных для печати";return}
 const nz=[];for(let i=0;i<19;i++)if(i===0||i===17||data.some(r=>r[i]))nz.push(i);
-if(xl){const cl=s=>String(s==null?"":s).replace(/−/g,"-").replace(/^\+/,""),tsv=[nz.map(i=>HD[i].replace("|"," ")).join("\t")];
+if(xl){const cl=s=>String(s==null?"":s).replace(/−/g,"-").replace(/^\+/,"").replace(",","."),tsv=[nz.map(i=>HD[i].replace("|"," ")).join("\t")];
 data.forEach(row=>tsv.push(nz.map(i=>cl(row[i])).join("\t")));
-tsv.push(nz.map(i=>i===0?"Razem":i===17?"":i===13?(T[i]?"-"+fz(-T[i]):""):fz(T[i])).join("\t"));
+tsv.push(nz.map(i=>i===0?"Razem":i===17?"":cl(i===13?(T[i]?"-"+fz(-T[i]):""):fz(T[i]))).join("\t"));
 const text=tsv.join("\r\n");const done=()=>{$("st").textContent="Скопировано для Excel: "+data.length+" водителей, неделя "+wl(W)+". Вставьте в Excel (Ctrl+V)."};
 (async()=>{try{await navigator.clipboard.writeText(text);done()}catch(e){try{const ta=document.createElement("textarea");ta.value=text;ta.style.cssText="position:fixed;left:-999px";document.body.appendChild(ta);ta.select();const ok=document.execCommand("copy");ta.remove();if(!ok)throw 0;done()}catch(e2){prompt("Скопируйте вручную (Ctrl+C):",text)}}})();return}
 const nm=nz.filter(i=>i===0||i===17).length,w=((98-7.2*nm)/(nz.length-nm)).toFixed(2);
