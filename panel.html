@@ -90,7 +90,7 @@ nav button.on{background:var(--card);color:var(--fg);border-bottom-color:var(--a
 <button id="pr">Разобрать</button>
 <div id="pv"></div>
 </details>
-<div class="bar"><input id="adn" list="adl" placeholder="Добавить водителя в неделю (имя)" autocomplete="off"><datalist id="adl"></datalist><button id="adb">Добавить в таблицу</button><button class="g" id="cpb">Взять водителей с прошлой недели</button><button class="g" id="prb">Печать A4 (скачать файл)</button><button class="g" id="exb">Экспорт для водителей</button><span class="grow"></span><span class="mut">Размер таблицы</span><button class="g" id="z1">A−</button><button class="g" id="z2">A+</button></div>
+<div class="bar"><input id="adn" list="adl" placeholder="Добавить водителя в неделю (имя)" autocomplete="off"><datalist id="adl"></datalist><button id="adb">Добавить в таблицу</button><button class="g" id="cpb">Взять водителей с прошлой недели</button><button class="g" id="prb">Печать A4 (скачать файл)</button><button class="g" id="prx">Копировать для Excel</button><button class="g" id="exb">Экспорт для водителей</button><span class="grow"></span><span class="mut">Размер таблицы</span><button class="g" id="z1">A−</button><button class="g" id="z2">A+</button></div>
 <h2 id="ph"></h2><div id="wo"></div>
 <p class="mut">Ячейки «Фактуры», «Комиссия», «Аренда», «Долг», «Долг ZUS», «Выплата ZUS» можно вводить с клавиатуры: стрелки, Tab и Enter переходят между ячейками. В «Комиссии» пустое значение или равное расчётному включает автоматический расчёт, 0 снимает комиссию. Если за неделю нет положительного дохода, комиссия 0 сама.</p>
 </section>
@@ -128,7 +128,7 @@ nav button.on{background:var(--card);color:var(--fg);border-bottom-color:var(--a
 <section id="t6" class="hid"></section>
 <section id="t3" class="hid"><div class="card"><div class="row"><div><label for="nd">Новый водитель вручную</label><input id="nd" placeholder="Имя и фамилия"></div></div><button id="ndb">Добавить водителя</button> <span id="ndm" class="mut"></span></div><div id="dl"></div>
 <div class="card"><b>Что значит каждое поле</b><ul class="mut" style="margin:6px 0 0;padding-left:18px"><li><b>Водитель</b>: имя. Можно поправить, изменение сохраняется сразу.</li><li><b>Тариф</b>: от него считается комиссия парка. «Стандарт», «Фикс», «Особый» (подробности в подписи над таблицей).</li><li><b>Фикс. сумма</b>: нужна только для тарифа «Фикс», это комиссия за неделю.</li><li><b>Телефон</b>: номер для входа водителя в приложение, формат +48123456789. Без телефона водителю нельзя опубликовать неделю. У каждого водителя свой номер.</li><li><b>Остатки ZUS</b>: отметка получателя остатков ZUS. В печатной таблице у него «Выплата ZUS» выводится со знаком плюс, и в неделе без сумм его строка не печатается. Ставится одному человеку.</li><li><b>Объединить</b>: если один водитель записан дважды (разное написание имени), выберите, с кем объединить. Все данные перейдут второму, первый удалится.</li></ul></div></section>
-<div id="tools" class="card"><b>Служебное</b> <span class="mut">(временные кнопки, потом будут убраны)</span><div class="row"><button class="g" id="tbBk">💾 Копия базы</button><button class="g" id="tbRs">♻ Восстановление базы</button><button class="g" id="tbOut">Выйти</button></div><div class="row"><button class="g" id="bkS">💾 Копия панели (всё время)</button><button class="g" id="bkL">♻ Восстановить панель из копии</button><input type="file" id="bkF" accept=".json,application/json" style="display:none"><span id="bkM" class="mut"></span></div>
+<div id="tools" class="card"><b>Служебное</b><div class="row"><button class="g" id="tbBk">💾 Копия базы</button><button class="g" id="tbRs">♻ Восстановление базы</button><button class="g" id="tbOut">Выйти</button></div><div class="row"><button class="g" id="bkS">💾 Копия панели (всё время)</button><button class="g" id="bkL">♻ Восстановить панель из копии</button><input type="file" id="bkF" accept=".json,application/json" style="display:none"><span id="bkM" class="mut"></span></div>
 </div>
 </main>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
@@ -297,7 +297,7 @@ setIn(c.inv,x.inv?f(x.inv):"");setIn(c.fee,f(x.fee));c.fee.dataset.auto=x.fa;c.f
 [["R","rent"],["K","debt"],["L","zus"],["M","carry"]].forEach(([n,kk])=>{setIn(c[n],x.B[kk]?f(r2(x.B[kk])):"");c[n].dataset.a=x.A[kk]});
 add("inv",x.inv);add("fee",x.fee);add("inc",x.inc);add("R",x.B.rent);add("K",x.B.debt);add("L",x.B.zus);add("M",x.B.carry);add("tot",x.out);add("debt",-(x.debt+lf));pay+=x.pay;if(x.wz>0){zt+=x.wz;Z.push([dispName(S.dr[k]?S.dr[k].name:k),x.wz])}}
 $("wo").querySelectorAll("[data-t]").forEach(e=>{e.textContent=f(r2(T[e.dataset.t]||0))});if($("pay"))$("pay").textContent=f(r2(pay));if($("zl"))$("zl").innerHTML=zt>0?'В ZUS за неделю (удержано по «Выплата ZUS»): <b>'+f(r2(zt))+'</b> zł. '+Z.map(z=>esc(z[0])+' '+f(r2(z[1]))).join(", "):''}
-$("prb").onclick=()=>{if(!curKeys.length){$("st").textContent="Нет таблицы для печати";return}
+function prX(xl){if(!curKeys.length){$("st").textContent="Нет таблицы для печати";return}
 const W=curW||$("wk").value,wr=(S.wk[W]&&S.wk[W].rows)||{},fz=n=>f(r2(n)),ct=n=>Math.abs(n)>=0.005?fz(n):"";
 const HD=["Kierowca","Bolt|got.","Bolt|na konto","Uber|got.","Uber|na konto","FreeNow|got.","FreeNow|na konto","Faktury","Prowizja","Dochód","Rent","Borg","Borg ZUS","Następ. tyg.|Borg ZUS","Wypłata ZUS","Do przelewu|ZUS","Razem","Kierowca","Borg"];
 const sinkK=Object.keys(S.dr).find(k=>S.dr[k].zusSink)||Object.keys(S.dr).find(k=>/fumaniuk/i.test(S.dr[k].name))||"";
@@ -317,6 +317,11 @@ if(!sink){row[16]=fz(x.tot);val[16]=x.tot;if(x.tot<-0.004){row[18]=fz(x.tot);val
 val.forEach((v,i)=>{if(v!==null)T[i]+=v});drv+=sink?0:Math.max(0,x.tot);zus+=sink?Math.max(0,z):x.wz;data.push(row)});
 if(!data.length){$("st").textContent="Нет данных для печати";return}
 const nz=[];for(let i=0;i<19;i++)if(i===0||i===17||data.some(r=>r[i]))nz.push(i);
+if(xl){const cl=s=>String(s==null?"":s).replace(/−/g,"-").replace(/^\+/,""),tsv=[nz.map(i=>HD[i].replace("|"," ")).join("\t")];
+data.forEach(row=>tsv.push(nz.map(i=>cl(row[i])).join("\t")));
+tsv.push(nz.map(i=>i===0?"Razem":i===17?"":i===13?(T[i]?"-"+fz(-T[i]):""):fz(T[i])).join("\t"));
+const text=tsv.join("\r\n");const done=()=>{$("st").textContent="Скопировано для Excel: "+data.length+" водителей, неделя "+wl(W)+". Вставьте в Excel (Ctrl+V)."};
+(async()=>{try{await navigator.clipboard.writeText(text);done()}catch(e){try{const ta=document.createElement("textarea");ta.value=text;ta.style.cssText="position:fixed;left:-999px";document.body.appendChild(ta);ta.select();const ok=document.execCommand("copy");ta.remove();if(!ok)throw 0;done()}catch(e2){prompt("Скопируйте вручную (Ctrl+C):",text)}}})();return}
 const nm=nz.filter(i=>i===0||i===17).length,w=((98-7.2*nm)/(nz.length-nm)).toFixed(2);
 const cell=c=>'<td'+(/^[-−]/.test(c)?' class="neg"':'')+'>'+c+'</td>';
 let tb='<colgroup>'+nz.map(i=>'<col style="width:'+((i===0||i===17)?7.2:w)+'%">').join("")+'</colgroup><tr>'+nz.map(i=>'<th>'+HD[i].replace("|","<br>")+'</th>').join("")+'</tr>';
@@ -324,6 +329,7 @@ data.forEach(row=>{tb+='<tr>'+nz.map(i=>(i===0||i===17)?'<td class="nm"><b>'+esc
 tb+='<tr class="tr">'+nz.map(i=>i===0?'<td><b>Razem</b></td>':i===17?'<td></td>':i===15?'<td><b>+'+fz(T[i])+'</b></td>':i===13?'<td><b>'+(T[i]?"−"+fz(-T[i]):"")+'</b></td>':'<td><b>'+fz(T[i])+'</b></td>').join("")+'</tr>';
 const H='<!doctype html><html lang="pl"><head><meta charset="utf-8"><title>Wypłaty, tydzień '+wl(W)+'</title><style>@page{size:A4 landscape;margin:8mm}body{font:8.5px Arial,sans-serif;color:#000;margin:0}h2{font-size:14px;margin:0 0 6px}table{border-collapse:collapse;width:100%;table-layout:fixed}th,td{border:1px solid #888;padding:2px 1px;text-align:right;overflow:hidden;white-space:nowrap}th{white-space:normal;background:#eee}td.nm,th:first-child{text-align:left;white-space:normal;overflow-wrap:anywhere}.neg{color:#b00}tr{break-inside:avoid}tr.tr td{background:#f3f3f3}p{font-size:11px}</style></head><body><h2>Wypłaty dla kierowców, tydzień '+wl(W)+'</h2><table>'+tb+'</table><p>Do przelewu kierowcom: <b>'+fz(drv)+'</b> zł. Do przelewu do ZUS: <b>'+fz(zus)+'</b> zł.</p><p>„Następ. tyg. Borg ZUS” i niepokryta „Wypłata ZUS” przechodzą na następny tydzień.</p><script>onload=function(){setTimeout(function(){print()},400)}<\/script></body></html>';
 (async()=>{try{const dl=await claude.use("downloads");if(!dl){$("st").textContent="Сохранение файла здесь недоступно";return}await dl.save({filename:"vyplaty_"+curW+".html",data:H});$("st").textContent="Файл vyplaty_"+curW+".html сохранён. Откройте его: окно печати появится само (A4 альбомная). Если не появилось, нажмите Ctrl+P."}catch(e){$("st").textContent=e&&e.code==="declined"?"Сохранение отменено":"Не удалось сохранить файл: "+((e&&(e.message||e.code))||e)}})()};
+$("prb").onclick=()=>prX(false);$("prx").onclick=()=>prX(true);
 /* Порядок удержаний: Долг, Аренда, Долг ZUS, Выплата ZUS. Если дохода не хватает, непокрытая часть ложится с конца: сначала на Выплату ZUS, потом на Долг ZUS, Аренду и Долг. */
 function shortAl(x){let D=x.tot<0?-x.tot:0;const al={a:0,k:0,l:0,m:0};[["carry","m"],["zus","l"],["rent","a"],["debt","k"]].forEach(([c,f])=>{const b=x.B[c];if(D>0&&b<0){const t=Math.min(D,-b);al[f]=-t;D-=t}});if(D>0)al.k-=D;return al}
 $("exb").onclick=async()=>{const W=curW||$("wk").value,wr=(S.wk[W]&&S.wk[W].rows)||{},out=[];let np=0;
@@ -659,6 +665,30 @@ function wmMarks(){const W=curW,box=$("wo");if(!box||!W)return;
  if(z)z.onclick=async()=>{try{await fzFreeze(W);drawW(true)}catch(e){$("st").textContent="Ошибка: "+(e.code||e.message)}}}
 const paint1=paint;paint=function(){paint1();try{wmMarks()}catch(e){}};
 setInterval(()=>{if(!document.hidden)fzAuto()},300000);setTimeout(fzAuto,4000);setTimeout(fzAuto,15000);
+/* ===== Публикация недели водителям прямо из панели (вместо файла и admin.html) ===== */
+(function(){
+ const nP=s=>{let v=String(s||"").replace(/[^\d+]/g,"");if(v.startsWith("00"))v="+"+v.slice(2);else if(/^\d{9}$/.test(v))v="+48"+v;return v},okP=p=>/^\+\d{9,15}$/.test(p);
+ $("exb").textContent="Опубликовать неделю водителям";
+ $("exb").onclick=async()=>{const W=curW||$("wk").value;if(!W||!db||!sb)return;const wr=(S.wk[W]&&S.wk[W].rows)||{},ps=[],skipped=[],bad=[];
+  curKeys.forEach(k=>{const x=calc(k,W,wr),r=wr[k]||{},d=S.dr[k]||{};const pr=p=>r[p]?[r2(r[p].g),r2(r[p].n)]:[0,0];const name=dispName(d.name||k);
+   if(!d.phone){skipped.push(name);return}const ph=nP(d.phone);if(!okP(ph)){bad.push(name+" ("+d.phone+")");return}
+   ps.push({k,name,phone:ph,out:r2(x.out),tot:r2(x.tot),data:{w:wl(W),bolt:pr("bolt"),uber:pr("uber"),fn:pr("fn"),inv:r2(x.inv),g:r2(x.g),n:r2(x.n),inc:r2(x.inc),fee:r2(x.fee),rent:r2(x.B.rent),debt:r2(x.B.debt),zus:r2(x.B.zus),carry:r2(x.B.carry),tot:r2(x.tot),wz:r2(x.wz),std:(d.tariff||"Стандарт")==="Стандарт"&&!x.ov&&x.fee>0}})});
+  if(!ps.length){$("st").textContent="В этой неделе некому публиковать"+(skipped.length||bad.length?": у водителей нет телефона":"");return}
+  const sc=ps.length+" водителям";let q="Опубликовать расчёт недели "+wl(W)+" "+sc+"?\nУже опубликованный расчёт этой недели у этих водителей будет заменён.";
+  if(skipped.length)q+="\n\nБез телефона, не будут опубликованы ("+skipped.length+"): "+skipped.join(", ");if(bad.length)q+="\n\nНеверный телефон ("+bad.length+"): "+bad.join(", ");
+  if(!confirm(q))return;
+  $("exb").disabled=true;$("st").textContent="Публикуем…";
+  try{
+   const u=await sb.from("drivers").upsert(ps.map(x=>({name:x.name,phone:x.phone})),{onConflict:"phone"});if(u.error)throw u.error;
+   const ids=await sb.from("drivers").select("id,phone").in("phone",ps.map(x=>x.phone));if(ids.error)throw ids.error;
+   const map={};ids.data.forEach(d=>map[d.phone]=d.id);
+   const rows=ps.filter(x=>map[x.phone]).map(x=>({driver_id:map[x.phone],week_start:W,data:x.data,published_at:new Date().toISOString()}));
+   if(rows.length){const s=await sb.from("statements").upsert(rows,{onConflict:"driver_id,week_start"});if(s.error)throw s.error}
+   const sS={};ps.forEach(x=>{sS[x.k]={out:x.out,tot:x.tot}});const o=Object.assign({},wmGet(W),{sent:sS,sentAt:new Date().toISOString()});await db.doc("wkmeta/"+W).set(o);S.wm[W]=JSON.parse(JSON.stringify(o));
+   $("st").textContent="Опубликовано водителям: "+rows.length+(skipped.length?". Без телефона, не опубликованы: "+skipped.join(", "):"")+(bad.length?". Неверный телефон: "+bad.join(", "):"");
+   try{paint()}catch(e){}
+  }catch(e){$("st").textContent="Ошибка публикации: "+((e&&(e.message||e.code))||e)}finally{$("exb").disabled=false}};
+})();
 
 /* вкладка «Документы»: страница документов во встроенном окне, вход общий */
 const _tab=tab;
