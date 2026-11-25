@@ -718,5 +718,21 @@ db.doc("meta/al").onSnapshot(s=>{LD.al=1;S.al=(s.exists&&s.data().map)||{};draw(
 db.doc("meta/cfg").onSnapshot(s=>{LD.cfg=1;S.cfg=(s.exists&&s.data())||{};draw()},()=>{});
 })();
 </script>
+<script>
+/* Синхронизация с приложением: все водители, у которых в панели есть телефон, добавляются в приложение (таблица drivers), если их там ещё нет. Работает при открытии панели и раз в минуту. */
+(function(){
+ const nP=s=>{let v=String(s||"").replace(/[^\d+]/g,"");if(v.startsWith("00"))v="+"+v.slice(2);else if(/^\d{9}$/.test(v))v="+48"+v;return v},okP=p=>/^\+\d{9,15}$/.test(p);
+ let busy=false;
+ async function appSync(){if(busy||typeof sb==="undefined"||!sb||!LD.dr)return;busy=true;
+  try{const seen=new Set(),list=[];Object.values(S.dr).forEach(d=>{const ph=nP(d.phone);if(okP(ph)&&!seen.has(ph)){seen.add(ph);list.push({name:dispName(d.name),phone:ph})}});
+   if(!list.length)return;
+   const r=await sb.from("drivers").select("phone");if(r.error)return;
+   const have=new Set((r.data||[]).map(x=>x.phone)),miss=list.filter(x=>!have.has(x.phone));if(!miss.length)return;
+   const u=await sb.from("drivers").upsert(miss,{onConflict:"phone"});
+   $("st").textContent=u.error?"Не удалось добавить водителей в приложение: "+u.error.message:"В приложение добавлено водителей: "+miss.length+" ("+miss.map(x=>x.name).join(", ")+")"}
+  catch(e){}finally{busy=false}}
+ window.appSync=appSync;setTimeout(appSync,6000);setInterval(appSync,60000);
+})();
+</script>
 </body>
 </html>
