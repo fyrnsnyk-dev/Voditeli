@@ -274,12 +274,19 @@ let holdUntil=0;let lastAdded="";const pins={};let curW="",curKeys=[],cells={},d
 const inp=(i,c,k,fl)=>'<td class="n"><input class="ce" data-r="'+i+'" data-c="'+c+'" data-k="'+esc(k)+'" data-f="'+fl+'" inputmode="'+(c>=2?"text":"decimal")+'" autocomplete="off"></td>';
 const th=(a,b)=>'<th class="n">'+a+(b?'<br>'+b:'')+'</th>';
 function setIn(el,v){if(el&&el!==document.activeElement)el.value=v}
+/* Неактивные водители: нет отчётов Uber/Bolt/FreeNow за последние 3 недели. Только скрываются в таблице, печати, Excel и итогах; данные и перенос остатков не меняются. */
+const INACT_WEEKS=3;let showIn=false;
+const hasRep=(k,w)=>{const r=S.wk[w]&&S.wk[w].rows&&S.wk[w].rows[k];return !!r&&PL.some(p=>r[p]&&(Math.abs(+r[p].g||0)>0.004||Math.abs(+r[p].n||0)>0.004))};
+function inactiveKeys(W,keys){const out=new Set();if(showIn)return out;const wr=(S.wk[W]&&S.wk[W].rows)||{};
+ keys.forEach(k=>{if((pins[W]&&pins[W].has(k))||k===lastAdded)return;const d=S.dr[k]||{};if(d.refStart===W||refBonus(k,W))return;
+  for(let i=0;i<INACT_WEEKS;i++)if(hasRep(k,addD(W,-7*i)))return;
+  if(calc(k,W,wr).out>0.004)return;out.add(k)});return out}
 function drawW(force){const W=$("wk").value;if(!W)return;
 const ae=document.activeElement;if(!force&&ae&&ae.classList&&ae.classList.contains("ce")&&$("wo").contains(ae)){dirtyW=true;return}
 dirtyW=false;curW=W;$("ph").textContent="Выплаты водителям, неделя "+wl(W);const wr=(S.wk[W]&&S.wk[W].rows)||{};const ks=new Set(Object.keys(wr));(pins[W]||new Set()).forEach(k=>ks.add(k));
 Object.entries(S.dr).forEach(([k,d])=>{if(d.refStart===W)ks.add(k);if(refBonus(k,W))ks.add(k)});
 Object.values(S.it).forEach(it=>{if(it.kind==="plan"){if(planW(it,W).d)ks.add(it.driver);if(it.to&&planW(it,W).c)ks.add(it.to)}else if(it.week===W)ks.add(it.driver)});
-const L=[...ks].map(k=>({k,name:S.dr[k]?S.dr[k].name:k})).sort((a,b)=>dispName(a.name).localeCompare(dispName(b.name)));
+const L0=[...ks].map(k=>({k,name:S.dr[k]?S.dr[k].name:k})).sort((a,b)=>dispName(a.name).localeCompare(dispName(b.name)));const IN=inactiveKeys(W,L0.map(x=>x.k)),L=L0.filter(x=>!IN.has(x.k));
 $("adl").innerHTML=Object.values(S.dr).map(d=>'<option value="'+esc(dispName(d.name))+'">').join("");
 curKeys=L.map(x=>x.k);cells={};
 if(!L.length){$("wo").innerHTML='<p class="mut">За эту неделю данных нет. Загрузите отчёты выше или добавьте водителя вручную.</p>';return}
@@ -692,8 +699,8 @@ setInterval(()=>{if(!document.hidden)fzAuto()},300000);setTimeout(fzAuto,4000);s
 
 /* вкладка «Документы»: страница документов во встроенном окне, вход общий */
 const _tab=tab;
-tab=function(n){$("t6").classList.add("hid");$("b6").classList.remove("on");_tab(n)};
-function openDocs(after){[1,2,3,4,5].forEach(i=>{$("t"+i).classList.add("hid");$("b"+i).classList.remove("on")});
+tab=function(n){$("t6").classList.add("hid");$("b6").classList.remove("on");$("tools").style.display="";_tab(n)};
+function openDocs(after){$("tools").style.display="none";[1,2,3,4,5].forEach(i=>{$("t"+i).classList.add("hid");$("b"+i).classList.remove("on")});
   if(!$("t6").firstChild){const f=document.createElement("iframe");f.id="docf";f.src="dokumenty.html?embed=1&v="+Date.now();f.onload=()=>{if(after)after(f)};$("t6").appendChild(f);after=after}
   else if(after)after($("docf"));
   $("t6").classList.remove("hid");$("b6").classList.add("on")}

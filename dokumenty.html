@@ -132,6 +132,19 @@
   <main>
     <div id="topMsg"></div>
     <div id="ksefLine" style="margin-bottom:6px;font-size:13px"></div>
+    <div id="usageLine" style="margin-bottom:6px;font-size:13px"></div>
+    <details id="cleanHelp" style="margin-bottom:8px;font-size:13px">
+      <summary style="cursor:pointer">Как почистить базу, когда не хватает места</summary>
+      <div style="padding:6px 0 0 14px;line-height:1.5">
+        <b>Когда:</b> когда строка «Хранилище» дошла до 50–60%. Места занимают фотографии, сама база с цифрами маленькая.<br>
+        <b>1. Копия базы.</b> Нажмите «💾 Копия базы» (в панели, блок «Служебное» на другой вкладке) и сохраните ZIP.<br>
+        <b>2. Пакет бухгалтеру.</b> «⬇ Пакет бухгалтеру (ZIP)» → выберите месяц → «Сформировать и скачать ZIP». Сохраните ZIP в надёжное место.<br>
+        <b>3. Удалить фото.</b> Там же, в списке сформированных пакетов, нажмите «🗑 Удалить фото» у нужного месяца (два раза, второй раз подтверждает). Фото исчезнут из хранилища, а записи, суммы и «Итоги недели» останутся.<br>
+        <b>4. Подтверждения оплаты (KSeF).</b> Их фото в пакет не входят. Удаляйте вручную: Supabase → Storage → бакет <i>invoices</i> → папки старых месяцев → выделить → Delete. Папки создаются заново сами при следующей загрузке.<br>
+        <b>Нельзя удалять:</b> записи документов (на них держатся защита от дублей, «Итоги недели» и учёт) и фото, пока ZIP пакета не сохранён.<br>
+        <b>Проверка:</b> нажмите «Обновить»: строка «Хранилище» покажет новый размер (иногда с задержкой в несколько минут).
+      </div>
+    </details>
     <div id="sumLine" style="margin-bottom:8px;font-size:15px"></div>
     <div class="row" style="margin-bottom:10px"><span id="listInfo" class="muted"></span><span id="listSum" class="sum"></span></div>
     <div id="list"></div>
@@ -301,6 +314,23 @@ function fillWeekF() {
   sel.innerHTML = h; sel.value = cur;
 }
 
+
+// лимиты тарифа Supabase (МБ). Бесплатный тариф: база 500 МБ, хранилище 1024 МБ. Если у вас платный тариф, измените числа.
+const LIMIT_FILES_MB = 1024, LIMIT_DB_MB = 500;
+async function usageStatus() {   // строка «Хранилище: … из …»: только чтение функции storage_usage()
+  const el = $('usageLine'); if (!el) return;
+  try {
+    const { data, error } = await sb.rpc('storage_usage');
+    if (error || !data) { el.style.color = ''; el.innerHTML = '<span class="muted">Размер хранилища: запустите supabase_shag13_razmer.sql в Supabase</span>'; return; }
+    const mb = b => Number(b || 0) / 1048576, fmt = x => x >= 1024 ? (x / 1024).toFixed(2).replace('.', ',') + ' ГБ' : Math.round(x) + ' МБ';
+    const f = mb(data.files_bytes), d = mb(data.db_bytes), pf = f / LIMIT_FILES_MB * 100, pd = d / LIMIT_DB_MB * 100, worst = Math.max(pf, pd);
+    el.innerHTML = `Хранилище (фото): <b>${fmt(f)}</b> из ${fmt(LIMIT_FILES_MB)} (${Math.round(pf)}%, ${data.files_count} файлов) · База: <b>${fmt(d)}</b> из ${fmt(LIMIT_DB_MB)} (${Math.round(pd)}%)` + (worst >= 80 ? ' — пора чистить: пакет → «Удалить фото»' : '');
+    el.style.color = worst >= 80 ? '#d32f2f' : worst >= 60 ? '#b26a00' : '';
+    el.style.fontWeight = worst >= 60 ? '600' : '';
+    el.className = worst >= 60 ? '' : 'muted';
+  } catch (e) { el.innerHTML = ''; }
+}
+
 async function ksefStatus() {   // строка «последняя сверка с KSeF»: только чтение ksef_sync_log
   const el = $('ksefLine'); if (!el) return;
   try {
@@ -344,6 +374,7 @@ async function load() {
   msg('topMsg', '');
   render();
   ksefStatus();
+  usageStatus();
 }
 
 // ---------- вкладки и список ----------
