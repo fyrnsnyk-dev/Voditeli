@@ -101,7 +101,7 @@ body{margin:0}
     <p class="mut" data-i="loginText"></p>
     <form id="f2" class="stack">
       <div><label for="ph" data-i="phone"></label><input id="ph" type="tel" inputmode="tel" autocomplete="tel" value="+48 " placeholder="+48 600 000 000"></div>
-      <div><label for="cd" data-i="codeLabel"></label><input id="cd" inputmode="numeric" autocomplete="off" maxlength="9" placeholder="0000 0000"></div>
+      <div><label for="cd" data-i="codeLabel"></label><input id="cd" inputmode="numeric" autocomplete="off" placeholder="00000000"></div>
       <button class="btn" type="submit" id="b2" data-i="enter"></button>
     </form>
     <p class="neg small" id="msg" role="alert"></p>
@@ -302,7 +302,7 @@ $("rk").onclick=async()=>{if(!$("rok").checked){$("rmsg").textContent=(RD[lg]||R
 $("lang").onchange=()=>{lg=$("lang").value;try{localStorage.setItem("lang",lg)}catch(e){}stat();if(!$("rodo").hidden)rodoShow()};
 $("if").onchange=()=>{const f=$("if").files[0];$("ifn").textContent=f?f.name:T("invNoSel")};
 $("f2").onsubmit=async e=>{e.preventDefault();msg("");phone=normPhone($("ph").value);
- const code=$("cd").value.replace(/\D/g,"");
+ const code=$("cd").value.replace(/[\u0660-\u0669\u06F0-\u06F9\u0966-\u096F\u0A66-\u0A6F]/g,ch=>{const c=ch.charCodeAt(0);return String(c>=0x06F0&&c<=0x06F9?c-0x06F0:c>=0x0966&&c<=0x096F?c-0x0966:c>=0x0A66&&c<=0x0A6F?c-0x0A66:c-0x0660)}).replace(/\D/g,"");
  if(!/^\+\d{9,15}$/.test(phone)){msg(T("errPhone"));return}
  if(code.length!==8){msg(T("errCode"));return}
  $("b2").disabled=true;
